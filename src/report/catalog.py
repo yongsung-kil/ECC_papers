@@ -4,16 +4,16 @@
 '보기' 기능만 담당한다. (예: Phase 2 선별로 status가 바뀐 뒤 갱신)
 
 출력 구조:
-    papers/원본/{source}/{year}/{month}/catalog.md|csv          # 전체 22,225편
-    papers/1차선별/통과/{source}/{year}/{month}/catalog.md|csv  # filtered_in
-    papers/1차선별/제외/{source}/{year}/{month}/catalog.md|csv  # filtered_out
-    papers/1차선별/SUMMARY.md                                    # 선별 통계 요약
+    data/catalogs/원본/{source}/{year}/{month}/catalog.md|csv          # 전체 22,225편
+    data/catalogs/stage1/통과/{source}/{year}/{month}/catalog.md|csv   # filtered_in
+    data/catalogs/stage1/제외/{source}/{year}/{month}/catalog.md|csv   # filtered_out
+    data/catalogs/stage1/SUMMARY.md                                     # 선별 통계 요약
 
-`1차선별/통과`는 Phase 2 통과(status='filtered_in')를 모으며 Phase 2.5의
-알고리즘 기여 여부(filter_results.algo_mod)를 함께 표기한다.
-`1차선별/제외`는 Phase 2 제외(status='filtered_out')를 모은다.
+`stage1/통과`는 1단계 선별 통과(status='filtered_in')를 모으며 알고리즘 기여
+여부(filter_results.algo_mod)를 함께 표기한다.
+`stage1/제외`는 1단계 선별 제외(status='filtered_out')를 모은다.
 
-    python -m src.catalog        # 전체 카탈로그(원본+1차선별) 재생성
+    python -m src.report.catalog        # 전체 카탈로그(원본+stage1) 재생성
 """
 
 import csv
@@ -27,11 +27,12 @@ from src.db import get_conn
 
 logger = logging.getLogger(__name__)
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+CATALOG_ROOT = PROJECT_ROOT / "data" / "catalogs"   # 카탈로그(md/csv) 출력 루트
 
 # 출력 루트 디렉토리명
 DIR_ORIGINAL = "원본"
-DIR_SELECTED = "1차선별"
+DIR_SELECTED = "stage1"   # 1단계(선별) 산출 카탈로그
 DIR_IN = "통과"
 DIR_OUT = "제외"
 
@@ -60,13 +61,13 @@ def _algo_label(algo_mod) -> str:
 
 
 def rebuild_catalog():
-    """기존 papers/{원본,1차선별}을 비우고 DB로부터 전체 재생성 → 항상 DB와 정확히 일치."""
+    """기존 data/catalogs/{원본,stage1}을 비우고 DB로부터 전체 재생성 → 항상 DB와 정확히 일치."""
     for sub in (DIR_ORIGINAL, DIR_SELECTED):
-        d = PROJECT_ROOT / "papers" / sub
+        d = CATALOG_ROOT / sub
         if d.exists():
             shutil.rmtree(d)
-    # 과거 구조(papers/arxiv, papers/ieee)가 남아있으면 정리
-    for legacy in ("arxiv", "ieee"):
+    # 과거 구조(papers/ 하위 카탈로그)가 남아있으면 정리
+    for legacy in ("원본", "1차선별", "arxiv", "ieee"):
         d = PROJECT_ROOT / "papers" / legacy
         if d.exists():
             shutil.rmtree(d)
@@ -90,14 +91,14 @@ def export_catalog():
     rows = _fetch_rows()
 
     # 원본: 전체
-    _export_tree(PROJECT_ROOT / "papers" / DIR_ORIGINAL, rows, selected=False)
+    _export_tree(CATALOG_ROOT / DIR_ORIGINAL, rows, selected=False)
 
-    # 1차선별: 통과(filtered_in) / 제외(filtered_out)
+    # stage1(선별): 통과(filtered_in) / 제외(filtered_out)
     selected = [r for r in rows if r["status"] == "filtered_in"]
     excluded = [r for r in rows if r["status"] == "filtered_out"]
-    _export_tree(PROJECT_ROOT / "papers" / DIR_SELECTED / DIR_IN, selected, selected=True)
-    _export_tree(PROJECT_ROOT / "papers" / DIR_SELECTED / DIR_OUT, excluded, selected=False)
-    _export_summary(PROJECT_ROOT / "papers" / DIR_SELECTED, rows, selected)
+    _export_tree(CATALOG_ROOT / DIR_SELECTED / DIR_IN, selected, selected=True)
+    _export_tree(CATALOG_ROOT / DIR_SELECTED / DIR_OUT, excluded, selected=False)
+    _export_summary(CATALOG_ROOT / DIR_SELECTED, rows, selected)
 
 
 def _export_tree(root: Path, rows, selected: bool):
@@ -246,10 +247,10 @@ def _export_summary(root: Path, all_rows, selected):
         "",
         "---",
         "",
-        "- 상세 분류 기준: [../../CLASSIFICATION.md](../../CLASSIFICATION.md)",
-        "- 판정 기준서: [../../criteria/selection_criteria.md](../../criteria/selection_criteria.md)",
-        "- 통과 카탈로그: `1차선별/통과/{arxiv,ieee}/{연}/{월}/catalog.md`",
-        "- 제외 카탈로그: `1차선별/제외/{arxiv,ieee}/{연}/{월}/catalog.md`",
+        "- 상세 분류 기준: [../../../CLASSIFICATION.md](../../../CLASSIFICATION.md)",
+        "- 판정 기준서: [../../../criteria/stage1/selection_criteria.md](../../../criteria/stage1/selection_criteria.md)",
+        "- 통과 카탈로그: `data/catalogs/stage1/통과/{arxiv,ieee}/{연}/{월}/catalog.md`",
+        "- 제외 카탈로그: `data/catalogs/stage1/제외/{arxiv,ieee}/{연}/{월}/catalog.md`",
         "",
     ]
 
@@ -288,4 +289,4 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO,
                         format="%(asctime)s [%(levelname)s] %(message)s")
     rebuild_catalog()  # 기존 삭제 후 재생성
-    print("카탈로그 재생성 완료 (papers/원본 + papers/1차선별)")
+    print("카탈로그 재생성 완료 (data/catalogs/원본 + data/catalogs/stage1)")

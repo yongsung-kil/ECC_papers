@@ -3,7 +3,7 @@
 // filtered_in 중 reason 파싱으로 카테고리를 못 찾은 '애매' 논문을 대상으로,
 // 각 에이전트가 초록을 읽고 알고리즘/코드 기여(keep) vs HW만(drop)을 판정한다.
 //
-// 실행: Workflow({ scriptPath: "algo_workflow.js",
+// 실행: Workflow({ scriptPath: "src/stage1/algo_workflow.js",
 //                  args: { dir: "<RUN_DIR>", nAgents: N } })
 
 export const meta = {

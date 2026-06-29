@@ -10,9 +10,9 @@ filter_results.algo_mod 컬럼에 기록:
   NULL = 미판정(파싱으로 카테고리 못 찾음 → 에이전트 재판정 필요)
 
 명령:
-  python -m src.algo_classify dry     # 파싱 분포만 출력(쓰기 없음)
-  python -m src.algo_classify apply    # 컬럼 추가 + 비애매분 기록 + 애매분 목록 저장
-  python -m src.algo_classify stats    # algo_mod 현황
+  python -m src.stage1.algo_classify dry     # 파싱 분포만 출력(쓰기 없음)
+  python -m src.stage1.algo_classify apply    # 컬럼 추가 + 비애매분 기록 + 애매분 목록 저장
+  python -m src.stage1.algo_classify stats    # algo_mod 현황
 """
 
 import argparse
@@ -23,7 +23,7 @@ from pathlib import Path
 
 from src.db import get_conn, init_db
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 
 try:
     sys.stdout.reconfigure(encoding="utf-8")

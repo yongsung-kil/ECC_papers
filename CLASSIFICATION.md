@@ -24,7 +24,7 @@ NAND에 직접 쓰인 논문이 아니어도, 기법(부호 설계 → 디코더
 NAND LDPC ECC에 이식할 수 있으면 통과(in). 판단 축은 도메인이 아니라
 "NAND 고전 바이너리 LDPC에 *새로* 이식할 기법이 있나"다.
 
-**판정 기준 전문**: [criteria/selection_criteria.md](criteria/selection_criteria.md)
+**판정 기준 전문**: [criteria/stage1/selection_criteria.md](criteria/stage1/selection_criteria.md)
 
 포함(in) 카테고리:
 
@@ -44,7 +44,7 @@ JSCC·fountain/erasure 등. (각 항목의 예외 조건은 기준서 참조)
 - 미선별 논문을 100편 단위 청크로 분할, 청크당 에이전트 10개(에이전트당 10편)가 병렬 판정.
 - 각 에이전트는 기준서와 담당 논문 초록을 읽고 `in`/`out` + 한 줄 근거(`reason`)를 반환.
 - DB 기록 전 무결성 검증(존재하지 않는 id·중복·decision 오류), 통과 시에만 적용.
-- 도구: `src/review.py`(분할/기록/검증), `select_workflow.js`(병렬 판정 워크플로),
+- 도구: `src/stage1/review.py`(분할/기록/검증), `src/stage1/select_workflow.js`(병렬 판정 워크플로),
   절차서 `REVIEW.md`.
 
 **결과**: filtered_in **6,226** / filtered_out **15,999** (전체 22,225편 = 100% 완료).
@@ -72,7 +72,7 @@ JSCC·fountain/erasure 등. (각 항목의 예외 조건은 기준서 참조)
 2. **애매분 재판정** — 태그를 찾지 못한 논문(579편)만 에이전트가 초록을 다시 읽고
    `keep`(알고리즘/코드 기여) / `drop`(HW만)으로 판정 → 491 유지 / 88 제외.
 
-- 도구: `src/algo_classify.py`(파싱·분류·배치·기록), `algo_workflow.js`(애매분 재판정 워크플로).
+- 도구: `src/stage1/algo_classify.py`(파싱·분류·배치·기록), `src/stage1/algo_workflow.js`(애매분 재판정 워크플로).
 
 **결과** (filtered_in 6,226편 대상): 유지 **5,311** / 제외(HW만) **915**.
 제외된 915편은 "min-sum 디코더 FPGA 구현", "QC-LDPC VLSI 아키텍처" 등 표준 알고리즘의
@@ -91,13 +91,13 @@ status는 `filtered_in` 그대로 두고 컬럼만 플래그로 둔다.
 
 ```bash
 # Phase 2 현황 (status별 집계)
-python -m src.review stats
+python -m src.stage1.review stats
 
 # Phase 2.5 현황 (algo_mod별 집계)
-python -m src.algo_classify stats
+python -m src.stage1.algo_classify stats
 
 # 진행맵(연도별 선별 완료 현황) 갱신
-python -m src.progress        # → review_progress.md
+python -m src.report.progress        # → review_progress.md
 ```
 
 직접 조회 예:
@@ -118,9 +118,9 @@ WHERE p.status = 'filtered_in' AND f.algo_mod = 0;
 
 | 파일 | 역할 |
 |------|------|
-| `criteria/selection_criteria.md` | Phase 2 판정 기준서 |
+| `criteria/stage1/selection_criteria.md` | Phase 2 판정 기준서 |
 | `REVIEW.md` | Phase 2 실행 절차서 |
-| `src/review.py` · `select_workflow.js` | Phase 2 분할/기록/검증 · 병렬 판정 |
-| `src/algo_classify.py` · `algo_workflow.js` | Phase 2.5 분류 · 애매분 재판정 |
+| `src/stage1/review.py` · `src/stage1/select_workflow.js` | Phase 2 분할/기록/검증 · 병렬 판정 |
+| `src/stage1/algo_classify.py` · `src/stage1/algo_workflow.js` | Phase 2.5 분류 · 애매분 재판정 |
 | `data/papers.db` | 모든 메타데이터·판정 결과 (papers / filter_results) |
 | `review_progress.md` | 연도별 선별 완료 현황 |

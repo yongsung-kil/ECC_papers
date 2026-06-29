@@ -6,14 +6,14 @@ arXiv 논문 PDF 일괄 다운로드 (1차선별 통과분)
 
 대상
 ----
-papers/1차선별/통과/arxiv/ 아래 모든 catalog.csv 의 'PDF URL' 을 읽어
+data/catalogs/stage1/통과/arxiv/ 아래 모든 catalog.csv 의 'PDF URL' 을 읽어
 arXiv PDF 를 내려받는다. arXiv 는 공개 + 표준 TLS 라 사내망 SSL 우회 불필요.
 
 저장 위치
 --------
 원본 디렉토리 구조를 그대로 미러링한다(추적성).
-  papers/1차선별/통과/arxiv/2003/10/catalog.csv
-    → papers/1차선별_pdf/arxiv/2003/10/<논문ID>.pdf
+  data/catalogs/stage1/통과/arxiv/2003/10/catalog.csv  (카탈로그=소스)
+    → data/pdfs/arxiv/2003/10/<논문ID>.pdf             (PDF 저장)
 
 특징
 ----
@@ -42,8 +42,8 @@ except Exception:
 # ── 경로 설정 ──────────────────────────────────────────────────────────
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)  # 프로젝트 루트
-SRC_DIR = os.path.join(ROOT, "papers", "1차선별", "통과", "arxiv")
-OUT_DIR = os.path.join(ROOT, "papers", "1차선별_pdf", "arxiv")
+SRC_DIR = os.path.join(ROOT, "data", "catalogs", "stage1", "통과", "arxiv")  # 카탈로그(csv) 소스
+OUT_DIR = os.path.join(ROOT, "data", "pdfs", "arxiv")              # PDF 저장
 
 DELAY = 3       # 요청 사이 대기(초) — arXiv 예의
 TIMEOUT = 60    # 요청 타임아웃(초)

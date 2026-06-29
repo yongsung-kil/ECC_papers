@@ -1,11 +1,11 @@
 // LDPC 논문 1차 선별 — 병렬 워크플로
 //
-// 메인(오케스트레이터)이 `python -m src.review batch`로 미선별 논문을
+// 메인(오케스트레이터)이 `python -m src.stage1.review batch`로 미선별 논문을
 // 에이전트별 파일(_batch/agent_NN.json)로 분할한 뒤 이 워크플로를 실행한다.
 // 각 에이전트는 자기 파일 1개만 읽어 in/out 판정하고, 메인이 결과를 모아 DB에 기록한다.
 //
-// 실행: Workflow({ scriptPath: "select_workflow.js",
-//                  args: { dir: "_batch", nAgents: N, criteriaFile: "criteria/selection_criteria.md" } })
+// 실행: Workflow({ scriptPath: "src/stage1/select_workflow.js",
+//                  args: { dir: "_batch", nAgents: N, criteriaFile: "criteria/stage1/selection_criteria.md" } })
 
 export const meta = {
   name: 'select-ldpc',
@@ -21,7 +21,7 @@ if (typeof ARGS === 'string') {
 }
 const DIR           = (ARGS && ARGS.dir) || '_batch'
 const N_AGENTS      = (ARGS && ARGS.nAgents) || 0
-const CRITERIA_FILE = (ARGS && ARGS.criteriaFile) || 'criteria/selection_criteria.md'
+const CRITERIA_FILE = (ARGS && ARGS.criteriaFile) || 'criteria/stage1/selection_criteria.md'
 // ─────────────────────────────────────────────────────────────────
 
 const SCHEMA = {

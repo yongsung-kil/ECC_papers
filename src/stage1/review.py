@@ -19,7 +19,7 @@ from pathlib import Path
 
 from src.db import get_conn, init_db, _now
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 
 # Windows 콘솔(cp949)에서도 한글/유니코드가 깨지거나 크래시하지 않도록 UTF-8 강제
 try:

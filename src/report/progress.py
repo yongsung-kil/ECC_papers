@@ -3,7 +3,7 @@
 연도 × 타입(conference/journal/arXiv)별로 '완료/전체'를 표로 출력한다.
 완료 = status가 'new'가 아님(=선별 판단이 끝남).
 
-    python -m src.progress
+    python -m src.report.progress
 """
 
 import re
@@ -13,7 +13,7 @@ from pathlib import Path
 
 from src.db import get_conn
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 OUT = PROJECT_ROOT / "review_progress.md"
 
 # 표 컬럼 순서 (content_type → 표시명)
@@ -53,7 +53,7 @@ def generate() -> str:
     lines = [
         "# 선별(Phase 2) 진행 현황",
         "",
-        f"> 생성: {stamp} · `python -m src.progress`로 갱신",
+        f"> 생성: {stamp} · `python -m src.report.progress`로 갱신",
         "",
         "## 요약",
         f"- 전체 **{total[1]:,}편** · 선별 완료 **{total[0]:,}편** ({pct}%)",
