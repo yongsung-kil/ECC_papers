@@ -1,0 +1,529 @@
+Optimizing Puncturing Patterns of 5G NR LDPC Codes for Few-Iteration Decoding
+Reinhard Wiesmayr1, Darja Nonaca1, Chris Dick2, and Christoph Studer1 1ETH Zurich, 2NVIDIA
+email: {wiesmayr, dnonaca}@iis.ee.ethz.ch, cdick@nvidia.com, studer@ethz.ch
+
+2024 58th Asilomar Conference on Signals, Systems, and Computers | 979-8-3503-5405-8/24/$31.00 ©2024 IEEE | DOI: 10.1109/IEEECONF60004.2024.10942813
+
+Abstract—Rate-matching of low-density parity-check (LDPC) codes enables a single code description to support a wide range of code lengths and rates. In 5G NR, rate matching is accomplished by extending (lifting) a base code to a desired target length and by puncturing (not transmitting) certain code bits. LDPC codes and rate matching are typically designed for the asymptotic performance limit with an ideal decoder. Practical LDPC decoders, however, carry out tens or fewer message-passing decoding iterations to achieve the target throughput and latency of modern wireless systems. We show that one can optimize LDPC code puncturing patterns for such few-iteration-constrained decoders using a method we call swapping of punctured and transmitted blocks (SPAT). Our simulation results show that SPAT yields from 0.20 dB up to 0.55 dB improved signal-to-noise ratio performance compared to the standard 5G NR LDPC code puncturing pattern for a wide range of code lengths and rates.
+I. INTRODUCTION
+Digital communication systems rely on channel coding to protect the transmitted data against transmission errors. Modern channel codes, such as the 5G new radio (NR) low-density parity-check (LDPC) code [1], support a wide range of code rates and lengths using a single, unified code description. A common technique for constructing such flexible LDPC codes is puncturing, which selects a predetermined set of code bits that are not transmitted. While punctured LDPC codes have been shown to approach the channel capacity [2], they are usually designed for the asymptotic performance limit [3], which describes the error-rate performance that could be achieved with an infinitely long code and an ideal decoder that performs infinitely many message-passing (MP) iterations.
+MP is the de-facto standard decoding method for practical LDPC codes [4] and iteratively propagates reliability information on the coded bits over a bipartite graph described by the code. Although LDPC codes and puncturing patterns are generally designed for the asymptotic performance limit, practical LDPC codes have finite code-length (e.g., a few thousand code bits or less), and LDPC decoders typically only carry out a small number of MP iterations (e.g., tens or even fewer) in order to meet the stringent throughput, latency, silicon area, and power constraints of modern wireless systems. Thus, practical decoder implementations operate far from that of an ideal decoder in the asymptotic performance limit.
+The work of CS was supported in part by an ETH Zurich Research Grant. We acknowledge NVIDIA for their sponsorship of this research.
+The authors thank Nihat Engin Tunali for helpful comments and suggestions.
+
+A. Contributions We demonstrate that, with practical MP-based decoders,
+better puncturing patterns for the 5G-NR-complaint LDPC code exist. To this end, we propose SPAT (short for Swapping of Punctured And Transmitted blocks), an algorithm that optimizes LDPC code puncturing patterns for few-iteration MP decoding. SPAT delivers puncturing patterns that achieve a block error rate (BLER) of 10−3 at up to 0.55 dB lower signal-to-noise ratio (SNR) than the standard 5G NR LDPC code for varying code lengths and rates as well as for flooding and layered MP decoding. These gains are achieved solely by optimizing the puncturing patterns while leaving the remaining 5G NR rate-matching scheme and the underlying 5G NR LDPC base code unchanged. To gain insight into the inner workings of such optimized puncturing patterns, we conduct a performance analysis based on the empirical average binary cross-entropy (BCE). This analysis reveals that optimized puncturing patterns achieve lower error rates for fewer MP iterations, but can be outperformed by the 5G-NR-compliant puncturing pattern for MP-based decoders that carry out a large number of iterations.
+B. Relevant Prior Work LDPC codes, discovered by Gallager in [5], are widely used
+in modern communication systems due to their excellent errorcorrection capabilities and efficient decoder implementations. State-of-the-art LDPC codes [3], including the code specified in 5G NR [1], are typically designed with density evolution techniques [6] or EXIT (short for extrinsic information transfer) chart methods [7] that consider the asymptotic performance limit with an infinitely long code and an ideal decoder that performs infinitely many iterations. However, practical LDPC decoder implementations for modern wireless systems must meet stringent throughput, latency, silicon area, and power constraints, which is achieved by carrying out a small number of decoding iterations. In particular, real-world MP-based LDPC decoder implementations often utilize NF = 10 iterations for the flooding schedule proposed in [5] (see, e.g., the implementation in [8]–[10] ) and NL = 5 iterations for the layered schedule proposed in [11] (see, e.g., the implementations in [12]–[14]). Evidently, such real-world LDPC decoder implementations operate far away from the asymptotic performance limit. In order to achieve improved error-correction performance with such practical few-iteration LDPC decoders, we utilize SPAT to
+
+979-8-3503-5405-8/24/$31.00 ©2024 IEEE
+
+788
+
+Asilomar 2024
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:05:19 UTC from IEEE Xplore. Restrictions apply.
+
+optimize puncturing patterns for NF = 10 flooding iterations, which also performs well for NL = 5 layered iterations.
+When few-iteration decoding is considered already during code design, better codes can be obtained. This observation was made by Elkelesh et al. in [15], where codes were generated for decoders running NF = 20 flooding iterations. Their codeconstruction method was used to generate a short rate-half LDPC code with code-length 128, which achieves more than 0.3 dB better SNR performance at a target block error rate of 10−5 compared to the rate-matched 5G NR code of the same rate and length in a real-valued binary-input additive white Gaussian noise (BI-AWGN) channel. While the method from [15] specifically designs a code for one length and rate, an extension to variable code lengths using lifting was presented in [16].1 However, both design methods [15], [16] have not yet been applied for generating rate-compatible LDPC codes, i.e., codes that support varying rates. The missing part for a rate adaptive code is puncturing, which truncates the LDPC code to a shorter length by not transmitting certain bits, which increases the rate as the encoded information remains unchanged.
+While puncturing patterns (i.e., the selection of bits that are not transmitted) have been optimized for few-iteration decoding already with structured block-type LDPC codes [18], existing methods for general LDPC codes optimize the performance in the asymptotic limit and ignore finite (and small) iteration effects. Prominent puncturing pattern optimization techniques are proposed in, e.g., [19] and [20]. Reference [19] applies a Gaussian approximation to optimize the punctured code’s performance in the asymptotic decoding limit. Reference [20] proposes three optimization methods to puncture short quasicyclic (QC)-LDPC codes, but without an explicit focus on few-iteration decoding. The first two methods optimize puncturing based on cycles in the bipartite graph describing the code and MP decoder. The third method randomly generates puncturing patterns and selects the one achieving best error-rate performance using Monte–Carlo simulations. Different from the methods presented in [20], SPAT implements a Greedy algorithm that successively improves an existing puncturing pattern, in our case the 5G-NR-complaint puncturing pattern. Another key difference to our work is our focus on the practical few-iteration decoding performance, which we explicitly study for a varying number of MP iterations.2 We thereby show that much better few-iteration performance can be achieved just by optimizing the puncturing pattern of an existing code that was designed for the asymptotic performance limit.
+C. Notation Boldface lowercase and uppercase letters represent column
+vectors and matrices, respectively. For a vector x, the ith entry is denoted by xi = [x]i and its transpose by xT. Vertical
+1State-of-the-art lifting techniques (see, e.g., [17]) do not focus on the error-rate performance with few-iteration decoding and routinely ignore that practical decoders are limited to carry out a small number of MP iterations.
+2The numerical optimization heuristic and also the results in [20] are simulated with a decoder that implements 60 or 200 MP iterations, which is far from what practical decoder implementations typically carry out.
+
+concatenation of two vectors (or matrices) x and y is denoted by [x; y]. The set {0, 1}n indicates all 2n vectors of length n with entries taken from the set {0, 1}. The M × N all-zeros and N × N identity matrix are 0M×N and IN , respectively. GF(2) is the finite field of two elements (0 and 1). We denote probabilities by P(·) and conditional probabilities by P(·|·).
+
+II. PREREQUISITES We now briefly review the basics of the 5G NR LDPC code and the used channel model. Our optimization of puncturing patterns is detailed in Sec. III.
+
+A. Channel Coding and the 5G NR LDPC Code In what follows, we focus on the 5G NR LDPC code [1],
+which is a quasi-cyclic (QC) code in GF(2) that is constructed from a short base code described by a so called protograph, or base graph. At the transmitter, k information bits b ∈ {0, 1}k are mapped to a codeword c ∈ C from the finite codebook
+
+C = c ∈ {0, 1}n : Hc = 0(n−k)×1 ,
+
+(1)
+
+where H is the (n−k)×n parity-check matrix. This mapping is typically implemented by the encoding function c = enc(b) = Gb, with the n × k generator matrix G = [Ik; P], that can be obtained from H. The first k bits in c are the systematic bits and the n − k bits generated by P are the parity bits.
+To obtain a parity check matrix for a code of length n and rate r = k/n, the 5G NR standard utilizes rate-matching, which comprises the following steps:
+First, one selects a base graph (BG), which is a (nB−kB)×nB parity-check matrix that specifies the protograph of the code, and the lifting coefficients, which we explain below. In 5G NR, one selects among BG 1 (of size 46 × 68) and BG 2 (of size 42 × 52). The structure of the two BGs is illustrated in Fig. 1 and the selection for either BG 1 or BG 2 depends on the desired number of information bits k and the desired rate r. Note that the first two columns of both BGs are highly connected to many parity check equations and receive special attention in the design of the 5G NR LDPC code [3].
+Second, lifting (expanding) the BG is used to increase the length of the base-code (i.e., the code specified by the protograph). The selected BG is lifted (expanded) by a lifting factor L. This works by replacing all zero-entries in the BG by an all-zeros matrix 0L×L and all one-entries by a circularly shifted identity matrix IL. The 5G NR standard specifies a set of shift values for each one-entry in the BG, which are selected by the lifting factor L. The lifted code is thus L times longer than the BG’s base-code, i.e., nL = LnB and kL = LkB. Since the lifting factor is selected to ensure that kL ≥ k, the encoder needs to zero-pad (or fill) the information bit vector b before encoding. Therefore, kL − k zeros are appended to b, i.e., bL = [b; 0kL−k]. The appended zeros are called filler bits. To encode bL, the transmitter computes a generator matrix G˜ of size nL × kL from the lifted BG H˜ such that H˜ G˜ = 0(nL−kL)×kL . The encoder then computes the codeword by cL = enc(bL) = G˜ bL, which generates nL − kL parity bits in addition to the kL systematic bits in bL.
+
+789
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:05:19 UTC from IEEE Xplore. Restrictions apply.
+
+1 10 20 30 40 50 60 1 5 10 15 20 25 30 35 40 45
+
+1 10 20 30 40 50 1 5 10 15 20 25 30 35 40
+
+Fig. 1. Base graph 1 of dimension 46×68 (left) and base graph 2 of dimension 42 × 52 (right). White represents zeros in the BG and will be replaced by zero matrices during lifting. The black boxes represent ones in the BG and will be replaced by circularly shifted identity matrices during lifting. The 5G NR standard specifies a set of shift coefficients for each one-entry in the BG.
+
+������
+
+������
+
+transmitted
+
+punctured
+
+filler
+
+Then, we transmit xi over a real-valued BI-AWGN channel:
+
+yi = xi + zi.
+
+(2)
+
+Here, yi is the channel’s output, and zi is independent and identically distributed (i.i.d.) real-valued Gaussian noise with zero mean and variance σ2. We define the SNR as SNR = 1/σ2.
+The receiver then uses the channel’s outputs yi to compute a-posteriori probabilities for the transmitted symbol xi given yi, described by the log-likelihood ratio (LLR) value
+
+ℓi = log
+
+P(xi = +1|yi) P(xi = −1|yi)
+
+=
+
+2yi σ2
+
+.
+
+(3)
+
+As the LLR values are computed from the channel output yi, ℓi is often called channel LLR. The channel LLRs of the individual code bits ℓ = [ℓ1; . . . ; ℓn] are then passed to the LDPC MP decoder, which we describe in the following.
+
+������������!
+
+������������!
+
+Fig. 2. Default 5G NR puncturing pattern for n = 128, k = 64, working on BG 2 lifted by L = 11. Each rectangle illustrates a lifted block (i.e., column of the BG). Colors indicate transmitted bits (light blue), punctured bits (red), and filler bits (dark blue) which are always punctured.
+
+Third, puncturing, which avoids transmission of certain coded bits to match the desired code length n. Since the encoded lifted code-length nL is in general longer than the desired code-length n, the encoder shortens the codeword before transmission. This is achieved by not transmitting (or puncturing) certain bits. To decide which bits to puncture, the 5G NR standard specifies the following scheme: (i) the first 2L systematic bits, which correspond to the two highly connected columns in both BGs, are always punctured, (ii) the remaining k − 2L systematic bits are transmitted, (iii) the kL − k filler bits contain no information and are always punctured, (iv) the first n − k + 2L parity bits are transmitted, and (v) all remaining parity bits are punctured. Thereby, we select n bits out of cL to construct the transmit codeword c of desired length n and rate r = k/n.3 An example of this 5G NR LDPC code rate-matching scheme is depicted in Fig. 2 for n = 128 and k = 64, which results in the selection of BG 2 and a lifting factor of L = 11. In contrast to 5G NR compliant puncturing, the proposed SPAT algorithm optimizes the selection of n bits out of the nL lifted code bits obtained from the encoder.
+
+B. Channel Model We transmit each code bit ci = [c]i with i ∈ {1, . . . , n}
+independently over a memoryless BI-AWGN channel. We first map each code bit ci for transmission to a binary-phase-shiftkeying (BPSK) constellation symbol according to xi = (−1)ci .
+
+3The 5G NR standard also defines transmission of additional n parity bits upon unsuccessful decoding, which is called hybrid automatic repeat request (HARQ). As a more powerful LDPC code in the first transmission reduces the frequency of HARQ, we only focus on optimizing the puncturing pattern for the initial (first) transmission. An extension of SPAT for subsequent HARQ transmissions is left for future work.
+
+C. MP-Based LDPC Decoding Practical LDPC decoders typically utilize MP algorithms
+that operate on the bipartite factor graph described by the parity-check matrix [4]. Each row of the parity-check matrix corresponds to a check node and each column to a variable node. MP decoders iteratively exchange reliability information (in the form of LLR values) between check and variable nodes according to a predefined schedule. While the flooding schedule alternates between updating all variable nodes and then all check nodes in parallel, the layered schedule put forward in [11] serially updates blocks (layers) of parity-check equations (i.e., blocks of orthogonal rows of the parity-check matrix). For both schedules, we denote one iteration to involve one update of all parity-check equations and quantify the number of MP iterations with the flooding and the layered schedule by NF and NL, respectively. The layered schedule typically requires about half the number of MP iterations to achieve the same error-rate performance as the flooding schedule [11].
+Message updates in the variable nodes process the corresponding channel LLR defined in (3) together with all messages stemming from check nodes connected to this variable node. Variable nodes associated with punctured bits assume channel LLR values of zero (absolute uncertainty about the value of a punctured bit); variable nodes associated with filler bits assume channel LLR values of infinity (absolute certainty that filler bits have value zero). Message updates in the check nodes can either utilize the sum-product algorithm (SPA) or the maxproduct algorithm (MPA); other approximations also exist [13]. Each check node processes all messages stemming from the variable nodes connected to this check node in order to produce new messages that are processed by the variable-node updates.
+After a predefined4 number of MP iterations is reached, the decoder computes the sum of all incoming messages at variable nodes that are associated to systematic bits. The decoder then outputs either the resulting soft-information (representing LLRs) or performs hard decisions based on the sign of this soft-information, to obtain bit estimates for b.
+4To reduce power consumption, early termination strategies are often used to stop decoding as soon as all parity checks are satisfied.
+
+790
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:05:19 UTC from IEEE Xplore. Restrictions apply.
+
+First iteration: swap with all transmitted blocks
+
+… 1 2 19 20 21 21
+
+52 18
+
+Punctured block array
+
+… 3 4 5 11 12 13
+
+16 17
+
+Transmitted block array
+
+Fig. 3. Punctured (left) and transmitted block (right) arrays in the first iteration of Alg. 1 when initialized with the 5G NR puncturing pattern shown in Fig. 2. Array elements specify indices of punctured and transmitted blocks, each representing L bits, except for the last element of the punctured block array, which represents the partially punctured block (cf. the 18th block in Fig. 2).
+
+III. OPTIMIZATION OF PUNCTURING PATTERNS
+
+We now propose swapping of punctured and transmitted
+
+blocks (SPAT), an algorithm that aims at finding better punc-
+
+turing patterns for MP-based LPDC decoders that carry out a
+
+small number of MP iterations. In contrast to state-of-the-art
+
+puncturing-pattern optimization techniques [19], [20], SPAT
+
+considers a given decoder algorithm with a fixed and practically
+
+low number of decoding iterations.
+
+While an exhaustive search over all possible puncturing
+
+patterns would quickly result in prohibitive complexity, e.g.,
+
+for a short rate-half code of length n = 128, there already exist
+
+g15re22e86dy≈pr2o.3ce·1d0u1re25apnodsosinbllye
+
+puncturing patterns. explores puncturing
+
+SPAT pursues a of entire blocks
+
+of the lifted BG in order to determine improved puncturing
+
+patterns in a computationally tractable manner. Here and in
+
+what follows, one block denotes one column of the BG, i.e., L
+
+subsequent bits in cL. More specifically, SPAT has a runtime that scales with the product of the number of transmitted blocks,
+
+times the number of punctured blocks, times the computational
+
+effort for evaluating the optimization objective. For the example
+
+in Fig. 2, SPAT only explores 371 different puncturing patterns,
+
+which is computationally tractable with modern computers.
+
+The overall complexity of SPAT is the number of swaps times
+
+the cost of evaluating the optimization objective.
+
+A. Optimization Objective
+The goal of SPAT is to optimize the SNR performance in the waterfall region. Therefore, SPAT determines the minimum SNR required to achieve a target block error rate (BLER) of, e.g., BLER = 10−3, for each evaluated puncturing pattern. We call the minimum SNR to achieve this target error-rate as the SNR operating point abbreviated by SNR@BLER = 10−3. Therefore, SPAT samples the BLER at multiple SNR values5 and linear interpolates (in logarithmic scale) the BLER vs. SNR curve to extract the SNR operation point where BLER = 10−3.
+If faster runtime is desired, SPAT could be modified to optimize a simpler objective. Alternatively, one could only sample the BLER at one specific SNR and select the puncturing pattern that achieves the lowest BLER value. Note that the third method presented in [20] determines the bit error rate (BER) at one specific SNR, which does not necessarily result in the best BLER performance, as pointed out in [21].
+
+5We sample the BLER by Monte–Carlo simulation. Therefore, we transmit random codewords over the BI-AWGN channel and perform MP decoding with the desired algorithm, schedule, and number of MP iterations.
+
+Algorithm 1 The SPAT algorithm 1: input: punc_idx and tran_idx 2: for i=1 to len(punc_idx) do 3: snr_at_bler[0] ← sim(punc_idx, tran_idx) 4: for j=1 to len(tran_idx) do 5: punc_tmp ← punc_idx 6: tran_tmp ← tran_idx 7: swap(punc_tmp[i-1], tran_tmp[j-1]) 8: snr_at_bler[j] ← sim(punc_tmp, tran_tmp) 9: end for 10: i_opt ← argmin(snr_at_bler) 11: if i_opt > 0 then 12: swap(punc_idx[i-1], tran_idx[i_opt-1]) 13: end if 14: end for 15: output: punc_idx and tran_idx
+B. SPAT: Swapping of Punctured and Transmitted Blocks
+SPAT proceeds as follows. Starting from the 5G NR puncturing pattern, we first store the indices of transmitted and punctured blocks in two arrays punc_idx and tran_idx, respectively. For the example in Fig. 2, we illustrate the initial array values in Fig. 3. The block that is partially punctured and partially transmitted (block index 18) is defined to be the last one of the punctured block array. The block that contains systematic bits and filler bits (block index 6) is for simplicity excluded from the optimization and thereby not listed in both arrays. The systematic bits of this partial block (block index 6) are always transmitted; the filler bits are always punctured.
+SPAT now performs two nested loops. In the outer loop, SPAT iterates over all elements of the punctured block array (Alg. 1 line 2). For each element of the punctured block array, the algorithm benchmarks swapping with all elements of the transmitted block array, one after the other, inside the inner loop (line 4). Within the inner loop, the current punctured block index is swapped with the current transmitted block index (line 7) and the SNR operating point of the resulting temporary puncturing pattern is simulated (line 8). After the inner loop has iterated over all transmitted blocks, the block index with the lowest SNR operating point is determined (line 10) and swapped between the two arrays (line 12), as this new puncturing patterns showed an improved SNR operating point. If none of the explored swaps improve the SNR operating point, then the current puncturing pattern is left untouched. Then, the outer loop proceeds to the next element of the punctured block array and iterates until all are optimized through swapping and testing with all elements of the transmitted block array.
+Note that the step on line 3 can be skipped for i > 1, as it corresponds to the previous iteration’s best SNR operating point. Furthermore, note that array indices in Alg. 1 start with value 0 and puncturing (and transmission) block indices denote columns of the BG and thereby start with value 1.
+Since SPAT optimizes the BLER performance of the actual decoder (line 8), we ensure that the resulting puncturing pattern achieves improved few-iteration decoding performance.
+
+791
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:05:19 UTC from IEEE Xplore. Restrictions apply.
+
+IV. SIMULATION RESULTS We now demonstrate the efficacy of SPAT for 5G NR LDPC codes. To this end, we extend the implementation of the 5G NR LDPC MP decoder from NVIDIA Sionna [22] to support (i) alternative puncturing patterns and (ii) layered MP decoding [11]. In the following, we present an extensive set of simulation results for various code rates and block lengths. We start in Sec. IV-A by comparing the BLER performance of the 5G-NR-compliant and optimized puncturing patterns and then present in Sec. IV-B a convergence analysis which compares the BCE for a varying number of MP iterations. The BLER at each SNR shown in our plots is simulated with 106 codeword transmissions and the SNR gains are compared to a target BLER of 10−3. The SPAT algorithm simulates each SNR point with 106 codeword transmissions (or until 105 block errors are detected) and stops simulating higher SNR values when no block error is detected. A block error is detected if at least one of the k information bit estimates at the decoder output is incorrect.
+A. Conventional vs. Optimized Puncturing Patterns In Fig. 4, we consider a short rate-half code of length
+n = 128 that is constructed from BG 2. Here, we used SPAT for an SPA MP decoder applying the flooding scheme with NF = 10 iterations. SPAT delivers a puncturing pattern that yields a 0.28 dB SNR gain compared to the 5G-NR-compliant code (upper left plot). This optimized puncturing pattern also achieves 0.36 dB lower SNR with a MPA flooding decoder (upper right plot), and 0.43 dB and 0.55 dB lower SNR with the layered schedule (plots at the bottom of Fig. 4), with SPA with NL = 5 and MPA with NL = 10, respectively. Interestingly, the optimized pattern only punctures the second out of the two highly connected blocks, which are considered to be always punctured in the 5G NR standard.
+In Fig. 5, we consider a medium-length rate-3/4 code of length n = 512 that is constructed from BG 1. Here, we used SPAT for an SPA MP decoder applying the flooding scheme with NF = 10 iterations. SPAT delivers a puncturing pattern that yields a 0.20 dB SNR gain compared to the 5GNR-compliant code (left plot, light colors). This optimized puncturing pattern also achieves 0.30 dB lower SNR with MPA (left plot, dark colors). In the right plot of Fig. 5, we compare the SNR operating point for a varying number of flooding iterations NF. Although the puncturing pattern was optimized for NF = 10, it shows improved SNR performance compared to the 5G NR standard code up to NF = 20 flooding iterations. Interestingly, the optimized pattern only punctures the first out of the two highly connected blocks, and punctures the fifth core parity column (fifth block after the filler bits) and many blocks of the extension parity columns (degree-1 variable nodes), as denoted in [3, Fig. 5].
+In Fig. 6, we consider a long rate-half code of length n = 4096 that is constructed from BG 2. Here, we used SPAT for an SPA MP decoder applying the flooding scheme with NF = 10 iterations. SPAT delivers a puncturing pattern that yields a 0.24 dB SNR gain compared to the 5G-NR-compliant code
+
+block error-rate (BLER)
+
+100 10−1 10−2 10−3 10−4 1
+100 10−1 10−2 10−3 10−4 1
+
+100
+
+block error-rate (BLER)
+
+10−1
+
+default NF = 10 default NF = 20 optimized NF = 10 optimized NF = 20
+
+2
+
+3
+
+SNR [dB]
+
+0.28 dB
+
+4
+
+5
+
+10−2 10−3 10−4 1
+100
+
+block error-rate (BLER)
+
+10−1
+
+default NL = 5 default NL = 10 optimized NL = 5 optimized NL = 10
+
+2
+
+3
+
+SNR [dB]
+
+0.43 dB
+
+4
+
+5
+
+10−2 10−3 10−4 1
+
+default NF = 10 default NF = 20 optimized NF = 10 optimized NF = 20
+
+2
+
+3
+
+4
+
+5
+
+SNR [dB]
+
+default NL = 5 default NL = 10 optimized NL = 5 optimized NL = 10
+
+0.55 dB
+
+2
+
+3
+
+4
+
+5
+
+SNR [dB]
+
+0.36 dB
+
+block error-rate (BLER)
+
+Fig. 4. BLER vs. SNR of flooding (top) and layered (bottom) decoding of a rate-half code of length n = 128 with SPA (left) and MPA (right), puncturing pattern optimized for SPA with NF = 10 (bottom).
+
+block error-rate (BLER)
+
+100
+
+10−1
+
+10−2 10−3 10−4 4
+
+default SPA
+
+default MPA optimized SPA
+
+0.20 dB
+
+optimized MPA
+
+5
+
+6
+
+SNR [dB]
+
+20 15 10 0.20 dB 5
+
+default SPA default MPA optimized SPA optimized MPA
+
+NF
+
+7
+
+05.5 6 6.5 7 7.5 8
+
+SNR@BLER=10−3 [dB]
+
+Fig. 5. BLER vs. SNR of flooding decoding of a rate-3/4 code of length n = 512 with NF = 10 (left) and SNR operation points for varying NF (right), puncturing pattern optimized for SPA with NF = 10 (bottom).
+(left plot, light colors). This optimized puncturing pattern also achieves 0.23 dB lower SNR with MPA (left plot, dark colors). In the right plot of Fig. 6, we compare the SNR operating point for a varying number of flooding iterations NF. The puncturing pattern optimized for NF = 10 shows improved SNR performance compared to that of the 5G-NR-compliant pattern up to NF = 16. Different from our other results shown in Fig. 4 and Fig. 5, here we also used SPAT to find improved puncturing patterns for 20 instead of 10 flooding iterations. However, the puncturing pattern optimized for NF = 20 only shows 0.01 dB better SNR performance at NF = 20 than the 5G-NR-compliant pattern. Interestingly, the pattern optimized for NF = 10 punctures both of the two highly connected blocks, but the puncturing pattern optimized for NF = 20 only punctures the first one.
+This highlights that SPAT can deliver much better puncturing patterns for few-iteration decoding (e.g., for NF = 10), while it is challenging to outperform the 5G-NR-compliant puncturing pattern in the long decoding limit (e.g., for NF ≥ 20).
+
+792
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:05:19 UTC from IEEE Xplore. Restrictions apply.
+
+block error-rate (BLER) NF
+binary cross-entropy (BCE) binary cross-entropy (BCE)
+
+100 10−1 10−2 10−3 10−41.5
+
+20
+default SPA
+
+default MPA
+
+optimized SPA
+
+15
+
+optimized MPA
+
+10
+
+0.24 dB 0.23 dB
+
+5
+
+default SPA opt. for NF = 10 SPA opt. for NF = 20 SPA
+0.24 dB
+
+2
+
+2.5
+
+SNR [dB]
+
+3
+
+01
+
+23456
+
+SNR@BLER=10−3 [dB]
+
+100 10−1 10−2 10−3 10−4100
+
+default baseline optimized opt. par.
+
+101
+
+102
+
+103
+
+NF
+
+100 10−1 10−2 10−3 10−4100
+
+default baseline optimized opt. par.
+
+101
+
+102
+
+103
+
+NF
+
+Fig. 6. BLER performance of flooding decoding of a rate-half code of length n = 4096 with NF = 10 (left) and SNR operation points for varying NF (right). Puncturing patterns optimized for SPA with NF = 10 (middle) and with NF = 20 (bottom).
+
+Fig. 7. BCE vs. NF of a rate-half code of length n = 128, measured at SNR = 3 dB (left) and SNR = 4 dB (right). 5G NR compliant puncturing from Fig. 2 and the optimized puncturing pattern from Fig. 4 are compared to a baseline (middle) and an optimized parity puncturing pattern (bottom).
+
+B. BCE Convergence Analysis
+
+We now take a closer look at the reason why improved puncturing patterns can outperform 5G NR standard-compliant LDPC codes. To this end, we compare the empirical average binary cross-entropy (BCE) between the transmitted information bits and the corresponding LLR values at the decoder output for each iteration. As shown in [21], the empirical average BCE is a qualitative measure for the BER and it is minimal if the LLR values correspond to “true” probabilities, according to the definition in (3). In case of an iterative MP decoder with SPA, we expect that the messages will no longer represent exact likelihoods and can become over- or under-confident after many iterations due to loops in the factor graph.
+To compute the empirical average BCE, we first map the k LLR estimates at the decoder output ℓˆi to the corresponding probability estimates for bi = 1, denoted pˆi, according to
+
+pˆi
+
+=
+
+1
+
+1 + eℓi
+
+.
+
+(4)
+
+We then obtain the average BCE over all information bits by
+
+BCE = − 1 k
+
+k
+
+bi log(pˆi) + (1 − bi) log(1 − pˆi),
+
+(5)
+
+i=1
+
+which is then averaged over all 106 codeword transmissions at each simulated SNR point, resulting in the empirical average BCE. To improve numerical stability when calculating (6), we use the equivalent (but numerically stable) form
+
+compare the optimized puncturing pattern from Fig. 4 also with a baseline pattern that we define to transmit the first n = 128 bits (depicted in Fig. 7 in the middle) and a pattern optimized with SPAT under the constraint of transmitting all information bits (labeled “opt. par.,” depicted in Fig. 7 at the bottom). While the baseline puncturing pattern shows the best (lowest) BCE during early iterations, it performs worst after a large number (64 or more) of iterations. The 5G-NR-compliant puncturing pattern shows the worst (highest) BCE during early iterations, but shows continuously decreasing BCE up to NF = 103. Both optimized puncturing patterns perform best from NF = 8 and perform approximately as well as the 5G-NR-compliant puncturing pattern at NF = 103.
+We conclude from this analysis that there is a trade-off between puncturing patterns that work well for the early MP iterations, but then perform not as well for more iterations. For this short code of length n = 128, we observed that the optimized puncturing patterns obtained by SPAT work much better at NF = 10 and as well as the 5G-NR-compliant puncturing pattern at 103 MP iterations. However, the results shown in the right plot of Fig. 6 indicate that optimized puncturing patterns can also perform worse compared to the 5G-NR-compliant pattern, which confirms the fact that the 5G-NR-compliant puncturing pattern was designed for the asymptotic performance limit and that one can do better for few-iteration decoding.
+
+BCE = 1 k
+
+k
+
+max(0, −ℓˆi) + biℓˆi + log
+
+1 + exp(−|ℓˆi|) . (6)
+
+i=1
+
+In Fig. 7, we compare the average empirical BCE versus the number of flooding iterations NF from 1 to 103. The BCE was measured at an SNR of 3 dB (left plot) and at an SNR of 4 dB (right plot). Here, we consider the short rate-half code of length n = 128 that we also analyzed in Fig. 4. We observed that transmitting (i.e., not puncturing) all information bits leads to a “decoding head start,” resulting in lower BCE after the very first iteration compared to patterns which involve puncturing of information bits. Due to this observation, we
+
+To better understand and quantify the performance difference between the two optimized puncturing patterns compared in Fig. 7, we illustrate in Fig. 8 their BER (left) and BLER (right) performance with an SPA flooding decoder with NF = 10. Interestingly, the constrained SPAT algorithm obtains a puncturing pattern that performs 0.03 dB better than the unconstrained SPAT algorithm (cf. the gain measured in Fig. 4). This minor difference can be explained by the heuristic nature of SPAT, achieving (potentially) different results with different initial puncturing patterns and optimization constraints. Note that the constrained SPAT algorithm was initialized with the baseline pattern illustrated in Fig. 7.
+
+793
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:05:19 UTC from IEEE Xplore. Restrictions apply.
+
+100
+
+100
+
+bit error-rate (BER) block error-rate (BLER)
+
+10−1
+
+10−1
+
+10−2
+
+10−2
+
+10−3
+
+default
+
+0.46 dB
+
+10−3
+
+default
+
+0.31 dB
+
+optimized
+
+optimized
+
+opt. par.
+
+opt. par.
+
+10−4 1
+
+2
+
+3
+
+4
+
+5
+
+10−4 1
+
+2
+
+3
+
+4
+
+5
+
+SNR [dB]
+
+SNR [dB]
+
+Fig. 8. BER (left) and BLER (right) performance of flooding decoding of a rate-half code of length n = 128 with SPA and NF = 10, same puncturing patterns as in Fig. 7, which are optimized for SPA with NF = 10.
+
+V. CONCLUSIONS We have shown that better puncturing patterns exist for the 5G NR LDPC code when considering practical MP-based decoders which perform only a small number of iterations. To extract improved puncturing patterns, we have proposed SPAT, a greedy procedure that iteratively swaps blocks of transmitted and punctured bits, and selects puncturing patterns that show better simulated SNR performance. By applying SPAT to 5G NR LDPC codes of various lengths and rates, we obtained puncturing patterns that achieve from 0.20 dB and up to 0.55 dB better SNR performance than 5G-NR-compliant puncturing in a BI-AWGN channel. A convergence analysis that is based on the empirical average BCE of bit probability estimates at the decoder output revealed a trade-off between puncturing patterns obtained by SPAT that work best for few-iteration decoding and 5G-NR-compliant puncturing patterns that show in some cases better performance after a large number of iterations. Since significant SNR gains in few-iteration decoding can be achieved by just transmitting different code bits than those specified by the 5G NR standard, these performance gains come at no additional complexity. However, the description of our optimized puncturing patterns is not as simple and universal as that of the 5G-NR-compliant puncturing scheme and also depends on the code length and rate. Nonetheless, we strongly suggest considering few-iteration decoding performance as code-design criterion in future communication standards. We understand that standardization bodies often formulate code descriptions without consideration of hardware implementation and thereby select a coding scheme that works best in the asymptotic performance limit. Nonetheless, practical decoders operate far from this asymptotic performance limit and—as we have shown in this paper—more effective decoding is possible with codes and puncturing patterns that are specifically designed for the few-iteration decoding regime.
+
+REFERENCES
+[1] European Telecommunications Standards Institute, “5G NR multiplexing and channel coding,” Apr. 2021, ETSI 3GPP TS 38.212 version 16.5.0 Release 16.
+[2] C.-H. Hsu and A. Anastasopoulos, “Capacity achieving LDPC codes through puncturing,” IEEE Trans. Inf. Theory, vol. 54, no. 10, pp. 4698– 4706, Oct. 2008.
+[3] T. Richardson and S. Kudekar, “Design of low-density parity check codes for 5G new radio,” IEEE Commun. Mag., vol. 56, no. 3, pp. 28–34, Mar. 2018.
+[4] F. R. Kschischang, B. J. Frey, and H.-A. Loeliger, “Factor graphs and the sum-product algorithm,” IEEE Trans. Inf. Theory, vol. 47, no. 2, pp. 498–519, Feb. 2001.
+[5] R. Gallager, “Low-density parity-check codes,” IRE Trans. Inf. Theory, vol. 8, no. 1, pp. 21–28, Jan. 1962.
+[6] T. J. Richardson, M. A. Shokrollahi, and R. L. Urbanke, “Design of capacity-approaching irregular low-density parity-check codes,” IEEE Trans. Inf. Theory, vol. 47, no. 2, pp. 619–637, Feb. 2001.
+[7] S. ten Brink, G. Kramer, and A. Ashikhmin, “Design of low-density parity-check codes for modulation and detection,” IEEE Trans. Commun., vol. 52, no. 4, pp. 670–678, Apr. 2004.
+[8] M. Milicevic and P. G. Gulak, “A multi-Gb/s frame-interleaved LDPC decoder with path-unrolled message passing in 28-nm CMOS,” IEEE Trans. VLSI Syst., vol. 26, no. 10, pp. 1908–1921, Oct. 2018.
+[9] Y. S. Park, D. Blaauw, D. Sylvester, and Z. Zhang, “A 1.6-mm2 38-mW 1.5-Gb/s LDPC decoder enabled by refresh-free embedded DRAM,” in Proc. Symp. VLSI Circuits (VLSIC), Jun. 2012.
+[10] M. Weiner, M. Blagojevic, S. Skotnikov, A. Burg, P. Flatresse, and B. Nikolic, “27.7 a scalable 1.5-to-6 Gb/s 6.2-to-38.1 mW LDPC decoder for 60 GHz wireless networks in 28 nm UTBB FDSOI,” in IEEE Int. Solid-State Circuits Conf. (ISSCC) Dig. Tech. Papers, Feb. 2014.
+[11] E. Sharon, S. Litsyn, and J. Goldberger, “Efficient serial message-passing schedules for LDPC decoding,” IEEE Trans. Inf. Theory, vol. 53, no. 11, pp. 4076–4091, Nov. 2007.
+[12] C. Studer, N. Preyss, C. Roth, and A. Burg, “Configurable highthroughput decoder architecture for quasi-cyclic LDPC codes,” in Proc. Asilomar Conf. Signals, Syst., Comput., Oct. 2008.
+[13] Y. Ren, H. Harb, Y. Shen, A. Balatsoukas-Stimming, and A. Burg, “A generalized adjusted min-sum decoder for 5G LDPC codes: Algorithm and implementation,” IEEE Trans. Circuits Syst. I, 2024, early access.
+[14] C.-Y. Lin, L.-W. Liu, Y.-C. Liao, and H.-C. Chang, “A 33.2 Gbps/iter. reconfigurable LDPC decoder fully compliant with 5G NR applications,” in Proc. IEEE Int. Symp. Circuits and Syst. (ISCAS), May 2021.
+[15] A. Elkelesh, M. Ebada, S. Cammerer, L. Schmalen, and S. ten Brink, “Decoder-in-the-loop: Genetic optimization-based LDPC code design,” IEEE Access, vol. 7, pp. 141 161–141 170, 2019.
+[16] Y. Liu, M. Jiang, and Y. Zhang, “A GenAlg optimization of lengthscalable QC-LDPC codes,” in Proc. Int. Conf. Comput. and Commun. (ICCC), Dec. 2021.
+[17] S. Myung, K. Yang, and Y. Kim, “Lifting methods for quasi-cyclic LDPC codes,” IEEE Commun. Lett., vol. 10, no. 6, pp. 489–491, Jun. 2006.
+[18] S.-N. Hong, H.-G. Joo, and D.-J. Shin, “Optimal puncturing of block-type LDPC codes and their fast convergence decoding,” in Proc. IEEE Int. Symp. Inf. Theory (ISIT), Jul. 2006.
+[19] J. Ha, J. Kim, and S. W. McLaughlin, “Rate-compatible puncturing of low-density parity-check codes,” IEEE Trans. Inf. Theory, vol. 50, no. 11, pp. 2824–2836, Nov. 2004.
+[20] J. Liu and R. C. de Lamare, “Rate-compatible LDPC codes with short block lengths based on puncturing and extension techniques,” AEU - Int. J. Electron. and Commun., vol. 69, no. 11, pp. 1582–1589, Nov. 2015.
+[21] R. Wiesmayr, G. Marti, C. Dick, H. Song, and C. Studer, “Bit error and block error rate training for ML-assisted communication,” in Proc. IEEE Int. Conf. Acoust., Speech, Signal Process. (ICASSP), Jun. 2023.
+[22] J. Hoydis, S. Cammerer, F. Ait Aoudia, A. Vem, N. Binder, G. Marcus, and A. Keller, “Sionna: An open-source library for next-generation physical layer research,” arXiv:2203.11854, Mar. 2022.
+
+794
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:05:19 UTC from IEEE Xplore. Restrictions apply.
+
+

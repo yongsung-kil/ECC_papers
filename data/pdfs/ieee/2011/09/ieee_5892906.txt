@@ -1,0 +1,629 @@
+IEEE JOURNAL OF SELECTED TOPICS IN APPLIED EARTH OBSERVATIONS AND REMOTE SENSING, VOL. 4, NO. 3, SEPTEMBER 2011
+
+653
+
+Accelerating Regular LDPC Code Decoders on GPUs
+Cheng-Chun Chang, Member, IEEE, Yang-Lang Chang, Senior Member, IEEE, Min-Yu Huang, and Bormin Huang
+
+Abstract—Modern active and passive satellite and airborne sensors with higher temporal, spectral and spatial resolutions for Earth remote sensing result in a significant increase in data volume. This poses a challenge for data transmission over error-prone wireless links to a ground receiving station. Low-density parity-check (LDPC) codes have been adopted in modern communication systems for robust error correction. Demands for LDPC decoders at a ground receiving station for efficient and flexible data communication links have inspired the usage of a cost-effective high-performance computing device. In this paper we propose a graphic-processing-unit (GPU)-based regular LDPC decoders with the log sum-product iterative decoding algorithm (log-SPA). The GPU code was written to run NVIDIA GPUs using the compute unified device architecture (CUDA) language with a novel implementation of asynchronous data transfer for LDPC decoding. Experimental results showed that the proposed GPU-based high-throughput regular LDPC decoder achieved a significant 271x speedup compared to its CPU-based single-threaded counterpart written in the C language.
+Index Terms—Compute unified device architecture (CUDA), graphic processing unit (GPU), log sum-product algorithm (log-SPA), low-density parity-check (LDPC), regular LDPC, remote sensing, satellite communication links.
+I. INTRODUCTION
+C ONTEMPORARY hyperspectral and ultraspectral sensors have received considerable interests in recent years due to their enormous data volumes collected with hundreds or even thousands of spectral bands for more abundant information in Earth remote sensing applications. However, it is more challenging to transmit the enormous amount of data over space-borne or airborne error-prone wireless links to a ground receiving station. Low-density parity-check (LDPC) codes are error-robust and have been adopted in modern communication systems, e.g., digital video broadcasting – satellite – second generation (DVB-S2) standard ratified by European telecommunications standards institute (ETSI) [1]. LDPC codes were originally devised by Gallager in 1960 [2], and then long forgotten. It was rediscovered by Berrou et al. in 1993 in the form of turbo codes [3], and independently rediscovered by Mackay
+Manuscript received August 31, 2010; revised January 24, 2011; accepted March 10, 2011. Date of publication June 16, 2011; date of current version August 26, 2011. This work was supported by the National Science Council, Taiwan, under Grants NSC 99-2116-M-027-003 and NSC 98-2218-E-027-016MY3.
+C. C. Chang is with the Department of Electrical Engineering, National Taipei University of Technology, Taipei 10608, Taiwan.
+Y. L. Chang is with the Department of Electrical Engineering, National Taipei University of Technology, Taipei 10608, Taiwan (corresponding author, e-mail: ylchang@ntut.edu.tw).
+M. Y. Huang is with the Department of Electrical Engineering, National Taipei University of Technology, Taipei 10608, Taiwan.
+B. Huang is with the Space Science and Engineering Center, University of Wisconsin-Madison, Madison, WI 53706 USA.
+Digital Object Identifier 10.1109/JSTARS.2011.2142295
+
+et al. in the mid 90’s in the form close to Gallager’s original construction [4]. LDPC codes have attracted much attention due to their superior error correction capability [5]–[9]. LDPC codes have been shown to achieve near the Shannon’s channel capacity limit with linear encoding and decoding computational complexity [10], [11]. Furthermore, the LDPC decoding algorithm is inherently parallel and hence it eases the development of high-throughput LDPC decoders using a parallel computing system.
+LDPC codes have been also promoted for reliable transmission of most current communication systems such as WiMAX (IEEE 802.16e), WI-FI (IEEE 802.11n) and 10GBASE-T (IEEE 802.3an) for the high data rate transmission. With the superior error correction capability of LDPC codes, higher order modulation schemes can be combined with LDPC codes, and hence deliver a more efficient transmission. In the DVB-S2 standard, for example, an inner LDPC code is combined with high order modulation schemes such as 32 Amplitude Phase Shift Keying (APSK) for satellite transmission signals. Accordingly, the new DVB-S2 standard is able to prove capacity gain of around 30% over the existing DVB-S standard [7], [8].
+For practical consideration of computational complexity and error-correction performance, LDPC decoders can use iterative message-passing (MP) algorithms. Several FPGA implementations of LDPC decoders have been reported [12]–[15]. To design LDPC decoders that are suitable to ASIC/FPGA implementation, a fundamental basis is to introduce some reasonable constraints in the code design and then exploiting regularities in the structure of the parity check matrix. As pointed out in [5], such approach is efficient when the required flexibility is limited to a set of pre-defined codes, but it tends to be inadequate when the support to generally defined codes is required. Furthermore, although the constrained LDPC codes can achieve the gain performance (i.e., threshold values at the waterfall region) as good as freely-designed LDPC codes, the regularity introduces a shorter cycle/girth to practical iterative decoding algorithms, and hence results in a higher error-floor. A design of LDPC codes for FPGA implementation with low error floors was reported [5], with the throughput of 40 Mbps for regular 5/8 and 7/8 LDPC codes using Xilinx Virtex-II XC2V8000 operating at 100 Mhz. Even if the hardware-oriented LDPC codes with short cycle/girth may be avoided by careful code design, however, as the service become diverse, high throughput LDPC decoders that can operate at flexible code rate, flexible code length, and flexible code design parameters are desirable. The demands of LDPC decoders for low-cost, reliable and flexible satellite communication links have also inspired the usage of high-performance computing devices.
+Graphic processing unit (GPU) is an attractive alternative to FPGA to achieve large-scale and high-performance parallel
+
+1939-1404/$26.00 © 2011 IEEE Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:05:27 UTC from IEEE Xplore. Restrictions apply.
+
+654
+
+IEEE JOURNAL OF SELECTED TOPICS IN APPLIED EARTH OBSERVATIONS AND REMOTE SENSING, VOL. 4, NO. 3, SEPTEMBER 2011
+
+computing. High-end GPUs consist of hundreds of cores
+
+operating at a lower clock rate, compared to conventional
+
+central processing units (CPUs). GPU can take advantages of
+
+massively parallel processing to speed up the computation [16].
+
+In recent years NVIDIA has provided compute unified device
+
+architecture (CUDA) as an efficient parallel programming
+
+language for GPU implementation. Open computing language
+
+H (OpenCL) is another open standard for cross-platform GPU
+programming maintained by the Khronos group. In [17], perfor- Fig. 1. (a) An matrix example and (b) its corresponding Tanner graph.
+
+mance of CUDA and OpenCL were compared using complex,
+
+near-identical kernels. In their tests, CUDA was consistently
+
+faster than OpenCL, when both implementations ran nearly matrix corresponds to a parity check, whereas each check
+
+identical code. Therefore, we used CUDA for our GPU based node in the Tanner graph corresponds to a particular set of the
+
+implementation on a Linux operating system. A GPU-based parity-check constraints. Tanner graph is often used for repre-
+
+implementation of LDPC decoders was recently introduced in senting the connections between CNs and BNs. The elements
+
+the literature [18] with a throughput of 109.1 Mbps at code length of 20,000-bit with the minimum-sum decoding algorithm. It uses 8-bit precision to cut the computational time on the GPU and has a better error-correction ability as compared to VLSI-based LDPC decoders with 5 or 6-bit precision.
+In this paper we propose a new GPU-based LDPC decoder with 32-bit single-precision floating-point architecture based on the log-sum-product iterative decoding algorithm (log-SPA). We used asynchronous data transfer (ADT) method [19] to boost the speedup. Compared to the method [18], which is a synchronous data transfer (SDT) implementation, we showed an additional speedup gain from ADT over SDT. Encouraging experimental results showed that the proposed GPU-based LDPC decoder could achieve a significant speedup compared to its CPU-based single-threaded counterpart written in the C language. The proposed GPU-based implementation can be used as an effective platform for LDPC decoding of different structures and design parameters.
+The rest of this paper is organized as follows. Section II briefly introduces LDPC codes and the log-SPA decoding algorithm. Section III presents our GPU-based LDPC decoder implementation. Experimental results are shown in Section IV. Finally, we draw our conclusion in Section V.
+
+of 1’s in the matrix stand for the connections between CNs
+
+and BNs. In the example, we see each CN has four connections
+
+with BNs (
+
+), and each BN has two connections with CNs
+
+(
+
+).
+
+In a decoding procedure, BNs are associated to a codeword
+
+while CNs are used to check the integrity of the codeword. Typ-
+
+ically, iterative MP algorithm is exploited to decode the LDPC
+
+codes. In the decoding process, messages are exchanged along
+
+the graph edges. If an LDPC code is well designed, the mes-
+
+sages will converge to the correct bits after a finite number of
+
+iterations [5]. However, proper operations of the iterative MP al-
+
+gorithms rely on the assumption that neighbors of a node in the
+
+Tanner graph are conditionally independent. In our example, it
+
+can be found that the connection cycle (BN1, CN1, BN3, CN2
+
+and BN1) shows a close loop. The length of the loop is called
+
+cycle, and the length of the shortest cycle is called girth. If there
+
+are too many short cycles in the graph, the MP algorithms will
+
+converge slowly or even return wrong decoded results. In gen-
+
+eral, the longer the girth, the lower the possible bit error rate
+
+when practical iterative algorithms are applied.
+
+Hence, the Tanner graph girth is critically important in the
+
+construction of LDPC codes, and less imposed constraints from
+
+hardware consideration support more flexible design of high
+
+performance LDPC codes.
+
+It should be notice that even though the parity-check matrices
+
+II. LDPC CODES AND THE LOG-SPA DECODING ALGORITHM
+
+of LDPC codes are sparse, in general the generator matrix needed for encoding may be not necessary. A non-sparse
+
+An LDPC code is a linear block code with a sparse parity- matrix is the result from that is derived using the clas-
+
+check matrix , whose elements are composed of few ones, sical Gaussian elimination method. Hence, conventionally the
+
+and zeros elsewhere. The number of nonzero elements in a row derived non-sparse matrix require encoding complexity of
+
+is defined as the row weight , and that in a column is defined
+
+. Efforts have been made to reduce the encoding com-
+
+as the column weight . An LDPC code is called regular if , plexity and make a linear time encoding of LDPC codes pos-
+
+as well as , stays the same for all columns and rows. Though sible. Example approaches include: 1. designing a particular
+
+irregularity can provide performance improvement in term of structure for the matrix or utilizing the sparseness of the
+
+reliable decoding, regularity could lead to simplified modular matrix to circumvent the Gaussian elimination process, and 2.
+
+implementation in practical realization. In this work, the regular encoding LDPC codes iteratively on their Tanner graphs by bor-
+
+version of LDPC codes is investigated.
+
+rowing the decoder architecture. Recently, Lu and Moura also
+
+The notion of Tanner graph is often used to represent LDPC developed a linear complexity encoding method for arbitrary
+
+codes. As shown in Fig. 1, a Tanner graph is a bipartite graph LDPC codes by using a graph-based encoding method, namely
+
+with bit nodes (BNs) on one side and check nodes (CNs) on the Label-and-decide [10].
+
+other side. For example, a regular LDPC matrix of 3 rows The log-SPA is used as the decoding algorithm in our GPU-
+
+(related to CNs) by 6 columns (related to BNs) and its corre- based implementation. The 5-step algorithm is briefly illustrated
+
+sponding Tanner graph are shown in Fig. 1. Each row of the as follows [11], with an illustrative diagram in Fig. 2.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:05:27 UTC from IEEE Xplore. Restrictions apply.
+
+CHANG et al.: ACCELERATING REGULAR LDPC CODE DECODERS ON GPUS
+
+655
+
+Fig. 2. The LDPC decoding procedure. (a) Horizontal Procedure. (b) Vertical Procedure.
+
+Step 1: (Initialization) As messages are received, the initial Step 4: (Iterations) Go to Step 2 until . Then the poste-
+
+log likelihood ratio (LLR) is computed by
+
+riori log likelihood ratio can be obtained by
+
+(1)
+
+(4)
+
+where
+
+and
+
+are the prior
+
+probabilities of zero and one for the th BN,
+
+.
+
+Step 2: (Horizontal procedure) For the th iteration,
+
+,
+
+is defined as
+
+Step 5: (Hard decision) Finally, the decoded codeword is determined via hard decision by
+if (5)
+if
+
+III. GPU-BASED LDPC DECODERS
+
+For serial architecture of LDPC decoding, the decoding
+
+operations at BNs and CNs of the Tanner graph are performed
+
+(2) sequentially. This architecture has the advantage of a min-
+
+imal number of modules, which require the least computing
+
+where and are the indices for
+
+.
+
+is the sign of
+
+and is the amplitude
+
+of
+
+.
+
+, where is the
+
+number of edges at the th CN. We note
+
+for . As illustrated in Fig. 2(a), the
+
+for BN1 is computed based on the message
+
+from BN2, BN3 and BN4. Similarly,
+
+for
+
+BN2, BN3, BN4 can be obtained, respectively, in the
+
+same manner.
+
+Step 3: (Vertical procedure) For the th iteration,
+
+is
+
+defined as
+
+resources. However it has a low throughput as compared to LDPC decoders with parallel architecture, which perform the decoding operation simultaneously among CNs or BNs. In response, parallel LDPC decoders implemented by FPGA, in which all of BNs and CNs modules are connected through a Tanner graph interconnection network, are therefore introduced to mitigate the drawbacks of serial LDPC decoding.
+Regardless that this hardware-oriented LDPC decoding achieves high parallelism and high throughputs [20], it is not scalable to LDPC codes with large code length due to the heavy burden of interconnect wires [21]. Accordingly, in [22] Kim et al. proposed a unified BN/CN functional module (B/CFM)
+
+of DVB-S2 standard to perform the decoding operations in
+
+(3) BN and CN modules by interlacing each other sequentially for maximal sharing of the hardware resource and thus increasing
+
+the throughput capacity.
+
+where and are the indices for
+
+. For flexible implementations of LDPC decoders among dif-
+
+, where is the number of ferent code lengths, code rates, and code parameters (e.g.,
+
+edges at the th BN. As illustrated in Fig. 2(b), the and ), we developed in this paper a parallel LDPC decoder to
+
+for CN1 is calculated based on the message run on GPU platforms. A general procedure for GPU-based im-
+
+from CN2. Similarly,
+
+for CN2 can be ob- plementation of the LDPC decoder is illustrated in Fig. 3. The
+
+tained in the same manner.
+
+block in white stands for the works done in CPU and the block
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:05:27 UTC from IEEE Xplore. Restrictions apply.
+
+656
+
+IEEE JOURNAL OF SELECTED TOPICS IN APPLIED EARTH OBSERVATIONS AND REMOTE SENSING, VOL. 4, NO. 3, SEPTEMBER 2011
+
+H TABLE I
+BLOCK/THREAD ASSIGNMENTS OF MATRIX CORRESPONDING TO THE EXAMPLE OF FIG. 1
+
+possible value of the multiples of the lowest common multiple (LCM) between the number of edges per row and the number of edges per column [16]. As a result, the number of threads assigned to a block can be determined by
+
+(6)
+
+where is an integer which is chosen such that reaches to the
+
+maximum limitation supported by the GPU architectures. In the
+
+example of Fig. 1, is equal to 4 and is equal to 2, can be
+
+specified as 4, assuming
+
+.
+
+All the different threads of the horizontal or vertical proce-
+
+dures can be executed in the same GPU core simultaneously,
+
+while the horizontal and vertical procedures are performed iter-
+
+atively. Therefore,
+
+and
+
+can be computed inde-
+
+pendently by using threads in GPU at the same time. As a result,
+
+Fig. 3. A general procedure of the GPU-based LDPC code decoding.
+
+the proposed GPU implementation can be performed in parallel.
+
+In general, it should be noted that the elements of 1’s in the
+
+matrix are associated with the threads in GPU. With this regard, in gray stands for the works done in GPU. First, GPU is initial- the number of blocks, namely , can be obtained by ized. The encoded bit stream transmitted through communica-
+
+tion channels are then transferred from the CPU host to the GPU
+
+(7)
+
+device. The iterative procedures between CNs and BNs in GPU
+
+are next performed. The decoded bit stream is then determined where is the number of edges in the matrix. In the example
+
+by hard decision. Finally, the decoded bit stream is transferred of Fig. 1, equals to 12, and hence the number of blocks needed
+
+from the GPU device back to the CPU host.
+
+is 3 (
+
+). An example of the block/thread assignment is
+
+For GPU implementation, we note that a block is needed to be shown in Table I, in which three blocks are declared, each of
+
+set as a fundamental computing unit for the operation of GPU. which is assigned four threads.
+
+The number of threads assigned to a block should be carefully To boost the data throughput of LDPC decoding, an ADT
+
+selected in order to obtain efficient parallel operation and maxi- was implemented in the proposed method. ADT was adopted
+
+mize the speedup. We also note that all the BNs associated with in [19] for developing a high-performance GPU-based radiative
+
+a CN have to be assigned in the same block because different transfer model for hyperspectral sensors. The main advantage
+
+blocks may terminate the computations at different time. Oth- of ADT is that GPU can execute the kernel while transferring
+
+erwise, it will result in troubles for data accessing between dif- data between the CPU host and the GPU device. The ADT ca-
+
+ferent blocks due to lack of synchronization. Consequently it pability can maximize the computing efficiency of the applica-
+
+is important to find an appropriate number of threads within an tions with heavy data-transfer requirements by transferring data
+
+individual block to optimize the performance of GPU-based im- to local memory before it is needed [16]. Fig. 4 shows the exe-
+
+plementation.
+
+cution timeline comparison between ADT vs. the conventional
+
+According to the log-SPA algorithm, the computations of the approach, namely SDT. The white blocks represent data sent
+
+in (2) and
+
+in (3) are operated iteratively. In (DS) from host to device, the light gray blocks stand for GPU
+
+our example as illustrated in Fig. 1, each CN is related to four kernel execution (GKE), and the dark gray blocks represent data
+
+BNs for the horizontal procedure, and each BN is related to received (DR) from device to host.
+
+two CNs for the vertical procedure. The computation of
+
+, As illustrated in Fig. 4, the advantage of ADT is that the
+
+,
+
+and
+
+can be assigned to four different execution of DS and DR can be overlapping with the execu-
+
+horizontal threads. The computation of
+
+and
+
+can tion of GKE. An SDT example of three DS/GKE/DR cycles is
+
+be assigned to two different vertical threads. Here we define a shown in Fig. 4. In this case, the execution time for the SDT
+
+as the number of threads used in one block. It is the largest is
+
+, whereas the ADT only
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:05:27 UTC from IEEE Xplore. Restrictions apply.
+
+CHANG et al.: ACCELERATING REGULAR LDPC CODE DECODERS ON GPUS
+
+657
+
+Fig. 4. The different execution timeline comparisons between SDT and ADT.
+TABLE II EXPERIMENTAL SETUP
+
+H TABLE III MATRICES USED IN THE EXPERIMENTS
+
+needs
+
+instead. Obviously, ADT can
+
+save two
+
+cycles and outperform SDT. Given that
+
+in our example, the achievable gain of
+
+ADT over SDT can be expressed as follows:
+
+TABLE IV THE EXECUTION TIME COMPARISON AMONG VARIOUS CONFIGURATIONS
+
+(8)
+
+where is the number of codewords. We see that the gain will
+
+approach
+
+when is suffi-
+
+ciently large. When the total cycle time of DS and DR is the
+
+same as the cycle time of GKE (i.e.,
+
+),
+
+the ADT achieves the maximal gain of 2 over the SDT.
+
+IV. EXPERIMENTAL RESULTS
+
+The experimental setup is shown in Table II. The proposed
+
+GPU-based LDPC decoder was developed to run on NVIDIA
+
+Tesla C1060 GPU with 240 cores via CUDA, and was compared with its CPU code counterpart which is a serial implementation written in C to run on one Intel Xeon 5504 core. The C code used for the CPU approach is essentially identical to the code used in C & CUDA for the GPU approach.
+Details of the three regular matrices [23], [24] used in the experiments are listed in Table III. The execution time comparison among various configurations (numbers of iterations, matrix sizes) is shown in Table IV. The original CPU-based LDPC decoder with double precision was compiled using the -O2 compiler option.
+The speedups of the proposed GPU-based LDPC over its CPU-based single-threaded version for various matrix sizes
+
+its original CPU-based double-precision LDPC decoder takes 490.504 ms. This corresponds to 271 speedup. When the size of the matrix increases, the required decoding time also increases. However, more speedups can be achieved when the GPU-based LDPC decoding is applied to a larger matrix. Hence, the GPU approach can also compensate the increasing demands of the LDPC decoding on longer codeword length. To further investigate the ADT gain, a speedup comparison between ADT and SDT is illustrated in Table V. The comparison is applied to the matrix A, B, and C with 10 iterations. The corresponding TDS, TGKE, and TDR of both ADT and SDT execution time in ms are listed.
+
+and numbers of iterations are also shown in Fig. 5. The larger the matrix size, the higher the obtained speedup. For a matrix
+
+V. CONCLUSION
+
+size of 4,000 by 8,000 (matrix C) with 10 iterations, the execu- LDPC has been promoted for robust transmission of current
+
+tion time of LDPC decoding on the GPU is 1.808 ms whereas communication systems such as DVB-S2, WiMAX (IEEE
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:05:27 UTC from IEEE Xplore. Restrictions apply.
+
+658
+
+IEEE JOURNAL OF SELECTED TOPICS IN APPLIED EARTH OBSERVATIONS AND REMOTE SENSING, VOL. 4, NO. 3, SEPTEMBER 2011
+
+of NVIDIA Fermi GPU, as well as developing the GPU-based irregular LDPC decoders.
+
+REFERENCES
+
+H Fig. 5. The comparison of speedups of the proposed GPU-based LDPC over
+its CPU single-threaded version for three matrix sizes and various numbers of iterations.
+TABLE V THE EXECUTION TIME COMPARISON AMONG VARIOUS CONFIGURATIONS
+802.16e), WI-FI (IEEE 802.11n) and 10GBASE-T (IEEE 802.3an). LDPC decoder can use the iterative message-passing algorithms to lower computational complexity while achieving superior error-correction performance. LDPC codes have been shown possible to achieve near the Shannon’s channel capacity limit with linear encoding and decoding computational complexity. Due to the high data rate transmission requirement in a wide variety of current and future wireless communication systems, LDPC decoders with high throughput and flexible implementation are desired in ground receiving stations for various satellite communication links. The LDPC decoding algorithm is inherently parallel and hence it is suitable for GPU massively parallel implementation. GPU is an economic and efficient alternative to FPGA for LDPC decoding implementation. In this paper, a new GPU-based regular LDPC decoder with asynchronous data transfer is proposed. The current version runs on 32-bit single precision with the log-sum-product iterative decoding algorithm. For a matrix size of 4,000 by 8,000 with 10 iterations, the proposed regular LDPC decoder has 1.808 ms execution time on Tesla C1060 GPU, whereas its original CPU-based LDPC decoder takes 490.504 ms. This corresponds to 271 speedup. The proposed GPU-based implementation can be used as an effective platform for regular LDPC decoding of remote sensing data with different LDPC code design parameters. Future works include developing a double-precision LDPC decoder that takes advantage of the superior double-precision floating-point arithmetic architecture
+
+[1] Digital Video Broadcasting (DVB), Second Generation Framing Struc-
+
+ture, Channel Coding and Modulation Systems for Broadcasting, Inter-
+
+active Services, News Gathering and Other Broadband Satellite Appli-
+
+cations (DVB-S2). European Telecommunications Standards Institute
+
+(ETSI), EN 30230, REN/JTC-DVB-238.
+
+[2] R. G. Gallager, “Low density parity check codes,” IRE Trans. Inf.
+
+Theory, vol. IT:8, pp. 21–28, 1962.
+
+[3] C. Berrou, A. Glavieux, and P. Thitimajshima, “Near Shannon limit
+
+error correcting coding and decoding : Turbo-codes,” in Proc. IEEE
+
+Int. Commun. Conf., May 1993, pp. 1064–1070.
+
+[4] D. J. C. Mackay, “Near Shannon limit performance of low density
+
+parity check codes,” Electron. Lett., vol. 33, pp. 457–458, 1997.
+
+[5] L. Yang, H. Liu, and C.-J. R. Shi, “Code construction and FPGA im-
+
+plementation of a low-error-floor multi-rate low-density parity-check
+
+code decoder,” IEEE Trans. Circuits Syst., vol. 53, no. 4, pp. 892–904,
+
+Apr. 2006.
+
+[6] G. Masera, F. Quaglio, and F. Vacca, “Implementation of a flexible
+
+LDPC decoder,” IEEE Trans. Circuits Syst., vol. 54, no. 6, pp. 542–546,
+
+Jun. 2007.
+
+[7] A. Hashimoto and Y. Suzuki, “A new transmission system for the ad-
+
+vanced satellite broadcast,” IEEE Trans. Consumer Electron., vol. 54,
+
+no. 2, pp. 353–360, May 2008.
+
+[8] S. Papaharalabos, M. Papaleo, P. T. Mathiopoulos, M. Neri, A. Vanelli-
+
+Coralli, and G. E. Corazza, “DVB-S2 LDPC decoding using robust
+
+check node update approximations,” IEEE Trans. Broadcast., vol. 54,
+
+no. 1, pp. 120–126, Mar. 2008.
+
+[9] S.-M. Kim, C.-S. Park, and S.-Y. Hwang, “A novel partially parallel
+
+architecture for high-throughput LDPC decoder for DVB-S2,” IEEE
+
+Trans. Consumer Electron., vol. 56, no. 2, pp. 820–825, May 2010.
+
+[10] J. Lu and J. M. F. Moura, “Linear time encoding of LDPC codes,” IEEE
+
+Trans. Inf. Theory, vol. 56, no. 1, pp. 233–249, Jan. 2010.
+
+[11] T. K. Moon, Error Correction Coding Mathematical Methods. New
+
+York: Wiley, pp. 634–379.
+
+[12] C. H. Liu, S. W. Yen, C. L. Yen, H. C. Chang, C. Y. Chang, Y. S. Hsu,
+
+and S. J. Hsu, “An LDPC decoder chip based on self-routing network
+
+for IEEE 802.16e applications,” IEEE J. Solid-State Circuits, vol. 43,
+
+no. 3, pp. 684–694, Mar. 2008.
+
+[13] F. Kienle, T. Brack, and N. Brack, “A synthesizable IP Core for
+
+WIMAX 802.16E LDPC code decoding,” in Proc. IEEE 17th Int.
+
+Symp. Personal, Indoor and Mobile Radio Communications, 2006, pp.
+
+1–5.
+
+[14] S. Seo, T. Mudge, Y. Zhu, and C. Chakrabarti, “Design and analysis of
+
+LDPC decoders for software defined radio,” in Proc. IEEE Workshop
+
+on Signal Processing Systems, 2007, pp. 210–215.
+
+[15] X. Y. Shih, C. Z. Zhan, C. H. Lin, and A. Y. Wu, “An 8.29 mm2 52
+
+mW multi-mode LDPC decoder design for mobile WiMAX system in
+0.13 m CMOS process,” IEEE J. Solid-State Circuits, vol. 43, no. 3,
+
+pp. 672–683, 2008.
+
+[16] “CUDA Programming Guide v3.0,” NVIDIA, 2010.
+
+[17] K. Karimi, N. G. Dickson, and F. Hamze, “A Performance Compar-
+
+ison of CUDA and OpenCL,” [Online]. Available: http://arXiv:1005.
+
+2581v2
+
+[18] G. Falcao, V. Silva, and L. Sousa, “How GPUs can outperform ASICs
+
+for fast LDPC decoding,” in Proc. 23rd Int. Conf. Supercomputing,
+
+2009, pp. 390–399.
+
+[19] B. Huang, J. Mielikainen, H. Oh, and H.-L. Huang, “Development of
+
+a GPU-based high-performance radiative transfer model for the in-
+
+frared atmospheric sounding interferometer (IASI),” J. Comput. Phys.,
+
+Doi:10.1016/j.jcp.2010.09.011, to be published.
+
+[20] A. J. Blanksby and C. J. Howland, “A 690-mW 1-Gb/s 1024-b, rate-1/2
+
+low-density parity-check code decoder,” IEEE J. Solid-State Circuits,
+
+vol. 37, no. 3, pp. 404–412, Mar. 2002.
+
+[21] L. Yang, H. Liu, and C.-J. R. Shi, “Code construction and FPGA imple-
+
+mentation of a low-error-floor multi-rate low-density parity-check code
+
+decoder,” IEEE Trans. Circuits Syst. I, vol. 53, no. 4, pp. 892–904, Apr.
+
+2006.
+
+[22] S.-M. Kim, C.-S. Park, and S.-Y. Hwang, “A novel partially parallel
+
+architecture for high-throughput LDPC Decoder for DVB-S2,” IEEE
+
+Trans. Consumer Electron., vol. 56, no. 2, pp. 820–825, 2010.
+
+[23] D. J. C. Mackay, LDPC Database. [Online]. Available: http://www.in-
+
+ference.phy.cam.ac.uk/mackay/codes/data.html
+
+GF(2 m) [24] I. Kozintsev, MATLAB programs for encoding and decoding of LDPC
+
+codes over
+
+. [Online]. Available: http://www.kozintsev.net/
+
+soft.html
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:05:27 UTC from IEEE Xplore. Restrictions apply.
+
+CHANG et al.: ACCELERATING REGULAR LDPC CODE DECODERS ON GPUS
+
+659
+
+Cheng-Chun Chang (S’06–M’09) received the B.Sc. degree from National Tsing-Hua University, Hsinchu, Taiwan, in 2001, the M.Sc. degree from National Taiwan University, Taipei, Taiwan, in 2003, and the Ph.D. degree from University of Pittsburgh, Pittsburgh, PA, in 2008, all in electrical engineering. During 2005, he was a Postgraduate Student with The Johns Hopkins University, Baltimore, MD.
+He was a Principal Engineer with NanoLambda during 2009, where he was in charge of algorithm development for applications of nano-optical-filterarray spectrum sensors. Since August 2009, he has been an Assistant Professor with the Department of Electrical Engineering, National Taipei University of Technology, Taipei, Taiwan. His current research interests include general area of digital signal processing, wireless communications, and the application of signal processing techniques to optical and biomedical applications. Dr. Chang is a member of IEEE and OSA.
+Yang-Lang Chang (M’05–SM’08) received the B.S. degree in electrical engineering from Chung Yuan Christian University, Taiwan, in 1987, the M.S. degree in computer engineering from Syracuse University, Syracuse, NY, in 1993, and the Ph.D. degree in computer science and information engineering from National Central University, Taiwan, in 2003.
+He started his career with NDC IBM Taiwan as a Hardware Design Engineer before joining ALCATEL as a Software Development Engineer, and presently is an Associate Professor in the Department of Electrical Engineering, National Taipei University of Technology. His research interests are in remote sensing, high performance computing and hyperspectral image analysis. Dr. Chang is a Senior Member of IEEE, a Member of SPIE, Phi Tau Phi Scholastic Honor Society, the Chinese Society of Photogrammetry and Remote Sensing, and the Chinese Society of Image Processing and Pattern Recognition. He has been a Conference Program Committee member and Session Chair for several international conferences. He is a member of the Editorial Advisory Board of Open Remote Sensing Journal. He served as Guest Editor for the special issue on High Performance Computing in Earth Observation and Remote Sensing in the IEEE JOURNAL OF SELECTED TOPICS IN APPLIED EARTH OBSERVATIONS AND REMOTE SENSING (JSTARS). Currently, he also serves as a General Secretary of the Taipei Chapter of the IEEE Geoscience and Remote Sensing Society. He is the recipient of the Best Reviewer Award of the IEEE JSTARS in 2010.
+
+Min-Yu Huang received the B.S. degree in electrical engineering and the M.S. degree in computer engineering from the National Taipei University of Technology, Taiwan, in 2008 and 2010, respectively. He is currently pursuing the Ph.D. degree at the same university.
+His research interests include remote sensing, high performance computing and hyperspectral image analysis.
+Mr. Huang is the recipient of 2010 Best Thesis Award recognized by Taipei Chapter of IEEE Geoscience and Remote Sensing Society.
+Bormin Huang received the M.S.E. degree in aerospace engineering from the University of Michigan, Ann Arbor, and the Ph.D. degree in the area of satellite remote sensing from the University of Wisconsin-Madison.
+He was with NASA Langley Research Center during 1998–2001 for the NASA New Millennium Program’s Geosynchronous Imaging Fourier Transform Spectrometer (GIFTS). He is currently a research scientist and principal investigator at the Space Science and Engineering Center, the University of Wisconsin-Madison, where he advises and supports both national and international MS and PhD students and visiting scientists. He also serves as the CTO of Hyper Sensing, LLC. He has authored or coauthored over 100 scientific and technical publications, including the book Satellite Data Compression, to be published by Springer in 2011. He was the Principal Investigator of the NOAA-funded satellite data compression research project for the Hyperspectral Environmental Suite (HES), the next-generation operational geostationary sounder. This project led to a 2006 NOAA bronze medal, the highest honor award that can be granted by the Under Secretary of Commerce for Oceans and Atmosphere. He is currently the Principal Investigator of several U.S. federal projects related to high-performance computing in geoscience and remote sensing. He has broad interest and experience in remote sensing science and technology, including satellite data compression and communications, remote sensing image processing, remote sensing forward modeling and inverse problems, and high-performance computing in remote sensing. Dr. Huang has been serving as a Chair for the SPIE Conference on Satellite Data Compression, Communications, and Processing since 2005, and a Chair for the SPIE Europe Conference on High Performance Computing in Remote Sensing since 2011. He currently serves as an Associate Editor for the Journal of Applied Remote Sensing, the Guest Editor for the special section on High-Performance Computing in the Journal of Applied Remote Sensing, and a Guest Editor for the special issue on Advances in Compression of Optical Image Data from Space in the Journal of Electrical and Computer Engineering. He also served as the Guest Editor for the special section on Satellite Data Compression in the Journal of Applied Remote Sensing. He has been a Session Chair or Program Committee member for several IEEE or SPIE conferences.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:05:27 UTC from IEEE Xplore. Restrictions apply.
+
+

@@ -1,0 +1,514 @@
+2025 14th International ITG Conference on Systems, Communications and Coding (SCC) | 979-8-3315-2289-6/25/$31.00 ©2025 IEEE | DOI: 10.1109/IEEECONF62907.2025.10949122
+
+2025 14th International ITG Conference on Systems, Communications and Coding (SCC)
+On the Design and Performance of Machine Learning Based Error Correcting Decoders
+Yuncheng Yuan, Pe´ter Scheepers, Lydia Tasiou, Yunus Can Gu¨ltekin, Federico Corradi, Alex Alvarado
+
+Abstract—This paper analyzes the design and competitiveness of four neural network (NN) architectures recently proposed as decoders for forward error correction (FEC) codes. We first consider the so-called single-label neural network (SLNN) and the multi-label neural network (MLNN) decoders which have been reported to achieve near maximum likelihood (ML) performance. Here, we show analytically that SLNN and MLNN decoders can always achieve ML performance, regardless of the code dimensions—although at the cost of computational complexity— and no training is in fact required. We then turn our attention to two transformer-based decoders: the error correction code transformer (ECCT) and the cross-attention message passing transformer (CrossMPT). We compare their performance against traditional decoders, and show that ordered statistics decoding outperforms these transformer-based decoders. The results in this paper cast serious doubts on the application of NN-based FEC decoders in the short and medium blocklength regime.
+Index Terms—Forward Error Correction, Machine Learning, Maximum Likelihood, Transformers.
+I. INTRODUCTION
+F ORWARD error correction codes are critical for reliable data transmission over noisy channels [1]. Enhancing FEC decoders to achieve near-ML decoding performance with low complexity and latency has been the holy grail of coding theory for many years. ML decoders minimize the probability of decoding errors and thus, they are performance-wise optimal [2]. However, their complexity grows exponentially with increasing code blocklength, making them impractical [3].
+Traditional (suboptimal) FEC decoders are generally categorized into the classes of hard- and soft-decision decoders. Hard-decision decoders, e.g., the classic bit-flipping algorithms introduced by Gallager in [4] or bounded distance decoding for BCH codes, operate on binary data. While these methods are computationally simple, this simplicity often comes at the expense of relatively poor performance. On the other hand, soft-decision decoders, like the soft-input ML decoder or other near-ML decoders such as belief propagation (BP) for low-density parity-check codes, utilize probabilistic information about the received bits. Soft-decision decoders offer improved error correction performance at the cost of significantly higher complexity.
+BP is an iterative decoding method for FEC codes, updating its estimates of the code bits via message passing
+The authors are with the Department of Electrical Engineering, Eindhoven University of Technology, 5600 MB Eindhoven, The Netherlands (corresponding author e-mail: a.alvarado@tue.nl).
+This work has been partially funded by the Eurotech PhD program via the project CORTECH-4-PUF and by the Eindhoven Hendrik Casimir Institute (EHCI) Collaborative Projects Program.
+
+[5]. While very popular in practice, its complexity increases with the number of iterations and the blocklength. Another well-known soft-decision decoding method is ordered statistics decoding (OSD) [6], which leverages soft-decision information by focusing on the most reliable code bit positions. Though effective, both BP and OSD face challenges in terms of complexity and latency, particularly for large blocklengths.
+In [7], the concept of NN-based decoders is revisited, highlighting their potential for one-shot decoding and parallelizable architecture. Their results show that for the Polar (16, 8) code, the maximum a posteriori (MAP) performance is achieved, however, scaling to longer codes is prohibitive due to exponentially increasing training complexity. Moreover, NN-based decoders, such as SLNN [8]–[10] and MLNN [8], [10]–[14], have emerged as potential efficient alternatives to traditional decoders, achieving ML or near-ML performance without performing exhaustive searches [15]. These modelfree decoders [16] do not rely on the knowledge of the specific code structure and are non-iterative, making them interesting in practice. However, the decoders from [8]–[14] have not been extensively analyzed for different code types. Furthermore, their complexity compared to traditional decoders and their scalability to longer codes still remain unknown.
+Transformer-based decoders, including the error correction code transformer (ECCT) and the cross-attention message passing transformer (CrossMPT), have also recently been proposed [17], [18]. These decoders have shown improved decoding performance with respect to BP and BP-based neural decoders [19]. While the results reported in [17], [18] are promising, no comparisons exist against previously proposed NN-based decoders such as SLNN and MLNN. In addition, apart from some simple comparisons in [17], [18], no extensive comparisons against traditional decoders exist in the literature.
+In this paper, we first show analytically that SLNN and MLNN decoders achieve exact ML performance for a specific network architecture defined by the FEC code structure, without even any training. This is achieved by using weights that are simply the codewords in the codebook. We then expose that these network architectures are significantly less complex than the ones used in [9]–[11] to achieve near-ML performance. Next, we reproduce performance results of the ECCT and CrossMPT decoders from [17], [18] and compare them, for the first time, to OSD. We show that these transformer-based decoders are not competitive to OSD.
+The organization of the paper is as follows. Preliminaries are introduced in Section II. SLNN and MLNN decoders are
+
+979-8-3315-2289-6/25/$31.00 ©2025 IEEE Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:11:40 UTC from IEEE Xplore. Restrictions apply.
+
+2025 14th International ITG Conference on Systems, Communications and Coding (SCC)
+
+investigated in Sec. III. The performance and limitations of ECCT and CrossMPT are analyzed in Sec. IV. Conclusions and future prospects are given in Sec. V.
+
+II. PRELIMINARIES
+
+A. System Model and Maximum Likelihood Decoding The communication system under consideration includes
+three main components: the transmitter, the channel, and the receiver. The transmitter is a concatenation of an FEC encoder and a binary phase-shift keying (BPSK) mapper. The receiver consists of a soft-input FEC decoder. At the transmitter, the information bits b = (b1, . . . , bk) are encoded using an (n, k) linear block code into a codeword c = (c1, . . . , cn). Encoding is achieved through c = bG, where G is the k × n generator matrix of the code. The codebook C = {c(1), . . . , c(2k)} consists of the 2k possible codewords.
+After encoding, the code bits ci are mapped to BPSK symbols si ∈ {−1, 1} via si = 2ci − 1, for i = 1, . . . , n. The transmitted symbols s = (s1, . . . , sn) are sent over a binaryinput additive white Gaussian noise (BI-AWGN) channel. At the receiver, the real-valued noisy symbols r = s + w are observed, where w = (w1, . . . , wn) is an n-dimensional vector of independent and identically distributed (i.i.d.) noise samples wi, drawn from a zero-mean Gaussian distribution with variance σ2 = N0/2 where N0 is the power spectral density of noise. Throughout this paper, we report results as a function of Eb/N0, the so-called “bit SNR”, where the energy per information bit Eb = 1/(k/n) assuming si = ±1 are equally-likely. At the receiver, the transmitted codeword cˆ is estimated by applying a decoding algorithm to the received noisy symbols r.
+For any (n, k) linear block code whose codewords are transmitted with equal probability, the ML decoding rule is
+
+cˆ = argmax p(r|s),
+
+(1)
+
+c∈C
+
+where p(r|s) is the likelihood of receiving r when c was transmitted, and cˆ is the estimated codeword. For a memoryless channel, (1) can be rewritten as
+
+n
+
+cˆ = argmax log(p(ri|si)).
+
+(2)
+
+c∈C i=1
+
+For the BI-AWGN channel, the channel transition probability
+
+density function p(ri|si) is given by
+
+p(ri|si)
+
+=
+
+√ 1 exp 2πσ2
+
+−
+
+(ri
+
+− si)2 2σ2
+
+.
+
+(3)
+
+Substituting (3) into (2) gives
+
+cˆ = argmax
+c∈C
+
+n −2
+
+log
+
+(2πσ2)
+
+−
+
+1 2σ2
+
+n
+(ri − si)2
+
+i=1
+
+,
+
+(4)
+
+where the first term can be neglected as it does not depend
+
+on c, i.e., on s. Expanding the second term in (4) results in
+
+cˆ
+
+=
+
+argmax
+c∈C
+
+−
+
+1 2σ2
+
+n
+||r||22 − 2risi + ||s||22 ,
+i=1
+
+(5)
+
+where || · ||22 is the squared L2 norm. Since ||s||22 is constant for all c ∈ C and ||r||22 does not depend on c, they can both be ignored. Using the fact that si = 2ci − 1 in (5) and further neglecting the terms that do not depend on c, we can express the ML rule for the BI-AWGN channel as
+
+n
+
+n
+
+cˆ = argmax (2ci(j) − 1)ri = argmax c(ij)ri, (6)
+
+c(j)∈C i=1
+
+c(j)∈C i=1
+
+for j = 1, . . . , 2k where ci(j in the codebook C, and ri is
+
+) is the
+
+the ith bit of the jth codeword ith received noisy symbol in r.
+
+The ML decoder estimates the code bits based on real-valued
+
+channel outputs, i.e., it is a soft-input hard-output decoder.
+
+B. Ordered Statistics Decoding OSD is a soft-input decoding algorithm particularly well-
+suited for short and medium blocklengths. OSD sorts the vector r according to the permutation Φ1 based on the reliability values as
+
+Φ1(r) = r = (r1, . . . , rn) such that |r1| ≥ . . . ≥ |rn|. The permutation Φ1 is applied to the columns of G, denoted by G = Φ1(G), to obtain an equivalent matrix G with the corresponding (equivalent) code C . Then, the vector r is permuted by a second permutation Φ2, which is based on the so-called “most reliable basis”. This basis is determined as follows: starting from the first column of G , the first k linearly independent columns with the highest corresponding reliability values are found. The corresponding reliability of the i-th column of G refers to the value |ri|, 1 ≤ i ≤ n, and
+
+r = (r1 , . . . , rn) = Φ2(Φ1(r)), with |r1 | ≥ . . . ≥ |rk | ∧ |rk+1| ≥ . . . ≥ |rn|.
+Using row operations, G = Φ2(Φ1(G)) is brought into a systematic form. The first k coordinates act as an information stoet.geHnaerrda-tdeeaciscioodneswboarsdedr0oninrtAhe=e(qru1iv, a. l.e.n,trkco)daereCth.eLn ausstleyd, reverse permutations are applied to obtain a codeword cˆ in the original code: cˆ = Φ1−1(Φ−2 1(r0)). We refer to this method as OSD of order q = 0. For q > 0, test patterns are generated by adding error patterns of Hamming weight up to q to rA.
+III. NEURAL NETWORK DECODERS
+
+A. Single-Label Neural Network Decoder
+
+In [8]–[10], the decoding problem was formulated as a supervised single-label classification problem. The proposed SLNN decoder is a fully-connected network with N0 = n input neurons, one hidden layer with N1 neurons applying ReLU activation, and N2 = 2k output neurons using scaled softmax with scaling factor α = 1 to output a probability distribution over 2k possible codewords. The scaled softmax function is given by
+
+σ(xi) =
+
+exp (αxi)
+
+M j=1
+
+exp(αxj
+
+)
+
+,
+
+(7)
+
+where xi is the input to the i-th neuron, and M is the total number of neurons in the layer. The estimated transmitted
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:11:40 UTC from IEEE Xplore. Restrictions apply.
+
+2025 14th International ITG Conference on Systems, Communications and Coding (SCC)
+
+r1 r2 r3 r4 r5 r6 r7 r1 r2 r3 r4 r5 r6 r7
+0
+
+100 10−3
+
+FER BER
+
+Pre-FEC FER
+
+10−1 10−4
+
+Pre-FEC BER
+
+argmax cˆ
+
+argmax cˆ
+
+Fig. 1. (Left) SLNN decoder architecture SLNN 7-7-16 in [9], [10] for the Hamming (7, 4) code. (Right) SLNN architecture SLNN 7-16 proposed in this work (see Theorem 1), where the hidden layer is not present. The red edges in the right figure represent the codeword used in Example 3.
+
+codeword, i.e., the output neuron with the highest probability, is found by applying the argmax operation, see Fig. 1 (left).
+In this paper, the SLNN decoder is trained following the approach in [9], i.e., based on a dataset DSLNN that consists of pairs of r(j) ∈ Rn and x(j) ∈ {0, 1}2k for j = 1, 2, . . . , |DSLNN|. Here, r(j) is the jth noisy received codeword in the dataset and x(j) is the jth one-hot encoded label corresponding to the codeword in C that led to the reception of r(j). The dataset DSLNN is generated via uniform random sampling from the codebook and transmission at 0 dB SNR, which has been shown in [9] to generalize well across SNRs and achieve near-ML performance. The dataset is split into training and test (validation) sets. The accuracy is measured via the fraction of codewords correctly classified over the total number of codewords. Training continues until the complement of the accuracy, i.e., the error rate, is equal to the frame error rate (FER) found at 0 dB SNR using the ML decoder.
+Example 1 (SLNN for Hamming (7, 4)). The SLNN decoder architecture was implemented using PyTorch to train the SLNN decoder and to simulate the decoding performance via Monte Carlo simulations. An example of this architecture is shown in Fig. 1 (left) for the simple case of a Hamming (7, 4) code. The notation used here for SLNN indicates the number of neurons in each layer, e.g., SLNN 7-7-16 means an input layer with N0 = 7 neurons, a hidden layer with N1 = 7 neurons, and an output layer with N2 = 16 neurons. FER results are shown in Fig. 2 (left). For each SNR point, simulations were performed until at least 2000 frame errors were detected. These results show that SLNN with a single hidden layer can achieve ML performance, as long as enough neurons in the hidden layer are used. For the Hamming (7, 4) code, N1 = 5 is not enough. As shown in [9], [10], when N1 = n (N1 = 7 here), the ML performance is achieved.
+The following theorem is the first contribution of this paper, which shows that the hidden layer in the SLNN architecture is, in fact, not needed. ML performance can be always guaranteed for any (n, k) linear block code with an NN with N0 = n input neurons and N2 = 2k output neurons.
+Theorem 1. Let (n, k) be a linear block code, with codebook C containing 2k codewords. Consider a two-layer NN with n
+
+10−6 0
+
+ML
+2 4 6 8 10 Eb/N0 (dB)
+
+10−7 0
+
+ML
+2 4 6 8 10 Eb/N0 (dB)
+
+SLNN 7-5-16 [9], [10] SLNN 7-7-16 [9], [10] SLNN 7-16 (Theorem 1)
+
+MLNN 7-50-50-4 [10], [11] MLNN 7-16-4 (Theorem 2)
+
+Fig. 2. FER (left) and BER (right) vs. SNR for different SLNN (left) and MLNN (right) decoders for the Hamming (7, 4) code. The results for SLNN 7-5-16, SLNN 7-7-16, and MLNN 7-50-50-4 are based on our implementation of the architectures proposed in [9]–[11].
+
+input neurons and 2k output neurons. Let the n-by-2k weight matrix W (1) connecting the input layer to the output layer be binary, and has its columns equal to the codewords in C. This NN architecture realizes (codeword-wise) ML decoding. No training is required.
+Proof: The summation in (6) can be expressed as a vector multiplication between c(Tj) and r, where (·)T indicates the transpose operation, i.e., cˆ = argmaxc(j)∈C rc(Tj). The proof is completed by representing this maximization problem in matrix form: Consider a vector-matrix multiplication between the received signal r and the n-by-2k matrix W (1) for which each column is equal to a different c ∈ C. The jth element in the vector rW (1) is equal to the jth metric rcT(j) over which the maximization is carried out. This is what the SLNN architecture with N0 = n, N1 = 0, and N2 = 2k realizes.
+The result in Theorem 1 shows that the SLNN decoder without the hidden layer realizes ML decoding. Furthermore, this result also implies that no training is required, as the weights of the NN are in fact the codewords of the code to be decoded. The number of edges in the resulting NN is the sum of the Hamming weights of all codewords in C.
+Example 1 (SLNN for Hamming (7, 4) (Cont.)). Fig. 1 (right) shows the SLNN architecture based on Theorem 1 for the Hamming (7, 4) code. This figure shows that there is no hidden layer, and the input neurons are sparsely connected to the output neurons through the elements of the codebook. The left-most neuron in the output layer is in fact not connected at all and set to 0, which is due to the fact that the first codeword c in the codebook is the all-zero codeword for which rcT = 0. Fig. 2 (left) shows the FER results for SLNN 7-16. As expected, the presented results show that the hidden layer in SLNN 7-7-16 is indeed redundant, and only increases the computational complexity and memory requirements of the decoder. For this code, the number of edges in the NN is lowered from 161 (for SLNN 7-7-16) to only 56 (for SLNN 7-16).
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:11:40 UTC from IEEE Xplore. Restrictions apply.
+
+2025 14th International ITG Conference on Systems, Communications and Coding (SCC)
+
+r1 r2 r3 r4 r5 r6 r7
+r1 r2 r3 r4 r5 r6 r7 ...
+...
+
+ˆbi =1
+≶ 0.5
+ˆbi =0
+ˆb4 ˆb3 ˆb2 ˆb1
+
+ˆbi =1
+≶ 0.5
+ˆbi =0
+ˆb4 ˆb3 ˆb2 ˆb1
+
+Fig. 3. (Left) MLNN decoder 7-50-50-4 in [10], [11] for the Hamming (7, 4) code. (Right) MLNN decoder 7-16-4 proposed in this work.
+
+B. Multi-Label Neural Network Decoder In [8], [10]–[14], the decoding problem was cast as a
+supervised multi-label classification problem. The proposed MLNN architecture is a fully-connected NN with N0 = n input neurons and NL+1 = k output neurons, where a sigmoid activation function is applied to estimate the probability of each bit. The number of hidden layers L and hidden layer neurons Ni for i = 1, 2, . . . , L are design parameters. The activation function in the hidden layers is ReLU.
+To train the MLNN decoder, we follow the approach in [11], where a dataset DMLNN consisting of pairs r(j) ∈ Rn and b(j) ∈ {0, 1}k for j = 1, 2, . . . , |DMLNN| is generated. r(j) is the jth noisy received codeword and b(j) is the jth information bit vector that led to the reception of r(j). The dataset DMLNN is generated via uniform random sampling from all possible information bit vectors and transmission at 0 dB SNR, which leads to good generalization across SNRs and achieves nearML performance [11]. Here, the accuracy is the fraction of correctly classified information bits over the total number of information bits. Training continues until the complement of the accuracy is equal to the bit error rate (BER) found at 0 dB SNR using the ML decoder.
+Example 2 (MLNN for Hamming (7, 4)). In [10], [11], it was found that for the Hamming (7, 4) code, 2 hidden layers with 50 neurons each are sufficient to achieve near-ML performance. Fig. 3 (left) shows the resulting architecture, where we use a notation analogous to that used in Sec. III-A. BER results are shown in Fig. 2 (right). For each SNR point, simulation was run until 2000 bit errors were detected. These results show that near-ML performance is indeed achieved using MLNN 750-50-4. This performance is achieved, however, using an NN with 3200 edges, see Fig. 3 (left).
+The next theorem is the second contribution of this paper, which shows that there exists an MLNN architecture with a single hidden layer that does not have to be trained and achieves ML performance. The number of edges of such an NN is also much lower than that required in [10], [11].
+Theorem 2. Let (n, k) be a linear block code C. Consider
+
+a three-layer NN with n input neurons, 2k hidden neurons applying the scaled softmax in (7) with α = 2/σ2 as activation function, and k output neurons. Let the n-by-2k weight matrix W (1) connecting the input layer to the hidden layer be binary, and has its columns equal to the codewords in C. Let the 2k-by-k weight matrix W (2) connecting the hidden layer to the output layer be binary, and has its rows equal to the all possible k-bit input strings of the code. We assume that the columns and rows of W (1) and W (2), resp., are sorted such that jth row of W (2) is encoded into jth column of W (1) for j = 1, 2, . . . , 2k. This NN architecture realizes (bit-wise) ML decoding. No training is required.
+
+Proof: The bit-wise ML decoding rule is given by
+
+ˆbi = argmax p(r|bi = β),
+
+(8)
+
+β∈{0,1}
+
+for i = 1, 2, · · · , k, which is equivalent to
+
+ˆbi =1
+p(r|bi = 0) ≶ p(r|bi = 1)
+
+(9)
+
+ˆbi =0
+
+ˆbi =1
+p(r|s) ≶
+
+p(r|s).
+
+s:bi =0
+
+ˆbi=0 s:bi=1
+
+(10)
+
+The left-hand side of (10) can be written as
+
+n
+
+1
+
+√
+
+exp
+
+c:bi=0 j=1 2πσ2
+
+− (rj
+
+−
+
+(2cj 2σ2
+
+−
+
+1))2
+
+,
+
+(11)
+
+√
+
+which can be expanded, ignoring 1/ 2πσ2, into
+
+
+
+
+
+exp −
+
+n
+
+rj2 
+
+−
+
+4rj cj
+
++
+
+2&rj + &
+2σ2
+
+4c2j
+
+−
+
+4&cj + &
+
+1 ¡
+
+
+
+.
+
+c:bi =0
+
+j=1
+
+Neglecting common terms (crossed out) yields
+
+exp
+c:bi =0
+
+2rcT σ2
+
+ˆbi =1
+
+≶
+
+exp
+
+ˆbi=0 c:bi=1
+
+2rcT σ2
+
+.
+
+(12)
+
+Dividing both sides by the sum of both sides, we get
+
+c:bi =0
+
+exp
+
+2rcT σ2
+
+c exp
+
+2rcT σ2
+
+ˆbi =1
+≶
+ˆbi=0 c:bi=1
+
+exp
+
+2rcT σ2
+
+c exp
+
+2rcT σ2
+
+.
+
+(13)
+
+In the NN we defined in Theorem 2, the input-to-hidden
+
+transformation with the scaled softmax activation (7) computes
+
+the addends of the outer summations on both sides of (13).
+
+Then the hidden-to-output transformation computes the outer
+
+summation on the right-hand side. Also observing that left-
+
+and right-hand sides of (13) add up to 1, a thresholding operation applied on the output nodes of the NN, with threshold
+
+set at 1/2, results in (8).
+
+Example 2 (MLNN for Hamming (7, 4) (Cont.)). Fig. 2 (right) shows the results for the MLNN 7-16-4 (Thm. 2) for the Hamming (7, 4) code. The proposed MLNN decoders in the literature do not achieve ML results for increasing SNR, see, e.g., [10, Figs. 5 & 8]. In contrast, the MLNN architecture based on Thm. 2 realizes ML decoding for all SNRs with fewer
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:11:40 UTC from IEEE Xplore. Restrictions apply.
+
+2025 14th International ITG Conference on Systems, Communications and Coding (SCC)
+
+hidden layer neurons and without training. Another difference with the MLNN decoders proposed in the literature is that those use ReLU activation in the hidden layers, while the MLNN architecture from Thm. 2 uses softmax activation function. Although ReLU activation is computationally simpler than softmax, the overall dimensions of the MLNN decoders in the literature are larger, resulting in computationally more expensive matrix-vector multiplications. From Fig. 3, it is clear that the MLNN architecture from the literature (left) is significantly larger (3200 edges) compared to the one proposed in Thm. 2 (right, with 88 edges), while the latter realizes ML decoding. Note that the softmax scaling factor 2/σ2 is SNRdependent.
+IV. TRANSFORMER-BASED DECODERS In this section, we focus on recent proposals for using transformer architectures, originally proposed in [20] for large language model applications, for error correcting codes.
+A. ECCT and CrossMPT Decoders In [17], the decoding problem was formulated as a denoising
+task, with noise characteristics learned via the self-attention mechanism in transformers. ECCT utilizes the magnitude of the channel observations and the syndrome to learn the multiplicative noise w˜i defined as ri = si + wi = siw˜i. In what follows, we briefly review the operation of ECCT. The reader is referred to [17, Sec. IV] for more details.
+In the pre-processing step of ECCT, the received vector r is transformed into a new vector r˜ of length n + (n − k), which consists of the concatenation of |r1|, |r2|, . . . , |rn| and the sign of the syndrome s(r). The sign of syndrome is defined as s(r) = 2Hrhd − 1, where rhd the vector of harddecisions made on r, and where H is the parity-check matrix of the code. The vector s(r), therefore, represents a BPSKmodulated version of the syndrome Hrhd. Example 3 (ECCT for Hamming (7, 4)). Consider the Hamming (7, 4) code with transmitted codeword ci = [0, 1, 0, 0, 1, 1, 0] and received noisy codeword r = [−0.75, 0.98, −0.31, 0.18, 3.08, 1.08, −1.23]. The vector of hard-decisions is rhd = [0, 1, 0, 1, 1, 1, 0] and the syndrome sign is s(r) = [1, 1, 1]. We then have r˜ = [0.75, 0.98, 0.31, 0.18, 3.08, 1.08, 1.23, 1, 1, 1].
+In the pre-processing step, the magnitudes |ri| assist the model in learning the multiplicative noise, while the syndrome sign identifies the presence of errors in the received noisy codeword, providing critical information to the transformer model. This additional feature helps the transformer focus its attention on the most likely noised parts, improving the overall denoising accuracy. Given that ECCT requires knowledge on the received vector r, it is a soft-input decoding algorithm.
+In the decoding process, the received noisy codeword is processed by a self-attention transformer. The model begins by converting the input vector r˜ into embeddings. The model reformats input data into a high-dimensional representation, helping the model capture complex patterns in the noisy
+
+codeword more effectively than with the raw input. The selfattention mechanism is then applied, allowing the model to focus on different parts of the input that are most relevant for estimating the noise. To improve accuracy, a mask is used to guide the model’s attention, ensuring that it focuses only on the noisy parts of embeddings for better error correction. The output of the decoding process wˆ represents the model’s prediction of the multiplicative noise in the received codeword. This vector identifies and flips the bits at positions with detected errors in received vector r. The last step is to obtain the corrected codeword cˆ as a hard-decision on the vector w (2rhd − 1), where is an element-wise multiplication. Example 3 (ECCT for Hamming (7, 4) (Cont.)). Let the predicted multiplicative noise be the vector wˆ = [5.2, 5.7, 2.4, −6.1, 6.1, 5.5, 6.8]. The BPSK-modulated version of rhd is given by [−1, +1, −1, +1, +1, +1, −1]. The resulting vector is w (2rhd − 1) = [−5.2, 5.7, −2.4, −6.1, 6.1, 5.5, −6.8]. A hard-decision on this vector gives cˆ = [0, 1, 0, 0, 1, 1, 0], where the negative value in the fourth position of the vector wˆ is responsible for the bit flip that helps correct decoding.
+CrossMPT, built on a cross-attention mechanism, represents the state-of-the-art in error correction transformers [18]. Similar to self-attention, cross-attention uses two distinct inputs but produces one single output. In CrossMPT, the magnitude |r| and the sign of the syndrome s(r) are separately embedded and processed through cross-attention decoding, where two self-attention models iteratively exchange information, similar to BP. The output and post-processing are similar to ECCT, where the output is combined with the received codeword r to correct errors. More details can be found in [18, Sec. 4].
+B. Numerical Results Here we present numerical results for different BCH codes
+as examples of short and medium-length codes, where ECCT and CrossMPT are expected to perform well. We consider BCH (31, 16), BCH (63, 51), and BCH (127, 64) codes. The performance of ECCT and CrossMPT is compared against hard-decision bounded distance decoding (BDD) and softinput OSD with two different values of q, which determine the number of test patterns (see Sec. II-B). We consider the two simplest cases of OSD: q = 0 (1 test pattern) and q = 1 (k test patterns). Results are shown for d = 128, N = 6 and N = 10, where d denotes the number of embedding dimensions and N denotes the number of decoding iterations.
+Fig. 4 shows the BER results obtained. For the BCH (31, 16) code (left), ECCT and CrossMPT offer large gains with respect to HD decoding, with performances close to ML (dashed blue line). CrossMPT shows slightly better performance than ECCT. Although ECCT and CrossMPT outperform OSD with q = 0, OSD with q = 1 offers near-ML performance, providing better performance than ECCT and CrossMPT. The results for the BCH (63, 51) code (middle) are very similar and allow us to conclude that for these two BCH codes, a simple off-the-shelf OSD decoder (q = 1, with
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:11:40 UTC from IEEE Xplore. Restrictions apply.
+
+2025 14th International ITG Conference on Systems, Communications and Coding (SCC)
+
+10−1
+
+10−2
+
+BER
+
+10−3
+
+10−4 10−5
+Pre-FEC
+
+BCH (31, 16)
+
+BCH (63, 51)
+
+2
+
+4
+
+6
+
+Eb/N0 (dB)
+
+Maximum Likelihood
+
+HD (BDD) Decoding
+
+OSD q = 0
+
+2
+
+4
+
+6
+
+Eb/N0 (dB)
+
+OSD q = 1
+
+ECCT N = 6
+
+BCH (127, 64)
+
+ECCT N = 10
+
+2
+
+4
+
+6
+
+Eb/N0 (dB)
+
+CrossMPT N = 6
+
+CrossMPT N = 10
+
+Fig. 4. BER vs. SNR for different BCH codes. Both ECCT and CrossMPT results are obtained with d = 128. For the (31, 16) BCH code (left), ML decoding is also shown. For the (127, 64) BCH code (right), the ECCT result with N = 10 is also shown.
+
+16 or 51 test patterns) outperforms ECCT and CrossMPT. It is important to mention that training ECCT or CrossMPT for these two BCH codes requires the optimization of about 1.2 million parameters.
+We conclude by showing results for the BCH (127, 64) code. The results in Fig. 4 (right) show that ECCT with N = 6 is not competitive, even with respect to hard-decision decoding. We also report results for ECCT with N = 10, as well as CrossMPT with N = 6 and N = 10, which show slight improvements with respect to ECCT with N = 6. All three approaches exhibit nearly identical performance, but still far worse than HD decoding. Again, OSD with q = 1, whose main computation complexity is the Gaussian elimination required for finding the most reliable basis, offers excellent performance (in this case with 64 test patterns), about 2 dB better than transformer-based decoders.
+V. CONCLUSIONS We provided a comprehensive analysis of four neural network-based decoders for error correcting codes. SLNN and MLNN decoders were shown to always achieve maximum likelihood performance without requiring training. These decoders are limited to be used with short codes only, as both SLNN and MLNN always require at least one layer with an exponentially increasing number (number of codewords) of neurons. Transformer-based approaches were shown to be not competitive when compared to traditional decoders such as ordered statistics decoding. The results presented in this paper raise important concerns about the viability of neural network decoders, particularly in short and medium blocklength regimes. Future work includes a precise complexity comparison between NN-based and traditional decoders, and a performance comparison against neural BP decoders.
+Acknowledgment: The authors would like to thank Dr. Ivana Nikoloska (TU/e) for fruitful discussions.
+REFERENCES
+[1] G. Tzimpragos, C. Kachris, I. B. Djordjevic, M. Cvijetic, D. Soudris, and I. Tomkos, “A survey on FEC codes for 100G and beyond optical networks,” IEEE Commun. Surveys Tuts., vol. 18, no. 1, pp. 209–221, Oct. 2016.
+
+[2] A. Solomon, K. R. Duffy, and M. Me´dard, “Soft maximum likelihood decoding using GRAND,” in Proc. Int. Conf. Commun. (ICC), virtual event, June 2020.
+[3] E. Berlekamp, R. McEliece, and H. van Tilborg, “On the inherent intractability of certain coding problems (corresp.),” IEEE Trans. Inf. Theory, vol. 24, no. 3, pp. 384–386, 1978.
+[4] R. Gallager, “Low-density parity-check codes,” IRE Trans. Inf. Theory, vol. 8, no. 1, pp. 21–28, 1962.
+[5] D. Hocevar, “A reduced complexity decoder architecture via layered decoding of LDPC codes,” in Proc. IEEE Workshop Signal Process. Syst. (SIPS), Austin, TX, USA, Oct. 2004.
+[6] M. Fossorier and S. Lin, “Soft-decision decoding of linear block codes based on ordered statistics,” IEEE Trans. Inf. Theory, vol. 41, no. 5, pp. 1379–1396, 1995.
+[7] T. Gruber, S. Cammerer, J. Hoydis, and S. t. Brink, “On deep learningbased channel decoding,” in Proc. Conf. Inf. Sci. Syst. (CISS), Baltimore, MD, USA, Mar. 2017.
+[8] A. Di Stefano, O. Mirabella, G. Di Cataldo, and G. Palumbo, “On the use of neural networks for Hamming coding,” in Proc. IEEE Int. Symp. Circuits Syst. (ISCAS), Singapore, June 1991.
+[9] C. T. Leung, R. V. Bhat, and M. Motani, “Low-latency neural decoders for linear and non-linear block codes,” in Proc. IEEE Global Commun. Conf. (GLOBECOM), Waikoloa, HI, USA, Dec. 2019.
+[10] ——, “Low latency energy-efficient neural decoders for block codes,” IEEE Trans. Green Commun. Netw., vol. 7, no. 2, pp. 680–691, 2023.
+[11] ——, “Multi-label neural decoders for block codes,” in Proc. Int. Conf. Commun. (ICC), virtual event, June 2020.
+[12] V. Malik, R. Ghosh, and M. Motani, “Achieving low complexity neural decoders via iterative pruning,” in Proc. Cof. Neural Inf. Process. Syst. (NeurIPS), New Orleans, LA, USA, Dec. 2022.
+[13] Y. Lei et al., “A deep-neural-network-based decoding scheme in wireless communication systems,” Electronics, vol. 12, no. 13: 2973, July 2023.
+[14] S.-W. Wang et al., “Implementation of neural network-based linear block code decoder in SAC-OCDMA system,” in Proc. IEEE VTS Asia Pacific Wireless Commun. Symp. (APWCS), Tainan, Taiwan, Aug. 2023.
+[15] S. E. El-Khamy, E. A. Youssef, and H. M. Abdou, “Soft decision decoding of block codes using artificial neural network,” in Proc. IEEE Symp. Comput. Commun. (ISCC), Alexandria, Egypt, June 1995.
+[16] T. Matsumine and H. Ochiai, “Recent advances in deep learning for channel coding: A survey,” June 2024. [Online]. Available: https://arxiv.org/abs/2406.19664
+[17] Y. Choukroun and L. Wolf, “Error correction code transformer,” in Proc. Cof. Neural Inf. Process. Syst. (NeurIPS), New Orleans, LA, USA, Dec. 2022.
+[18] S.-J. Park, H.-Y. Kwak, S.-H. Kim, Y. Kim, and J.-S. No, “CrossMPT: Cross-attention message-passing transformer for error correcting codes,” May 2024. [Online]. Available: http://arxiv.org/abs/2405.01033
+[19] E. Nachmani et al., “Deep learning methods for improved decoding of linear codes,” IEEE J. Sel. Topics Signal Process., vol. 12, no. 1, pp. 119–131, Feb. 2018.
+[20] A. Vaswani, N. Shazeer, N. Parmar, J. Uszkoreit, L. Jones, A. N. Gomez, L. Kaiser, and I. Polosukhin, “Attention is all you need,” in Proc. Cof. Neural Inf. Process. Syst. (NeurIPS), Long Beach, CA, USA, Dec. 2023.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:11:40 UTC from IEEE Xplore. Restrictions apply.
+
+

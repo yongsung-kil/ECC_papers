@@ -1,0 +1,496 @@
+A Flexible FPGA Based QC-LDPC Decoder for the 
+Adaptive Coding and Modulation Scheme of 
+Broadband Satellite Communication System 
+ 
+Xiaxia Cui 
+Department of Satellite 
+Communication and Broadcast 
+Television, the 54th Research 
+Institute of China Electronics 
+Technology Group Corporation 
+Shijiazhuang, China 
+cuixiaxia_office54@163.com 
+ 
+Dongdong Wang* 
+Science and Technology on 
+Communication Networks 
+Laboratory, the 54th Research 
+Institute of China Electronics 
+Technology Group Corporation 
+Shijiazhuang, China 
+dongdongoffice@bupt.edu.cn 
+ 
+Chenhua Sun 
+Department of Satellite 
+Communication and Broadcast 
+Television, the 54th Research 
+Institute of China Electronics 
+Technology Group Corporation 
+Shijiazhuang, China 
+sun_chenhua@163.com 
+ 
+Haowei Sun 
+School of Electronic and 
+Information Engineering, South 
+China University of Technology 
+Guangzhou, China 
+ 
+ 
+Ming Zhang 
+Unit 32032 
+Beijing, China 
+ 
+Abstract—We designed a FPGA based LDPC Decoder for 
+decoding Type-I QC-LDPC codes with flexible code rate and 
+code length, by which the channel adaptation could be realized 
+with very fine granularity. In addition, the decoder shows good 
+bit error rate (BER) performance whose performance loss is only 
+0.6dB at the BER of 𝟏𝟎−𝟔, compared with the theoretical 
+performance when decoding the same LDPC codes using 
+normalized Min-Sum based layered decoding algorithm. 
+Keywords—LDPC decoder, FPGA, ACM, broadband satellite 
+I. 
+INTRODUCTION 
+Satellite communication has become an important and even 
+the only means to solve the problem of global connectivity, due 
+to its characteristics of “high” and “far” [1]. Satellite channel 
+environment is complex and changeable, the natural weather, 
+such as clouds and rainfall, will result in a large range of 
+dynamic attenuation of satellite signals. It is necessary to 
+reserve sufficient linkage allowance to ensure the link 
+connectivity under the worst channel condition. The sufficient 
+linkage allowance ensures the link connectivity, however, it 
+greatly reduces the satellite system throughput. 
+Adaptive coding and modulation (ACM) is one of the key 
+technologies that can maximize the throughput of the satellite 
+system under the premise of ensuring link connectivity. 
+Channel estimation and prediction, adaptive switching strategy, 
+flexible encoding and decoding, and multi-format-compatible 
+modulation and demodulation are the core modules of the 
+ACM scheme [2]. Adaptive range of signal-to-noise ratio 
+(SNR), granularity of demodulation threshold and Estimation 
+accuracy of SNR are the key indexes affect the performance of 
+the ACM scheme [3]. 
+In this paper, we mainly focus on the implementation of 
+flexible decoding, which affects both the adaptive range of 
+SNR and granularity of demodulation threshold. On the basis 
+of the RAM-based architecture of irregular repeat-accumulate 
+(IRA) LDPC decoder [4], some core modules have been 
+improved so that Type-I QC-LDPC codes with flexible code 
+rate and code length could be decoded correctly.In addition, 
+layered decoding algorithm [5] is bound to the proposed 
+decoder, the number of iterations can be reduced by up to half 
+when achieving the same BER performance compared with the 
+traditional non-layered decoding algorithm. Normalized Min-
+Sum algorithm is used in the horizontal decoding process to 
+reduce the complexity of the check node decoding module. The 
+error performance of the proposed decoder has been verified in 
+a real time point-to-point intermediate frequency loop system, 
+and the performance loss is only 0.6dB at the BER of 10−6, 
+compared with the theoretical performance when decoding the 
+same LDPC codes. 
+II. 
+ACHITECTURE OF THE FLEXIBLE FPGA BASED LDPC 
+DECODER 
+Before describing the architecture of the flexible FPGA 
+based LDPC decoder, the preprocessing of type-I QC-LDPC 
+parity check matrix 𝐻 should be introduced firstly, so that 
+readers can understand how to store and load the relevant 
+information of 𝐻 effectively. 
+ 
+𝐻= [𝐼(𝑝𝑗,𝑙)]1≤𝑗≤𝐽,1≤𝑙≤𝐿  
+() 
+𝐻 is a 𝐽× 𝐿 array that is compose of 𝐼(𝑝𝑗,𝑙). 𝐼(𝑝𝑗,𝑙) is a 
+𝑝× 𝑝 zero matrix (ZM) if 𝑝𝑗,𝑙= 0, otherwise it is a circulant 
+permutation matrix (CPM) that is obtained by cyclically right 
+shifting a 𝑝× 𝑝 identity matrix with 𝑝𝑗,𝑙 positions.  
+Based on the quasi-cyclic property, 𝐻 can be recovered 
+completely with only two types of information, which refer to 
+the non-zero 𝑝𝑗,𝑙 and the column coordinate 𝑙 of each non-zero  
+1368
+2021 IEEE 21st International Conference on Communication Technology
+978-1-6654-3206-1/21/$31.00 ©2021 IEEE
+2021 IEEE 21st International Conference on Communication Technology (ICCT) | 978-1-6654-3206-1/21/$31.00 ©2021 IEEE | DOI: 10.1109/ICCT52962.2021.9657842
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:36:50 UTC from IEEE Xplore.  Restrictions apply. 
+LLRs Cache 
+RAM
+Barral Shifter
+CNU
+Barral Shifter
+FIFO
+Check 
+Message 
+Cache RAM
+Decision
+Control 
+Shift 
+Value 
+ROM
+Addr. 
+ROM
+Output
+Input
+𝑀𝑐→𝑣
+𝑜𝑙𝑑
+𝑀𝑣→𝑐
+𝑜𝑙𝑑
+𝑀𝑐→𝑣
+𝑛𝑒𝑤
+𝑆𝑂𝑣
+𝑛𝑒𝑤
+𝑆𝑂𝑣
+𝑜𝑙𝑑
+𝑀𝑣→𝑐
+𝑜𝑙𝑑
+ 
+Fig. 1. Architecture of the flexible FPGA based LDPC decoder. 
+𝑝𝑗,𝑙. {𝑝𝑗,𝑙} and {𝑙} should be stored in address ROM and shift 
+value ROM, respectively. The elements order in {𝑝𝑗,𝑙} and {𝑙} 
+is from left to right in each row of 𝐻, then row by row from top 
+to bottom of 𝐻. If multiple check matrices need to be stored, 
+store their information sequentially. 
+Fig. 1 shows the architecture of the flexible FPGA based 
+LDPC decoder. The input data of the decoder should be 
+segmented-cached, and the length of each segment is 
+determined by the CPM size, which also indicates the decoding 
+parallelism for the current loaded LDPC code. 
+After caching a frame of input data in the LLRs cache 
+RAM module, the column coordinate set {𝑙} belongs to the 
+current used LDPC parity matrix will be circularly loaded. 
+Then, the loaded column coordinate 𝑙 will be sent to the LLRs 
+cache RAM module to indicate the address of the cache data 
+required to be read out. The read-out data will be sent to the 
+barrel shifter, which implements the cyclic shift of the input 
+data with given shift value. 
+Afterwards, the horizontal decoding and vertical decoding 
+process will be performed iteratively until the decoding is 
+successful or the maximum iterations are reached. The 
+principle of the layered decoding algorithm can be found in [5]. 
+III. 
+DESIGN OF THE CORE MODULES 
+This section focuses on the design of the core modules of 
+the proposed decoder. Three core modules, refer to the LLRs 
+cache RAM, barral shifter and check node unit, are carefully 
+designed to support the decoding of Type-I QC-LDPC codes 
+with different matrix parameters. 
+A. LLRs Cache RAM  
+The LLRs cache RAM is compose of two ram blocks. The 
+two ram blocks work alternately, and they have the same width 
+and depth.  
+In order to support the caching of multiple Type-I QC-
+LDPC codes with different matrix parameters, the width of 
+each ram should be determined by the maximum CPM with 
+size 𝑝𝑚𝑎𝑥× 𝑝𝑚𝑎𝑥, and the depth should not less than the total 
+number of the non-zero CPMs of all the LDPC parity matrices 
+required to be stored. 
+LLRs RAM2
+1
+2
+...
+...
+...
+...
+...
+P_max
+Depth
+LLRs RAM1
+1
+2
+...
+...
+...
+...
+...
+P_max
+Depth
+Width = LLR_Datawidth*p_max
+Width = LLR_Datawidth*p_max
+Initial
+LLR Input
+Updated
+LLR Input
+Address
+Input
+Control 
+input
+ 
+Fig. 2. LLRs cache RAM. 
+As shown in Fig. 2, there are four inputs of LLRs cache 
+RAM, the initial LLR input is the channel soft information, the 
+address input is the output of the Addr. ROM, the updated LLR 
+input is the horizontal decoding result, and the control input is 
+from the external counter to indicate the switching time of the 
+internal ram input. 
+B. Barral Shifter 
+We consider applying the multi-size circular shifting (MS-
+CS) network [6] to complete the design of barral shifter. The 
+basic unit of this network is a single size circular shifting (SS-
+CS) network, which is composed of stages of 𝑛= 𝑙𝑜𝑔2(𝑝) 
+stage of 𝑝 2-to-1 multiplexers each. Multiplexers on the 𝑖th 
+stage of the shifter, 0 ≤𝑖< 𝑛 , are connected in such a way to 
+circularly shifter (rotate) the input vector by 2𝑖 if the control bit 
+is set; otherwise, the stage is transparent to the input. In this 
+way, the arbitrary rotation 0 ≤ρ < 𝑝 is decomposed into 𝑛 
+consecutive rotations by powers of 2. An example a 5 × 5 
+barral shifter is shown in Fig. 3. 
+Obviously, only one CPM size can be supported to realize 
+the arbitrary rotation in SS-CS barral shifter. In order to 
+support arbitrary rotation for multi-size CPMs, MS-CS 
+network should be well designed. 
+The core idea of MS-CS barral shifter is the parallel 
+cascading of 𝑍= 𝑝𝑚𝑎𝑥/𝐵 SS-CS barral shifters and plus an 
+additional stage of 𝑝𝑚𝑎𝑥 Z-to-1 multiplexers, where 𝑝𝑚𝑎𝑥 is the 
+maximum block size of all the CPMs. The size of each SS-CS 
+barral shifter is 𝐵× 𝐵. 𝐵 is the greatest common divisor 
+between the block sizes of all the CPMs.  
+1369
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:36:50 UTC from IEEE Xplore.  Restrictions apply. 
+stage2
+stage1
+stage0
+Input0
+Input1
+Input2
+Input3
+Input4
+Output0
+Output1
+Output2
+Output3
+Output4
+Control
+Information
+r2
+r1
+r0
+ 
+Fig. 3. 5 × 5 SS-CS barral shifter. 
+Each barral shifter rotates a sub-block of B data by the 
+same value |𝜌|𝐵, and depending on the current block size 𝑝𝑘, 
+data are further shuffled in the additional stage, referred to as 
+adaptation network (AN), to achieve the arbitrary rotation 0 ≤
+ρ < 𝑝𝑘. The detailed description of adaptation network (AN) 
+can be found in [6]. Fig. 4 shows an example of an MS-CS 
+barrel shifter with 𝐵= 5 and 𝑝𝑚𝑎𝑥= 20. 
+Barral
+Shifter
+0
+Barral
+Shifter
+1
+Barral
+Shifter
+2
+Barral
+Shifter
+3
+Adaptation network
+x0,
+0
+x0,
+4
+x1,
+0
+x3,
+4
+y3,
+4
+y2,
+2
+y1,
+1
+y0,
+3
+y0,
+0
+ 
+Fig. 4. MS-CS barral shifter for 𝐵= 5 and 𝑝𝑚𝑎𝑥= 20. 
+C. CNU 
+The CNU design focuses on supporting the decoding of 
+check 
+equations 
+with 
+different 
+row 
+weights. 
+Serial 
+implementation is considered to save resources and ease the 
+overall control.  
+Fig. 5 shows the structure of the designed CNU. The input 
+of CNU is the LLRs constrained by the current check equation. 
+The number of LLRs in each check equation is not fixed, this 
+flexible feature is achieved by introducing the data valid enable 
+control signal into the compare, sorter and xor modulers. 
+abs
+compare
+Min
+Sub-Min
+sorter
+sign
+FIFO sign
+xor
+Reg_sign(in)
+Reg_sign(out)
+xor
+Normalized factor
+*
+FIFO 
+abs
+ 
+Fig. 5. Check node unit. 
+IV. 
+PERFORMANCE VERIFICATION 
+This section focuses on the performance verification of the 
+proposed decoder architecture. On the one hand, verify the 
+decoder’s capability of supporting multiple code rates, that is 
+the decoder can correctly decode LDPC codes with different 
+code rates; on the other hand, verify the BER performance of 
+the decoder. 
+Without loss of generality, three normal frame length 
+DVB-S2 [7] LDPC codes with different code rates, 1/2, 3/4, 
+8/9, are chosen to be implemented. According to the project 
+requirements, the decoding parallelism is selected as 60. The 
+decoder was implemented on the Xilinx's Virtex-6 platform, 
+and the resource utilization of the decoder is shown in Table I. 
+TABLE I.  
+RESOURCE UTILIZATION OF THE PROPOSED DECODER 
+Resource 
+Utilization 
+Available 
+Utilization % 
+Registers 
+20848 
+301440 
+6 
+LUTs 
+32411 
+150720 
+21 
+FF 
+16017 
+37242 
+43 
+BRAM 
+141 
+416 
+33 
+IO 
+18 
+600 
+3 
+ 
+The operating flow chart for the performance verification 
+of the designed decoder is shown in Fig. 6. 
+Data 
+Source
+Scrambler
+BPSK
+Modulator
+Digital
+AWGN Noise
+De-scrambler
+Decoder
+BER Stastics 1 
+BER Stastics 2
+BER Stastics 3  
+Fig. 6. Performance verification of the designed decoder. 
+On the transmitter side, three LDPC code words with 
+different code rates are stored in a ROM, refers to the data 
+source module, and the three code words are then read out in a 
+loop. Each code word needs to be scrambled and then be 
+modulated to BPSK symbol sequences.  
+On the receiver side, the BPSK symbol sequences with 
+digital AWGN noise should be descrambled first and then be 
+sent to the decoder. The output of the decoder is sent into 
+different BER statistics modules based on different code rates. 
+1370
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:36:50 UTC from IEEE Xplore.  Restrictions apply. 
+ 
+Fig. 7. BER performance of the designed decoder. 
+As shown in Fig. 7, the theory curves corresponds to the 
+BER performance of DVB-S2 LDPC codes simulated in BPSK 
+AWGN channel, sum-product decoding algorithm with 30 
+maximum iterations. And the test curves corresponds to the 
+actually measured decoding BER performance of the designed 
+decoder with Min-Sum based layered decoding algorithm with 
+15 maximum iterations.  
+Compare with the theory curves, the performance loss of 
+the test curves is only 0.6dB at the BER of 10−6, which means 
+the designed coder shows good BER performance. In addition, 
+since the decoder can correctly decoding LDPC codes with 
+different code rates sent continuously, the decoder has the 
+capability of supporting multiple code rates. 
+V. 
+CONCLUSION 
+As described in the above sections, on the basis of the 
+architecture of the flexible LDPC decoder, by carefully 
+designing each core module, multiple code rate supported 
+decoder with good BER performance was implemented on the 
+Xilinx's Virtex-6 platform. In the subsequent research work, 
+the decoder should support decoding more types of QC-LDPC 
+codes, verify and improve the decoder’s BER performance in 
+high order modulation systems and in different channel 
+conditions. 
+REFERENCES 
+[1] G. Maral, M. Bousquet, Z. Sun. Satellite communications systems: 
+systems, techniques and technologies, 5th edition, Wiley, 2009. 
+[2] H.Bischl, H. Brandt, and TD. Cola, et al, “Adaptive coding and 
+modulation for satellite broadband networks: From theory to practice,” 
+International Journal of Satellite Communications & Networks, vol. 28, 
+pp. 59-111, Mar. 2009. 
+[3] R. Rinaldo and R. D. Gaudenzi, “Capacity analysis and system 
+optimization for the forward link of multi-beam satellite broadband 
+systems exploiting adaptive coding and modulation,” International 
+Journal of Satellite Communications & Networks, 2004. 
+[4] H. Jin, A. Khandekar, and R. McEliece, “Irregular Repeat–Accumulate 
+Codes,” International Conference on Turbo Codes, Brest, France, Sep. 
+2000. 
+[5] C. Marchand, L. Conde-Canencia, and E. Boutillon, “High-Speed 
+Conflict-free layered LDPC decoder for the DVB-S2, -T2 and -C2 
+Standards,” IEEE Workshop on Signal Processing Systems, 2013. 
+[6] M. Rovini, G. Gentile, and L. Fanucci, “Multi-size circular shifting 
+networks for decoders of structured LDPC codes,” Electronics Letters, 
+vol. 43, no. 17, Aug. 2007. 
+[7] ETSI TR 102 376-1: "Digital Video Broadcasting (DVB); Second 
+generation framing structure, channel coding and modulation systems 
+for Broadcasting, Interactive Services, News Gathering and other 
+broadband satellite applications; Part 1: DVB-S2". 
+ 
+ 
+0.5
+1.0
+1.5
+2.0
+2.5
+3.0
+3.5
+4.0
+4.5
+5.0
+5.5
+10
+-8
+10
+-7
+10
+-6
+10
+-5
+10
+-4
+10
+-3
+10
+-2
+10
+-1
+Bit error rate
+Eb/N0 (dB)
+ 1/2 Theory
+ 3/4 Theory
+ 8/9 Theory
+ 1/2 Test
+ 3/4 Test
+ 8/9 Test
+1371
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:36:50 UTC from IEEE Xplore.  Restrictions apply. 

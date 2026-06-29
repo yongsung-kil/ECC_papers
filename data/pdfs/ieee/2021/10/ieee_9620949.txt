@@ -1,0 +1,518 @@
+2021 International Conference on Information and Communication Technology Convergence (ICTC) | 978-1-6654-2383-0/21/$31.00 ©2021 IEEE | DOI: 10.1109/ICTC52510.2021.9620949
+
+Machine Learning-Based Error Recovery System for NAND Flash Memory with Process Variation
+Seonmin Lee, Jeongju Jee, and Hyuncheol Park School of Electrical Engineering
+Korea Advanced Institute of Science and Technology (KAIST) Daejeon, South Korea
+{sminlee, ji1718, and hcpark}@kaist.ac.kr
+
+Abstract—The storage capacity of NAND flash memory has been significantly improved with advanced scaling and multileveling technologies. However, due to decreased intervals between voltage windows, NAND flash memory systems become vulnerable to retention and program/erase (P/E) cycling errors. Moreover, significant process variation resulting from the fabrication process results in different reliabilities among flash blocks. In this paper, we propose a machine learning-based error recovery system for low-latency NAND flash memory. In the NAND flash controller, the retention time and process variation are inaccessible in general. Therefore, it is difficult for the controller to select an appropriate decoding mode, resulting in increased latency. To replace the inaccessible information, we utilize the on-cell ratio as alternative information. The proposed error recovery system selects an optimal decoding mode which ensures successful error recovery with the minimum average read latency. Through simulation, we show that the proposed system predicts an optimal decoding mode with high accuracy. Moreover, average read latency performance is significantly improved compared to other baselines.
+Index Terms—3D NAND flash memory system, error recovery system, process variation, machine learning
+I. INTRODUCTION
+NAND flash memory has been faced with higher density and capacity demands. To meet these demands, advanced downscaling and multi-leveling technologies have been developed, which have boosted the storage density. However, in expanding under 10-nm process technology, 2D NAND flash memory technologies have encountered fundamental limits such as lithography problem and cell-to-cell interference [1]. To solve these limits, 3D NAND flash memory in which cell arrays are vertically stacked is developed [2]. Unfortunately, as flash memory density increases, cells become more vulnerable to retention and program/erase (P/E) cycling errors [3]. In addition, process variation causes reliability difference among flash blocks [4]. In particular, in 3D NAND flash memory, there exists significant layer-to-layer process variation which causes variation of threshold voltage distribution among different wordlines [5].
+To improve flash reliability, an error correction code (ECC) with strong error correction capability such as low-density parity-check (LDPC) code has been adopted to NAND flash memory systems [6]. LDPC decoding supports soft-decision
+This work was supported by Samsung Electronics Co., Ltd. (1214-0815201)
+
+(SD) decoding that enhances error correction capability by obtaining soft information through additional sensing. Despite its stronger error correction capability, SD decoding results in higher latency during additional sensing.
+There are several recent studies on improving the error recovery of NAND flash memory systems. In [7], a dynamic log-likelihood ratio (LLR) scheme based on the expectation–maximization (EM) algorithm for LDPC decoding is developed. This work always starts decoding from harddecision (HD) decoding, which has low latency and low error correction capability, regardless of the current memory state. Therefore, when the reliability of memory is degraded, a redundant decoding process can occur. The authors in [8] proposes a decoding mode selection scheme by estimating the raw bit error rate (RBER) value which represents the memory state. This work causes code rate penalty in the estimating RBER process, so the data storage efficiency is degraded. In [9] and [10], machine learning-based schemes for enhancing the decoding performance of NAND flash memory systems are provided. An error rate prediction model of NAND flash memory based on the random forest is presented in [9]. In [10], a machine learning-based algorithm which predicts the appropriate decoding status of NAND flash memory is provided. The works in [9] and [10] exploit retention time as an input feature, however, the controller is unaware of precise retention time in general. In addition, the process variation is not considered although it significantly affects the performance of multi-block NAND flash memory systems.
+In this paper, we propose a machine learning-based error recovery system for low-latency NAND flash memory. Unlike previous works, we consider process variation and conduct experiment with accessible information at the controller without code rate penalty. The proposed system starts decoding in the optimal decoding mode which ensures successful error recovery with minimum average read latency. Simulation results show that the proposed system starts decoding from the optimal mode with higher than 94 % accuracy on average and closely achieves minimum average read latency in various blocks and wordlines with different reliabilities.
+II. SYSTEM MODEL
+The NAND flash memory is composed of blocks, and each block consists of pages. We consider a triple-level cell (TLC)
+
+978-1-6654-2383-0/21/$31.00 ©2021 IEEE
+
+1537
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:39:41 UTC from IEEE Xplore. Restrictions apply.
+
+ICTC 2021
+
+NAND flash memory which stores three bits of data per cell, and a wordline consists of three pages: most significant bit (MSB) page, center significant bit (CSB) page, and a least significant bit (LSB) page.
+A. Basic operation
+The basic operation of the NAND flash memory system is depicted in Fig. 1. The message bits are encoded into codewords, and the codewords are mapped to symbols. Next, electrons are injected into the memory cells up to the target threshold voltage, and this process is called as a program operation. The threshold voltage distribution of memory cells is distorted by several factors – e.g., P/E cycling error, retention error, process variation, etc.
+To read the programmed data, the controller applies a predefined voltage between the voltage windows. The threshold voltage is identified by comparing it with the read reference voltage, which is denoted as sensing operation. We assume that the read references are ideally found as the intersection of adjacent distributions by existing algorithms [3], [11].
+In the end, the noisy codewords are corrected through the decoder. The decoding modes used for the LDPC decoding are HD decoding, 2-bit SD decoding, and 3-bit SD decoding. In this paper, we often use ‘mode’ without ‘decoding’ in the word ‘decoding mode’ for convenience. Fig. 2 illustrates the sensing operation of LDPC decoding modes. HD decoding is performed with 1-bit LLR information obtained by sensing once. n-bit SD decoding is performed with n-bit LLR information through 2n − 2 additional sensing after HD sensing. Error correction capability can be enhanced by SD decoding, which exploits more precise LLR information, however, higher latency is required due to additional sensing.
+
+Encoder Decoder
+
+Program/Erase Sensing
+
+Noise
+
+Fig. 1. The basic operation of the NAND flash memory system.
+
+2 additional sensing
+
+6 additional sensing
+
+HD decoding
+
+2-bit SD decoding
+
+3-bit SD decoding
+
+Fig. 2. Sensing operation of LDPC decoding modes.
+
+B. Channel model
+
+Fig. 3 shows the threshold voltage distribution of cells programmed in the w th wordline, and the distribution of the i th state can be modeled as a Gaussian distribution [12]:
+
+fvth,i (x) =
+
+√1
+
+e−
+
+(x−µvi 2σv2i
+
+)2
+
+σvi 2π
+
+,
+
+0≤i≤7
+
+(1)
+
+where µvi (w, N ) and σvi (w, N ) are mean and standard deviation of fvth,i (x), which are dependent on wordline index w and the number of P/E cycles N .
+
+,
+00
+ER
+
+,
+11
+P1
+
+,
+22
+
+P2
+
+…
+
+,
+77
+P7
+
+Fig. 3. The threshold voltage distribution of cells programmed in the w th wordline of TLC NAND flash memory.
+
+In addition, there exists reliability difference among flash blocks due to process variation. By using the same methodology as [13], we model block-to-block RBER variation (block variation for short):
+
+eb = min(a · 10 s·N , 1) ,
+
+(2)
+
+where a is an initial RBER without P/E cycling error and
+
+process variation, N is the number of P/E cycles, and s is a
+
+wearing degree that determines the growth rate of eb, which
+
+is a random variable due to process variation. The probability
+
+density function of s follows a bounded Gaussian distribution
+
+[13]:
+
+
+
+fs(x)
+
+=
+
+
+
+√1
+
+e−
+
+(x−µs 2σs2
+
+)2
+
+0σ,s 2π
+
+,
+
+if smin ≤ x ≤ smax else ,
+
+(3)
+
+where smin = 2.72×10−4, smax = 4.23×10−4, µs = (smin + smax)/2, and σs = 9 × 10−5. By block variation parameter s, we generate a different RBER for each block. We scale σvi in (1) to satisfy the generated RBER of each block.
+In addition, the threshold voltage distribution also changes according to retention time t. The probability density function of retention error in the w th wordline can be modeled as a
+Gaussian distribution [14]:
+
+ft(x)
+
+=
+
+√1
+
+e−
+
+(x−µti 2σt2i
+
+)2
+
+σti 2π
+
+,
+
+0
+
+≤
+
+i
+
+≤
+
+7
+
+(4)
+
+where µti (w, N ) and σti (w, N ) are dependent on wordline index w and the number of P/E cycles N . Considering wearing
+
+degree of the block, µti and σti are modeled as
+
+s 0.5
+
+µti (w, N ) = ∆µvi (w, N ) µs
+
+log(1 + t)
+
+(5)
+
+s 0.6
+
+σti (w, N ) = ∆σvi (w, N ) µs
+
+log(1 + t) , (6)
+
+where ∆µvi (w, N ) and ∆σvi (w, N ) are the constants which determine the initial distribution of the i th state in the w th
+wordline.
+
+III. MACHINE LEARNING-BASED ERROR RECOVERY
+SYSTEM
+This section presents a machine learning-based classifier which selects the optimal decoding mode according to the
+
+1538
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:39:41 UTC from IEEE Xplore. Restrictions apply.
+
+current memory state. Fig. 4 describes the proposed machine learning-based error recovery system. When an input feature vector is given as input, the classifier which is trained in the offline phase selects a decoding mode. If the classifier correctly predicts the optimal mode, error recovery succeeds at once. On the other hand, if the prediction is inaccurate and decoding fails, the next decoding mode is performed until error recovery succeeds. The classifier is trained by a decision tree. The data acquisition and training process are described below.
+Input features
+Machine Learning-based Classifier
+
+and block variation with only one on-cell ratio may lead to ambiguity. Therefore, we choose the 6th and 7th on-cell ratios as alternative information and jointly learn the relationship between on-cell ratio, retention time, and block variation by using a machine learning algorithm.
+
+The 6th On-cell Ratio The 7th On-cell Ratio
+
+0.82 0.8 0.78
+
+Block5 Block4 Block3 Block2 Block1
+
+0.96 0.94 0.92
+
+Block5 Block4 Block3 Block2 Block1
+
+0.76
+
+0.9
+
+0.74 0
+
+0.88
+
+10 20 30 40 50
+
+0
+
+10 20 30 40 50
+
+Retention time [hours]
+
+Retention time [hours]
+
+Fig. 5. The change of the 6th (left) and 7th (right) on-cell ratio.
+
+HD decoding (mode 1)
+
+2-bit SD decoding (mode 2)
+
+3-bit SD decoding (mode 3)
+
+Error recovery succeeds
+Error recovery fails due to false prediction
+Fig. 4. Proposed ML-based error recovery system.
+
+A. Dataset
+
+a) Input features: In the NAND flash memory system
+
+which is described in Section II, the optimal decoding mode
+
+is determined by five factors: the number of P/E cycles N ,
+
+wordline index w, page index p, retention time t, and block
+
+variation s. Although the former three factors are accessible
+
+information at the controller, t and s are generally inaccessible.
+
+Therefore, alternative information which captures the changes
+
+of these two unknown factors for varying memory states
+
+should be obtained. As alternative information, we use on-cell
+
+ratio ri, which is the ratio of the cells turned on among all cells in the page when sensing with the predefined reference
+
+voltage Vi. In the TLC NAND flash memory, the on-cell ratio is defined as
+
+ri
+
+=
+
+number of on cells at Vi , number of total cells
+
+i
+
+=
+
+1, . . . , 7.
+
+(7)
+
+Since variation between wordlines for each block tends to be consistent [5], we obtain on-cell ratio by sensing only one specific wordline for each block with the same reference voltage to reduce sensing latency. When read voltage is applied to a wordline, seven on-cell ratios are obtained. As shown in [5], the threshold voltage distribution of higher states shifts faster than the lower states. Fig. 5 shows r6 and r7 extracted from 5 different blocks with respect to retention time. Without loss of generality, we assume that the larger block number, the larger wearing degree, i.e., the reliability is worse. An intuitive relationship between on-cell ratio, retention time, and block variation is observed. As retention time and block variation increase, the on-cell ratio increases. However, a specific oncell ratio value can be mapped with several retention time and block variation pairs. For this reason, estimating retention time
+
+b) Labeling: Our goal is to find the optimal decoding mode which minimizes average read latency with successful error recovery. We decode the data in three decoding modes and calculate the average read latency for each mode. E[latd], means the average read latency when decoding starts from mode d (d = 1, 2, 3), can be derived as
+
+E[lat1] = (1 − PER1)E[latS1 ]
+
+(8)
+
++ PER1(1 − PER2)E[latS1→2 ]
+
++ PER1PER2(1 − PER3)E[latS1→2→3 ]
+
++ PER1PER2PER3E[latS1→2→3→fail ]
+
+E[lat2] = (1 − PER2)E[latS2 ]
+
+(9)
+
++ PER2(1 − PER3)E[latS2→3 ]
+
++ PER2PER3E[latS2→3→fail ]
+
+E[lat3] = (1 − PER3)E[latS3 ] + PER3E[latS3→fail ], (10)
+where each component in the equations is defined as follows:
+• PERd : Page error rates when decode in mode d. • Sflow : An event in which error is recovered successfully
+through subscript decoding order. The following examples explain the meaning of subscript.
+- 1 : Error recovery succeeds in mode 1 at once. - 1 → 2 : Error recovery fails in mode 1 and succeeds
+in mode 2. - 1 → 2 → 3 : Error recovery fails up to mode 2 and
+succeeds in mode 3. - 1 → 2 → 3 → fail : Error recovery fails in all decod-
+ing modes.
+• E[latSflow ] : The average read latency in event Sflow. For each memory state, we find the optimal decoding mode y from (11), and each input feature vector is labeled by y.
+
+y = arg min E[latd]
+
+(11)
+
+d
+
+B. Training environment
+
+We train the classifier with a decision tree algorithm. The decision tree classifies data into tree structure according to
+
+1539
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:39:41 UTC from IEEE Xplore. Restrictions apply.
+
+decision rules. The tree structure includes the root node, child nodes, leaves, and branches. The root node is the node where the tree begins. Child nodes are two or more nodes separated from one node. Leaves are the nodes which are no longer separated and mean the final outcome. The nodes are connected by branches.
+The decision tree splits data in the direction of decreasing impurity. Impurity is a measure of the heterogeneity of classes at the node. Entropy IH and Gini impurity IG can be used as a measure of impurity, and they are expressed as follows [15]:
+
+c
+
+IH = − pi log2 pi
+
+(12)
+
+i=1
+
+c
+
+IG = 1 − (pi)2 ,
+
+(13)
+
+i=1
+
+where pi is the proportion of data belong to class i at a given node and c denotes the total number of classes.
+We optimize the hyperparameters of the decision tree by evaluating the objective function 100 times with Bayesian optimization [16]. As a result of the optimization, the maximum depth is 12, the minimum number of leaves is 42, and Gini impurity is used to measure impurity. We divide 80 % of the data as the training set and 20 % as the test set. We validate the classifier by k–fold cross validation, and k is set to 5.
+
+IV. SIMULATION RESULTS
+In this section, we evaluate the proposed machine learningbased error recovery system in terms of prediction accuracy and average read latency through simulation.
+
+A. Simulation settings
+In the NAND flash memory, we extract 9 blocks as follows. From (3), we generate 10,000 block variation parameter s and sort them in order of decreasing reliability. We obtain 9 samples for s corresponding to the top 10 % to 90 % and sequentially assign them into blocks. Thus, in our experiment, the larger the block number, the worse the reliability. Each block contains 32 wordlines, and the page size is 16 KB. We select 4 out of 32 wordlines from each block.
+The ECC specifications are described as follows. Each 1KB data frame is encoded by the LDPC code with a code rate 0.9. The LDPC code is decoded by the min-sum algorithm. The maximum number of iterations for HD and SD decoding is set to 50 and 250, respectively. If the decoding succeeds, the iterative decoding is terminated at that moment.
+In extracted blocks, we acquire data by sampling every 2 hours between 2 to 50 hours of retention time at 1, 100, 500, 1000, and 2000 P/E cycles. We train a classifier with data belong to blocks 1, 3, 5, 7, and 9 among the obtained data.
+
+B. Prediction accuracy
+Table I shows the prediction accuracy of the classifier for all blocks. Class 1, 2, and 3 denote the case when the optimal decoding mode is HD, 2-bit SD, and 3-bit SD, respectively.
+
+The classifier predicts the optimal mode with higher than 94 % accuracy on average. Particularly, although the blocks 2, 4, 6, 8 have different RBER characteristics from the training data, the classifier achieves accuracy performance higher than 95 %. For data belong to class 2 and class 3, the classifier also predicts the optimal mode with about 100 % accuracy. Through this, most unnecessary error recovery processes can be omitted and latency can be greatly reduced. In addition, the classifier predicts LSB page with 100 % accuracy, and the accuracy decreases slightly in CSB and MSB pages. This is because CSB and MSB pages have relatively higher page error rates than LSB page [8].
+
+TABLE I PREDICTION ACCURACY OF PROPOSED DECODING CLASSIFIER
+
+Block number 1 2 3 4 5 6 7 8 9
+Average
+
+class1 class2 class3 96.7 % 98.0 % 100 % 97.7 % 98.4 % 100 % 98.1 % 98.4 % 99.9 % 98.3 % 97.0 % 99.8 % 98.8 % 96.5 % 99.9 % 99.0 % 96.3 % 99.6 % 99.7 % 98.0 % 99.3 % 99.4 % 97.6 % 96.6 % 99.7 % 97.5 % 98.6 % 98.6 % 97.5 % 99.1 %
+
+LSB CSB MSB 100 % 96.4 % 94.4 % 100 % 97.2 % 96.0 % 100 % 97.8 % 96.5 % 100 % 97.2 % 96.6 % 100 % 98.2 % 96.4 % 100 % 98.7 % 96.4 % 100 % 98.8 % 98.4 % 100 % 98.3 % 97.4 % 100 % 98.2 % 98.1 % 100 % 97.9 % 96.7 %
+
+C. Average read latency
+We evaluate the average read latency performance at the 6th wordline of the 9th block, whose reliability is worst among the blocks. We assume that the latency for one sensing is 100/7 µs, decoding latency is 0.5 µs per iteration [17], and data transfer latency is not considered. In addition, we set the latency for prediction through the classifier to be nearly zero because the proposed classifier has a relatively simple inference algorithm. For comparison, the latencies of the following baselines are evaluated.
+• Static denotes a scheme in which decoding always starts from HD decoding mode. If HD decoding fails, 2-bit SD and 3-bit SD decoding are sequentially performed until error recovery succeeds.
+• OPT denotes a genie-aided baseline scheme that knows the optimal decoding mode in advance. Its latency becomes a lower-bound performance.
+In addition, we add the three baselines below for the case when wordline and/or block-to-block RBER variation are unaware. These baselines are look-up table-based schemes.
+• BU denotes a case where block variation is unaware. A look-up table is generated based on data from the 5th block, which is an intermediate block variation level.
+• WU denotes a case where wordline variation is unaware. A look-up table is generated based on data from the 8th wordline, which has an intermediate FER performance among 32 wordlines.
+
+1540
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:39:41 UTC from IEEE Xplore. Restrictions apply.
+
+• VU denotes a case where both variations are unaware. A look-up table is generated based on data from the 8th wordline of the 5th block.
+The average read latency of the above five baselines and proposed scheme (PRO) is shown in Fig. 6. Since the proposed classifier is trained to consider block-to-block RBER variation and wordline variation, the average read latency of PRO is close to that of OPT in most memory states. However, baselines such as BU, WU, and VU which ignore variations cannot achieve low latency. Some baselines have higher latency than Static in some memory states. This is because the sensing latency is increased due to incorrect prediction. Particularly, for the case where the optimal modes of the memory states are HD decoding but the baselines incorrectly predict the optimal mode as 2-bit SD decoding.
+
+Average Read Latency [ms]
+
+5 BU Static
+4 WU PRO
+3 VU OPT
+
+Block 9 - MSB page
+
+2
+
+1
+
+0
+
+0
+
+5
+
+10
+
+15
+
+20
+
+25
+
+30
+
+35
+
+40
+
+45
+
+50
+
+Retention time [hours]
+
+1 BU Static
+0.8 WU PRO
+
+Block 9 - CSB page
+
+0.6 VU OPT
+
+0.4
+
+0.2
+
+0
+
+0
+
+5
+
+10
+
+15
+
+20
+
+25
+
+30
+
+35
+
+40
+
+45
+
+50
+
+Retention time [hours]
+
+Average Read Latency [ms]
+
+Fig. 6. Average read latency of proposed scheme and baselines.
+
+The average read latency improvement ratio with respect to Static is summarized in Table II. The latency improvement ratio of PRO is superior to that of other baselines. In addition, WU has a lower improvement ratio than BU, which means that the wordline variation affects significantly the reliability of flash memory than block-to-block RBER variation [5].
+
+TABLE II THE AVERAGE READ LATENCY IMPROVEMENT RATIO COMPARED TO
+STATIC SCHEME
+
+Average improvement ratio MSB CSB
+
+PRO 53.1 % 68.2 %
+
+BU 42.7 % 64.9 %
+
+WU 12.6 % 38.8 %
+
+VU 10.5 % 14.1 %
+
+V. CONCLUSIONS
+In this paper, we propose a machine learning-based error recovery system for low latency NAND flash memory. To replace retention time and block variation, which are generally inaccessible information at the controller, we use on-cell ratio as alternative information. Moreover, we derive the average read latency taken when decoding starts in each mode. From this, we generate a dataset by finding a mode that ensures successful error recovery with minimum latency. By utilizing
+
+generated dataset, we train the classifier based on the deci-
+sion tree algorithm to predict the optimal decoding mode in
+advance. By simulation, we show that the proposed scheme
+predicts the optimal decoding mode with higher than 94%
+accuracy even if there exists reliability variation among flash
+blocks and wordlines. In addition, the proposed scheme shows
+about 61% latency improvement ratio compared to the Static
+scheme and achieves the minimum average read latency. From
+this, low latency and high reliability can be guaranteed in
+numerous flash blocks in spite of process variation.
+REFERENCES
+[1] Y. Shim, M. Kim, M. Chun, J. Park, Y. Kim, and J. Kim, “Exploiting process similarity of 3D flash memory for high performance SSDs,” in Proceedings of the 52nd Annual IEEE/ACM International Symposium on Microarchitecture, 2019, pp. 211–223.
+[2] R. Micheloni, S. Aritome, and L. Crippa, “Array architectures for 3-D NAND flash memories,” Proc. IEEE, vol. 105, no. 9, pp. 1634–1649, 2017.
+[3] Y. Cai, S. Ghose, E. F. Haratsch, Y. Luo, and O. Mutlu, “Error characterization, mitigation, and recovery in flash-memory-based solidstate drives,” Proc. IEEE, vol. 105, no. 9, pp. 1666–1704, 2017.
+[4] Y. Pan, H. Zhang, M. Gong, and Z. Liu, “Process-variation effects on 3D TLC flash reliability: Characterization and mitigation scheme,” in 2020 IEEE 20th International Conference on Software Quality, Reliability and Security (QRS). IEEE, 2020, pp. 329–334.
+[5] Y. Luo, S. Ghose, Y. Cai, E. F. Haratsch, and O. Mutlu, “Improving 3D NAND flash memory lifetime by tolerating early retention loss and process variation,” Proceedings of the ACM on Measurement and Analysis of Computing Systems, vol. 2, no. 3, pp. 1–48, 2018.
+[6] K. Zhao, W. Zhao, H. Sun, X. Zhang, N. Zheng, and T. Zhang, “LDPCin-SSD: Making advanced error correction codes work effectively in solid state drives,” in 11th USENIX Conference on File and Storage Technologies (FAST), 2013, pp. 243–256.
+[7] J. Peng, Q. Wang, X. Fu, and Z. Huo, “Dynamic LLR scheme based on EM algorithm for LDPC decoding in NAND flash memory,” IEICE Electronics Express, vol. 14, no. 18, pp. 1–8, 2017.
+[8] K. Ma, M. Liu, T. Li, Y. Yin, and H. Chen, “A low-cost improved method of raw bit error rate estimation for NAND flash memory of high storage density,” Electronics, vol. 9, no. 11, p. 1900, 2020.
+[9] D. Wei, L. Qiao, M. Hao, H. Feng, and X. Peng, “Reliability prediction model of NAND flash memory based on random forest algorithm,” Microelectronics Reliability, vol. 100, p. 113371, 2019.
+[10] Y.-C. Liao, C.-H. Huang, C. Zeng, and H.-C. Chang, “Data analysis and prediction for NAND flash decoding status,” in 2017 IEEE International Memory Workshop (IMW). IEEE, 2017, pp. 1–4.
+[11] H. Choe, J. Jee, S.-C. Lim, S. M. Joe, I. H. Park, and H. Park, “Machine-learning-based read reference voltage estimation for NAND flash memory systems without knowledge of retention time,” IEEE Access, vol. 8, pp. 176 416–176 429, 2020.
+[12] G. Dong, Y. Zou, and T. Zhang, “Reducing data transfer latency of NAND flash memory with soft-decision sensing,” in 2012 IEEE International Conference on Communications (ICC). IEEE, 2012, pp. 7024–7028.
+[13] Y. Pan, G. Dong, and T. Zhang, “Error rate-based wear-leveling for NAND flash memory at highly scaled technology nodes,” IEEE Trans. VLSI Syst., vol. 21, no. 7, pp. 1350–1354, 2012.
+[14] Y. Pan, G. Dong, Q. Wu, and T. Zhang, “Quasi-nonvolatile SSD: Trading flash memory nonvolatility to improve storage system performance for enterprise applications,” in IEEE International Symposium on HighPerformance Comp Architecture. IEEE, 2012, pp. 1–10.
+[15] S. Singh and P. Gupta, “Comparative study ID3, cart and C4.5 decision tree algorithm: a survey,” International Journal of Advanced Information Science and Technology (IJAIST), vol. 27, no. 27, pp. 97–103, 2014.
+[16] E. Brochu, V. M. Cora, and N. De Freitas, “A tutorial on Bayesian optimization of expensive cost functions, with application to active user modeling and hierarchical reinforcement learning,” arXiv:1012.2599,arXiv.org, 2010.
+[17] R.-S. Liu, M.-Y. Chuang, C.-L. Yang, C.-H. Li, K.-C. Ho, and H.-P. Li, “Improving read performance of NAND flash SSDs by exploiting error locality,” IEEE Trans. Comput., vol. 65, no. 4, pp. 1090–1102, 2014.
+
+1541
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:39:41 UTC from IEEE Xplore. Restrictions apply.
+
+

@@ -1,0 +1,744 @@
+Proceedings of ICCT2013
+
+Implementation of IEEE 802.11n LDPC Codes Based on General Purpose Processors
+
+Xiao Han, Kai Niu, Zhiqiang He
+
+Key Lab of Universal Wireless Communications, Ministry of Education, Beijing University of Posts and Telecommunications, Beijing 100876, China
+15810537980@139.com
+
+Abstract: Recently, General-purpose processor (GPP) soft defined radio (SDR) platforms have drawn great attention for their programmability and flexibility, and some high-speed wireless protocol stacks (e.g., IEEE 802.11a/b/g) have been implemented on them using commodity general-purpose PCs. Low-density parity-check (LDPC) codes are optionally used in IEEE 802.11n high throughput (HT) system as a high-performance error correcting code instead of convolutional codes for the near Shannon limit performance. In order to complete the implementation of IEEE 802.11n on SDR platforms, this paper presents the encoding and decoding of IEEE 802.11n LDPC codes on GPPs. We extensively use the features of contemporary processor architectures to accelerate data processing, including large low-latency caches to store lookup tables and SIMD processing on GPPs. Layered decoding is used in this paper, which can significantly reduce the number of iterations and is well suited to using SIMD instructions. The implementation results show that the throughput can meet the protocol timing requirement under the performance premise.
+Keywords: Low-density parity-check (LDPC) codes; layered decoding; General-purpose processor (GPP); IEEE 802.11n
+
+1 Introduction
+
+The increasing demand of high data-rate and reliability
+
+in modern wireless communication systems requires
+
+high-performance
+
+error-correction
+
+schemes.
+
+Low-density parity-check (LDPC) codes [1] are among
+
+the best candidates to meet these requirements for
+
+next-generation wireless communication standards. In
+
+particular, quasi-cyclic (QC) LDPC codes [2] enjoy high
+
+decoding throughput at relatively low implementation
+
+complexity, and has been considered in different
+
+wireless standards, such as IEEE 802.16e [3] and IEEE
+
+802.11n [4].
+
+Owing to the special structure of the IEEE 802.11n LDPC parity check matrices, the encoder can be performed very efficiently. As this paper shows, the encoder of IEEE 802.11n LDPC can be simplified into matrix multiplier and adder. The decoder of LDPC in this paper is based on the concept of turbo decoding message passing (TDMP), which is also called layered decoding [5]. Compared to standard two-phase message ____________________________________ 978-1-4799-0077-0/13/$31.00 ©2013 IEEE
+
+passing (TPMP), TDMP offers 2x throughput as the number of iterations decreases by 50%. TDMP architecture also saves the memory needed to store the variable node messages and the channel log-likelihood ratios (LLR).
+Software defined radio (SDR) holds the promise of fully programmable wireless communication systems, effectively supplanting current technologies which have the lowest communication layers implemented primarily in fixed, custom hardware circuits [6]. Moreover, SDR platforms are based on general-purpose processor (GPP) architectures, such as commodity PCs. Developers program to familiar architecture and environment using sophisticated programming and debugging tools.
+In this paper, we implement the encoding and decoding of IEEE 802.11n LDPC on GPPs. The features of contemporary processor architectures are extensively exploited to accelerate data processing. First, we use lookup tables (LUTs) widely, trading off computation for memory. These LUTs substantially reduce the computational requirements, while at the same time taking advantage of the large, low-latency caches on modern GPPs. Second, in order to further accelerate data processing with data-level parallelism, we heavily use the Single Instruction Multiple Data (SIMD) extensions in modern GPPs, which can extremely speed up the data processing. It should be noted that since the number of nonnegative elements is not invariable for different rows of a prototype matrix, GPPs enjoy the advantage of flexibility over hardware platforms in the implementation of decoder.
+The rest of the paper is organized as follows. Section II introduces the structure of QC-LDPC in IEEE 802.11n briefly. Section III presents the implementation of IEEE 802.11n LDPC encoder based on GPPs. Then, the implementation of decoder is described specifically in Section IV. Section V gives the implementation results. Finally, we conclude the paper in section VI.
+2 LDPC Codes for IEEE 802.11n
+An N, K LDPC code is specified by the parity-check
+matrix H whose size is M u N . Since the LDPC codes for IEEE 802.11n are based on block-structured QC-LDPC codes, the parity-check matrix can be partitioned into square submatrices of size Z u Z , where
+
+ Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:04:44 UTC from IEEE Xplore. Restrictions apply.
+
+Proceedings of ICCT2013
+
+Z is defined as the expander factor in IEEE 802.11n. These submatrices are either cyclic-permutations of the identity matrix or null matrix. The cyclic-permutation matrix Pi is obtained from the Z u Z identity matrix by cyclically shifting the columns to the right by i elements. The matrix P0 is the Z u Z identity matrix. For example if Z 3 and i 1 , the corresponding
+
+cyclic-permutation
+
+matrix
+
+P1
+
+is >0 1 0 ; 0 0 1 ; 1 0 0@ . Define the
+
+prototype of H as Hb of size Mb u Nb , where " " represents null matrix. When the code rate is 3/4 and Z equals 81, the prototype matrix of the IEEE 802.11n standard [4] is
+
+ª48 29 28 39 9 61
+
+63 45 80
+
+37 32 22 1 0
+
+º
+
+« «
+
+4
+
+49
+
+42
+
+48
+
+11
+
+30
+
+49 17 41 37 15 54
+
+00
+
+» »
+
+«35 76 78 51 37 35 21 17 64 Hb «
+« 9 65 44 9 54 56 73 34 42
+
+59 7 35
+
+32 46 39 0
+
+00
+
+» »
+
+.
+
+00 »
+
+« 3 62 7 80 68 26 80 55 36 26 9 72
+
+0 0»
+
+«
+
+»
+
+¬26 75 33 21 69 59 3 38
+
+35 62 36 26
+
+1
+
+0¼
+
+There are three available codeword block lengths in IEEE 802.11n. For each available codeword block lengths, the LDPC encoder supports four coding rates.
+
+3 Implementation of Encoder
+
+In this section, we present the implementation of IEEE 802.11n LDPC encoder on GPPs, especially concerning the optimization of matrix multiplier.
+The parity-check matrix of IEEE 802.11n can be decomposed as follows
+
+ªA M Z u N M
+
+H« ¬
+
+FZ u N M
+
+B M Z uZ DZ u Z
+
+TM Z uM EZ u M Z
+
+Z
+
+º »
+
+.
+
+¼
+
+Accordingly, the decomposition of the matrix prototype
+
+is
+
+ªA M Z u N M
+
+H« ¬
+
+FZ u N M
+
+B M Z uZ DZ u Z
+
+TM Z uM EZ u M Z
+
+Z
+
+º »
+
+.
+
+¼
+
+Here, blocking matrixes are defined as
+
+Bb Mb 1 u1 1
+
+0
+
+T
+
+(1)
+
+Db1u1 1
+
+(2)
+
+Eb1u Mb 1
+
+0
+
+(3)
+
+ª0
+
+««0 0
+
+Tb Mb 1 u Mb 1
+
+« «
+
+«
+
+¬«
+
+º
+
+»
+
+»
+
+» . (4)
+
+0
+
+» »
+
+0 0»¼
+
+The inverse of matrix Tb is
+
+ª0
+
+« «
+
+0
+
+Tb Mb
+
+1 u Mb
+
+11
+
+«0 «
+
+«0
+
+«¬
+
+0 00
+
+º
+
+»
+
+»
+
+» . (5)
+
+0
+
+» »
+
+0 0»¼
+
+Tb Mb 1 u Mb 1 1 is a lower triangular matrix, with
+
+columns of identity matrix alternating with negative
+
+identity matrix.
+
+Assume the code word is c = S,p1,p2 . S represents
+the variable nodes. p1 and p2 are check nodes with length of Z and M Z respectively, and the calculation of p1 and p2 is described as
+
+p1T = ET 1A + F ST
+
+(6)
+
+pT2 = T 1 AST + Bp1T
+
+(7)
+
+According to (6) and (7), to generate check nodes in p1
+and p2 , we only need five blocking matrixes rather than the whole prototype of the parity-check matrix. What’s more, instead of generating the blocking matrixes immediately, we store them in LUTs in advance. The number of elements in matrix A is 132, 112, 90 and 60 when the coding rate is 1/2, 2/3, 3/4 and 5/6 respectively. Since there are three code lengths for each coding rate, the total size of A is 1182 Bytes. Similarly, the total size of F is 198 Bytes. It can be observed from the prototype matrix Hb that for the same code rate, the
+blocking matrixes B , T 1 and E are invariable for different code lengths. As a result, we can further compress the size of B , T 1 and E to 26 Bytes, 204 Bytes and 26 Bytes respectively. It is obvious from the above that the size of each LUT is sufficiently small, so the sum of all LUTs in the encoder can easily fit in the L2 caches of contemporary GPP cores.
+
+It can be seen from (6) and (7) that the most complex calculation in the encoder is matrix-vector productions. So, we will use AST as an example to discuss the multiplier in detail next. Define operation 1 as follows: A matrix times a column vector, where the matrix is a identity matrix cyclically shifted down by i i t 0 .
+If i 0 , the result is the original column vector. Otherwise, put the i ~ Z 1 entries to the front of the 0 ~ i 1 entries as the result. Thus, we summarize the encoding procedure as follows.
+
+1) Partition ST into sub-vectors according to Z .
+
+2) Perform the following operation on the k th row of Ab Mb 1 u Nb Mb : define two column vectors:
+X ^Y1,Y2, ,YZ `T and Ck ^Yk1,Yk2, ` ,YkZ T , both
+initialized as zero vectors.
+
+3) Find the non-negative value i in column j of k th row, then perform operation 1 on the j th
+
+ Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:04:44 UTC from IEEE Xplore. Restrictions apply.
+
+Proceedings of ICCT2013
+sub-vector. Assign the result to vector X , and xor Ck with X .
+4) Repeat 3) until there isn’t non-negative element in the k th row.
+5) Repeat 2) to 4).
+^ ` 6) Combine C0,C1, ,C Mb 2 as Y Y0,Y1, ,YZ Mb 1 1 .
+Here, SIMD instructions are used extensively to speed up the encoding process. The operations, such as the initialization in 1) and 2) as well as shift and xor in 3), can be realized with corresponding instructions in data-level parallel. Besides, the binary addition in (6) and (7) can be simply done with the xor instruction. One 128-bit SIMD instruction can perform 16 calculations simultaneously.
+In addition, taking advantage of the special structure of E and T 1 , we can further simplify the multiplier. In matrix E , all the entries are negative except the last one is zero. Therefore, if E multiplies vector V , the result is the last Z entries of V . T 1 is a lower triangular matrix, so the multiplication of T 1 and vector V can be described as follows: Assume vectors C0,C1, ,C Mb 2 are temporary result, then assign the first Z entries of vector V to C0 . To obtain C1 , we only need to xor C0 with the Z ~ 2Z 1 entries of vector V , and so on. All the above operations are realized in parallel with SIMD instructions.
+4 Implementation of Decoder
+This section describes the implementation of IEEE 802.11n LDPC decoder on GPPs. We use layered LDPC decoding with offset min-sum (OMS) message passing (MP) as the decoding algorithm for two reasons. For one thing, the convergence behavior of layered decoding is significantly improved compared to TPMP, since message updates are not done only after finishing the whole parity check matrix but also after finishing each layer of the parity check matrix. For another, the layered structure is well suited for using SIMD instructions to realize data-level parallelism. The implementation details of the LDPC decoder are presented as follows.
+4.1 Quantization
+In practical decoding process, the signal is represented by a finite number of q bits. Additionally, the channel data quantization can further improve the degree of data-level parallelism with a very small loss of performance.
+Let q,' denote a uniform quantization scheme with quantization step ' . One of the q bits denotes the sign, whereas the remaining q 1 denote the magnitude. Suppose that the same quantization is taken for both received values and messages passing in the decoder.
+
+Then the messages passing in the iterative decoding belong to an alphabet of size 2q 1 , represented by
+> T, , 1,0,1, ,T @ , where T 2q 1 1 . The
+
+def
+quantization threshold is defined as Tth T  ' . The
+received channel data yn is initially quantized to an
+integer yn , whose sign and magnitude are determined by
+
+sign yn sign yn respectively.
+
+and yn min «¬ yn / ' 0.5»¼,T
+
+4.2 Decoding on GPPs
+
+The decoding algorithm used in this paper is based on layered LDPC decoding. First, we divide check nodes
+into Mb layers. Each layer includes Z check nodes.
+Next, the decoding procedure is performed layer by layer in a serial fashion. Check node and variable node probabilities are calculated at the first layer. When the decoding process of the first layer has been completed, the second layer initiates the decoding process with the calculated variable node probability from the first layer. It is worth noting that the layered computational structure is well appreciated for data-level parallelism. As shown in Figure 1, when Z equals 81, one layer is partitioned into 6 groups, and each group consists of 16 rows except the last one. The 16 rows of each group are processed in parallel with SIMD instructions, substantially speeding up the iterative processing. The details of the decoding procedure are described below and summarized in Alg. 1.
+
+Initialization: The qn n values are initialized by the
+
+LLRs and all messages
+
+r0 m,n
+
+m, n
+
+are set to zero. The
+
+algorithm performs a maximum number of I iterations
+
+and operates row-rise. n  Nm in Alg. 1 means the
+
+columns of Hb for which > @ Hb m,n z ' ' .
+
+MIN phase: The
+
+ri 1 m,n
+
+message is subtracted from a
+
+cyclically shifted down version (by S m,n
+
+> @ Hb
+
+)
+m,n
+
+of qn and stored in vector tn . According to the
+
+value-reuse properties of OMS [7], we only need to
+
+compute the minimum and the second minimum for
+
+each entry of tn n . As shown in line 8, the temporary
+
+vector x contains the values not corresponding to the
+
+minimum (i.e., the second-lowest values), and in the
+
+index vector v , >v@ is set to the current index n if a k
+
+new
+
+minimum
+
+(i.e.
+
+corresponding
+
+to
+
+>t
+
+n
+
+@ k
+
+)
+
+has
+
+been
+
+found. The vector s contains Z signs.
+
+SEL Phase: In this phase, the new
+
+qn
+
+and
+
+ri m,n
+
+messages are computed iteratively for n  Nm . The
+
+sel-function in line 14 compares each entry of vector v
+
+with
+
+n
+
+and yields the corresponding entry of
+
+>m1
+
+@ k
+
+if
+
+>v@ z n k
+
+and
+
+>m 2
+
+@ k
+
+otherwise. The new
+
+ri m,n
+
+vector is
+
+ Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:04:44 UTC from IEEE Xplore. Restrictions apply.
+
+Proceedings of ICCT2013
+
+computed through OMS, and the offset value E is
+
+same for all Z entries. The new qn vector is the cyclically shifted down version (by
+
+S' m,n
+
+Z
+
+¬ªH p ¼ºm,n ) of the sum of tn
+
+and
+
+ri m,n
+
+.
+
+V1
+
+C1
+
+C2 Group 1
+V2
+噯
+C16 V3
+噯
+V4 C65
+
+V5
+
+C66 Group 5
+
+噯
+
+V6
+
+C80
+
+V7
+Variable Nodes
+
+C81 Group 6 Check Nodes
+
+Figure 1 The procedure of parallel processing in one layer
+In Alg. 1, the operations, such as finding the minimum, getting index vectors and the selection operation in line 14 are all performed efficiently through corresponding SIMD instructions.
+
+We also extensively use LUTs in LDPC decoder. The number and index values of non-negative entries in each row, the values of S m,n and S' m,n , and the
+looping times in cyclically shift are all be pre-calculated and stored in our scheme. As a consequence, the procedure of LDPC decoding is further speeded up with the computational complexity of Alg.1 significantly reduced.
+
+4.3 Clipping
+
+In order to prevent vector qn from overflowing, the
+maximum magnitude of the Q-values can be clipped. However, this straightforward approach yields poor error-rate performance. As line 15 of Alg.1 shows, instead of clipping the Q-values, the R-messages are clipped according to
+
+^ ` clip r,t max min^r,Qmax `t , Qmax t
+
+(8)
+
+which ensures that > @ qn k d Qmax n,k . In our scheme,
+
+since that the instructions _mm_adds_epi8 and
+
+_mm_subs_epi8 can prevent overflowing automatically,
+
+message clipping in line 15 and addition in line 16 of
+
+Alg.1 are simplified as follows
+
+sum
+
+ri m,n
+
+,
+
+t
+
+n
+
+_mm_adds_epi8
+
+ri m,n
+
+,
+
+tn
+
+ri m,n
+
+_mm_subs_epi8 sum rmi ,n,tn ,tn
+
+(9) (10)
+
+Algorithm 1
+
+1:
+
+r0 m,n
+
+m
+
+0Zu1, n
+
+1, 2,
+
+, Nb,m
+
+1, 2,
+
+,Mb
+
+2: qn m ª¬L n 1 Z 1L n 1 Z 2 LnZ ¼ºT , n
+
+3: for i 1,2, , I do
+
+4: for m 1,2, ,Mb do
+
+5:
+
+m1 m f  Izu1,m2 m f  Izu1,s m Izu1
+
+6:
+
+for n  Nm do
+
+7˖
+8: 9:
+
+^ ` > @ > @ S m,n
+
+Hb m,n ,tn m qn S m,n
+
+>m1, x,
+m2 m
+
+mv@inm^mm2in, x`m1,
+
+tn
+
+ri 1 m,n
+
+10:
+
+s m s  sign t
+
+11:
+
+end for
+
+12:
+
+for n  Nm do
+
+13:
+
+> @ > @ S m,n
+
+Hb m,n ,tn m qn S m,n
+
+ri 1 m,n
+
+14:
+
+m m sel m1,m2, v,n
+
+15:
+
+ri m,n
+
+m
+
+cilp
+
+s  sign
+
+tn
+
+ max^m
+
+E , 0`, t n
+
+16:
+
+qn m ¬ªtn
+
+º¼ ri
+
+, S S' m,n
+
+'
+
+m, n
+
+m,n
+
+Z ª¬H p ¼ºm,n
+
+17:
+
+end for
+
+18: end for
+
+19: end for
+
+4.3 Analysis of Parallelism
+
+In layered decoding, the decoding is performed layer by layer and the rows in one layer are processed in parallel. When the data is 8-bit fix-point, one 128-bit SIMD instruction can perform 16 simultaneous calculations. However, since the number of rows in one layer may not be a multiple of 16, the degree of parallelism is usually smaller than 16, which is calculated according the following formula.
+
+P Z / «ªZ / 16º»
+
+(11)
+
+where P represents the degree of parallelism. When
+
+Z 81, Z 54 and Z 27 , the value of P is always
+
+13.5.
+
+5 Implementation Results
+
+In this section, we give performance as well as delay and throughput of IEEE 802.11n LDPC codes implemented on GPPs. Test environment of this paper is shown in 0 The CPU is Intel core i7-2600K which has 4 cores and 8 threads. In computing, Streaming SIMD Extensions (SSE) is an SIMD instruction set extension to the x86 architecture, designed by Intel and introduced in 1999 in their Pentium III series processors as a reply to AMD's 3DNow!. Intel C++ Compiler, also known as ICC or ICL, is a group of C and C++ compilers from Intel Corporation available for Apple Mac OS X, Linux and Microsoft Windows, which support SSE instruction.
+
+Table I Test Environment
+
+CPU OS software compiler
+
+Intel core i7-2600K @3.4GHz(32nm)
+Windows 7 Microsoft Visual Studio
+2010 Intel ICC v11.1
+
+ Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:04:44 UTC from IEEE Xplore. Restrictions apply.
+
+Proceedings of ICCT2013
+Figure 2 depicts the bit error rate (BER) performance of layered decoding and TPMP, both with OMS. As the figure shows, layered decoding with 5 iterations can approximate the performance of TPMP with 10 iterations, which demonstrates the notion that the TDMP schedule on OMS only needs half the number of iterations to achieve similar convergence gains as TPMP. We also compare the BER performance of the implemented decoder for 8-bit fixed point arithmetic precisions with floating point. Compared to the floating point version, 8-bit fixed-point precision has only very small loss, while enables higher levels of instruction level parallelism, four times as floating point version.
+
+100
+iteration = 10(TPMP floating point)
+iteration = 5 (TDMP floating point) iteration = 5 (TDMP fixed point)
+-1
+10
+
+-2
+10
+
+BER
+
+10-3
+
+10-4
+
+-5
+10
+
+10-6
+
+0
+
+0.5
+
+1
+
+1.5
+
+2
+
+2.5
+
+3
+
+SNR(dB)
+
+Figure 2 BER Performance in an AWGN channel ( R 1 / 2 , Z 81 )
+
+We test the delay and throughput of IEEE 802.11n LDPC encoder and decoder based on GPPs with a single CPU core, when the length of PSDU (physical layer convergence procedure service data unit) is 65535 Bytes. Table II shows the test results of encoder. The decoding iterations number I is 5 and the test results are illustrated in Table III. The simulation results show that the throughput can satisfy the timing requirements of IEEE 802.11n protocol when the code rates are 1/2 and 3/4. Although the throughput is slightly lower than the requirements when the code rates are 2/3 and 5/6, it can be further improved using a multi-core CPU.
+
+Table II Encoding Delay and Throughput
+
+Rate
+1/2 2/3 3/4 5/6
+
+Delay (ms)
+0.563 0.446 0.377 0.324
+
+Throughput (Mbits/s) 931.23
+1175.5
+1390.7
+1618.1
+
+Table III Decoding Delay and Throughput
+
+Rate
+1/2 2/3 3/4 5/6
+
+Delay (ms)
+17.420 12.793 11.259 9.2905
+
+Throughput (Mbits/s) 30.0964
+40.9818
+46.5654
+56.4318
+
+6 Conclusions
+This paper presents the implementation of IEEE 802.11n LDPC on GPPs. Thanks to the programmability and flexibility of GPPs, we make extensive use of features of contemporary processor architectures to accelerate both encoder and decoder of LDPC codes, including SIMD processor extensions and large low-latency caches to store lookup tables. It’s worth mentioning that the layered decoding algorithm is especially suited to using SIMD instructions. Since the number of nonnegative is not always the same for different rows of a prototype matrix, GPPs enjoy the advantage of flexibility over hardware platform in the implementation of decoder. What’s more, considering the rapid development of CPU, data processing capacity of GPPs will be further improved.
+Acknowledgements
+This work was supported by the National Basic Research Program of China (973Program) (No. 2009CB320401), the National Natural Science Foundation of China (No.61171099), the National Science and Technology Major Project of China (No.2012ZX03004005-002 and 2013ZX03003-004).
+References
+[1] R. Gallager, “Low-Density Parity-Check Codes,” Trans. of the IRE Professional Group on Inf. Theory, vol. IT-8, pp. 21-28, Jan. 1962.J. Clerk Maxwell, A Treatise on Electricity and Magnetism, 3rd ed., vol. 2. Oxford: Clarendon, 1892, pp.68-73.
+[2] M. P. C. Fossorier, “Quasi-cyclic low-density parity-check codes from circulant permutation matrices,” IEEE Trans. on Inf. Theory, vol. 50, no. 8, pp. 1788-1793, Aug. 2004.I.S. Jacobs and C.P. Bean, “Fine particles, thin films and exchange anisotropy,” in Magnetism, vol. III, G.T. Rado and H. Suhl, Eds. New York: Academic, 1963, pp. 271-350.
+[3] IEEE P802.16e, Part 16, “Air Interface for Fixed and Mobile Broadband Wireless Access Systems,” Amendment 2: Physical and Medium Access Control Layers for Combined Fixed and Mobile Operation in Licensed Bands, and Corrigendum 1, Feb. 2006.
+[4] IEEE Std 802.11TM-2012, Part 11, “Wireless LAN Medium Access Contol (MAC) and Physical Layer (PHY) specifications”,Mar. 2012.
+[5] D. Hocevar, “A reduced complexity decoder architecture via layered decoding of LDPC codes,” IEEE SiPS, pp. 107-112, Oct. 2004.M. Young, The Technical Writer’s Handbook. Mill Valley, CA: University Science, 1989.
+[6] K. Tan, J. Zhang, J. Fang, H. Liu, Y. Ye, S. Wang, Y. Zhang, H. Wu, W. Wang, and G. M. Volker. SORA: High performance software radio using general purpose multi-core processors. In Proc. of NSDI (2009).
+[7] K. K. Gunnam, G. S. Choi, W. Wang, E. Kim, and M. B. Yeary, “Decoding of quasi-cyclic LDPC codes using an on-the-fly computation,” in Proc. Fortieth Asilomar Conference on Signals, Systems and Computers, Oct. 2006, pp. 1192-11.
+
+ Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:04:44 UTC from IEEE Xplore. Restrictions apply.
+
+

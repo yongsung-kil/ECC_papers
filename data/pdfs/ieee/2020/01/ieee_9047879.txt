@@ -1,0 +1,747 @@
+Received March 9, 2020, accepted March 23, 2020, date of publication March 26, 2020, date of current version April 9, 2020. Digital Object Identifier 10.1109/ACCESS.2020.2983433
+A Discrete Detection and Decoding of MLC NAND Flash Memory With Retention Noise
+WENHAO SUN AND JIANPING ZHENG
+State Key Laboratory of Integrated Services Network, Collaborative Innovation Center of Information Sensing and Understanding, School of Telecommunications Engineering, Xidian University, Xi’an 710071, China
+Corresponding author: Jianping Zheng (jpzheng@xidian.edu.cn) This work was supported in part by the National Natural Science Foundation of China under Grant 61671340.
+
+ABSTRACT The retention noise in MLC NAND flash memory has a great impact on reliability and lifetime of devices. How to recover information from the data corrupted by retention noise is a challenging problem. The joint processing of channel estimation, detection and low-density parity-check (LDPC) decoding is an effective method to handle this problem, while which is hindered by the limited computational resource of NAND flash memory devices. This paper proposes a discrete retention-failure recovery method, where the reading system only processes integers. The proposed method consists of two major components referred to binary tree searching (BTS) based channel updating and information bottleneck (IB) based LDPC decoding. In channel updating, the proposed learning based BTS algorithm can acquire reference voltages directly; thus it bypasses the intermediate stage of retention noise parameter estimation. The LDPC decoder is realized by IB based message passing, where node operation is achieved by lookup tables, and the messages passed between nodes are integers. Besides, a dynamic quantization level reduction strategy for IB based decoding is proposed to reduce the memory consumption of lookup tables. Finally, using PEG-constructed regular LDPC code (8000, 7200), the numerical results show that the proposed discrete method has much lower computational complexity and similar performance compared with the conventional method.
+INDEX TERMS Retention noise, flash memory, information bottleneck, decision trees, computational complexity.
+
+I. INTRODUCTION NAND flash memory is widely used in digital devices. But data in devices powered-off for a long time will suffer from serious noises, among which retention noise predominates [1], [2]. Because of the physical structure of memory cells, the charges inside the floating gates are escaping over time, which is the source of the retention noise [1]. Therefore, how to overcome the retention noise is an important problem in data recovery. On the other hand, prevalent NAND flash memory devices are usually powered by the battery and have limited computational resources, which means that the data recovery method should have low computational complexity and power consumption.
+Some conventional retention noise recovery methods utilize the refresh mechanism, where data are frequently read and corrected by error control coding (ECC), then they are written back before the retention noise makes the error
+The associate editor coordinating the review of this manuscript and
+approving it for publication was Mingjun Dai .
+
+outstrip the capability of the ECC [3]–[5]. However, this method doesn’t work on the longtime powered-off devices, and it also adds extra wearout [1]. Moreover, in the errorprediction error-recovery (EPER) [6] and flash-defibrillator (FD) [7], the retention-failure data were recovered by recharging the charge-reduced cells. In the retention failure recovery [8], the cells affected by retention noise were detected to reduce the raw retention errors. In those methods, extra sensing operation is required, which increases the read latency and power consumption.
+Another approach is channel estimation based retention error correction. Because the retention noise makes the threshold voltage distributions shift, it is necessary to calibrate the reference voltages. Moreover, the accuracy of updated reference voltages depends on channel parameters. In decision-directed estimation (DDE) [9], channel parameters were estimated by the decision results of ECC. This method doesn’t need extra memory sensing but requires the correctly decoded data which may be hard to collect under serious retention noise. Detector parameter estimation (DPE)
+
+60626
+
+This work is licensed under a Creative Commons Attribution 4.0 License. For more information, see https://creativecommons.org/licenses/by/4.0/ VOLUME 8, 2020
+
+W. Sun, J. Zheng: Discrete Detection and Decoding of MLC NAND Flash Memory With Retention Noise
+
+[10] and RABP assisted channel update (RABP-CU) [11] are iteration based channel estimation methods, where they first constructed a cost function related to channel parameters, then got the estimation result by iteration optimizing algorithms such as gradient descent (GD). Although RABPCU does not need extra sensing operations, it requires a large number of iterations to converge to a proper result, which leads to high complexity. The optimizing algorithm DPE has fast converging speed, but DPE needs extra sensing operations and high quantity of quantization levels. In [12], the authors proposed a two-stage estimation (TSE) method, where the first stage performs the coarse estimation and the second stage tunes it finely. Although TSE has low computational complexity, it needs extra memory sensing operation. Moreover, these methods in [9]–[12] only acquire the channel parameters. The complex reference voltage design methods such as the mutual information maximization [13] are further required to compute the reference voltages based on these parameters.
+On the other hand, the strong soft-decision ECC is an essential part of retention error recovery. The low-density parity-check (LDPC) [14] code is generally used as ECC in NAND flash memory, for it can significantly improve the error tolerance capacity compared with conventional Bose–Chaudhuri–Hocquenghem (BCH) [15] code. However, the complexity of float-point message passing is very high for flash memory devices; thus, it is usually replaced by simplified algorithms such as quantized decoder. But the uniform quantization in quantized decoder has usually negative impact on performance [16]. For example, the quantized min-sum decoder [17] has prominent performance loss compared with float-point sum-product algorithm (SPA) decoder.
+Recently, Lewandowsky and Bauch have proposed discrete sum-product LDPC information bottleneck (LDPC-IB) decoder [18]–[20]. LDPC-IB is based on information bottleneck (IB), which was first introduced by Tishby et. al. in 1999 [21]. The IB solves the problem that how to effectively extract the information x ∈ X from the related signal y ∈ Y by compressing Y . After that, several IB algorithmic approaches were proposed, such as agglomerative IB (Agg-IB), sequential IB (Seq-IB), deterministic IB (Det-IB) and KullbackLeibler-means IB (KL-means-IB) [22]. Since its invention, IB has widely applied in different fields, such as documents classification [23], neuroscience [24], deep learning [25] and LDPC decoding [18].
+In LDPC-IB decoder, the message passing among nodes is achieved by lookup tables (LUTs), which are generated by the IB method offline. With those LUTs, the online decoding procedure only needs to deal with unsigned integers. Compared with the float point decoding, LDPC-IB decoder can avoid float-point calculation and thus has low complexity, and meanwhile has nearly no performance loss. Therefore, it is a proper decoder implementation for NAND flash memory.
+In this paper, our goal is to construct a low complexity discrete retention error recovery method, in which all
+VOLUME 8, 2020
+
+the processes, including the channel updating and LDPC-IB decoding, can be done only by using integers. In channel updating step, we propose a decision tree based method. In this method, the design of reference voltages is transformed to a classification problem, and the reference voltages are acquired directly without the complex reference voltage computation such as the mutual information maximization method in [13]. Especially, the classification and regression trees (CART) [26] algorithm is utilized here for the classification problem. The inputs of binary tree trained by CART are numbers of cell threshold voltages falling into different quantization levels with raw reference voltages. The output is the index of the selected set of reference voltages. In the LDPC-IB decoder, the LUT is obtained by IB for BPSK-AWGN channel, and a channel re-mapping strategy is given to process the mismatch between MLC flash memory channel and BPSK-AWGN channel. Moreover, to reduce the memory consumption of LUTs, we propose a method to reduce the size of LUTs dynamically.
+In summary, the contributions of this paper are listed as follows.
+1) We propose a decision tree based method to acquire the reference voltages. This method can bypass the complex reference voltage design, and be implemented by simple binary tree searching.
+2) In LDPC-IB decoder, a channel re-mapping strategy is proposed to solve the mismatch between MLC flash memory channel and AWGN-BPSK channel. Moreover, a dynamic LUT size reduction method is proposed to save the memory space.
+3) The proposed discrete reading system shows good frame error rate performance. Concretely, using PEG-constructed regular LDPC code (8000, 7200), the proposed method has similar performance compared with the benchmark method consisted of TSE channel estimation and float-point SPA decoding.
+The rest of this paper is organized as follow. The system model is presented in Section II. The proposed channel updating is given in Section III. The proposed LDPC-IB decoder is discussed in IV. The complexity and simulation results are shown in Section V. Finally, we conclude this paper in Section VI.
+
+II. SYSTEM MODEL The MLC flash memory channel model in [11] is adopted here. According to [27]–[32], the read voltage of a 2-bit MLC NAND cell can be expressed by
+
+V = Vs + nu + np + nw − nr + ni .
+
+(1)
+
+Here, Vs ∈ Vs11 , Vs10 , Vs00 , Vs01 is the target voltage set with erased state s11 and programed states s10, s00, and s01. The noise nu is caused by incremental step pulse programming (ISPP), following a uniform distribution in the interval [0, Vpp] with Vpp which is the step size of ISPP. Its
+
+60627
+
+W. Sun, J. Zheng: Discrete Detection and Decoding of MLC NAND Flash Memory With Retention Noise
+
+probability density function (PDF) can be presented by
+
+0, 
+
+pnu (v) =
+
+1,
+
+ Vpp
+
+for Vs ∈ {Vs11 } if 0 ≤ v ≤ Vpp, for Vs ∈ {Vs10∼s01 }
+(2)
+
+The programming noise np is approximated by the Gaussian distribution
+
+pnp (v) =
+
+N (0, σe2), N (0, σp2),
+
+for Vs ∈ {Vs11 } for Vs ∈ {Vs10∼s01 }
+
+(3)
+
+where σe2 and σp2 are noise variances with σe > σp, and
+
+N µ, σ 2
+
+=
+
+1 √
+
+(σ −µ)2
+e− 2σ2 . The random telephone noise
+
+2π σ 2
+
+nw is related to program/erase (PE) cycles, for cell erasing
+
+causes damage to the oxide layer [8]. It can be modeled by
+
+pnw (v) = N (0, σw2)
+
+(4)
+
+with σw = 0.00027(PE)0.62 [30]. The data retention noise nr caused by the charge leakage
+is modeled by
+
+pnr (v) = N (µrs , σr2s )
+
+(5)
+
+with µrs and σrs , from [31],
+
+µrs = (Vs − x0) At (PE)αi + Bt (PE)αo log(1 + T ) (6)
+
+σrs = 0.3 ∗ µrs
+
+(7)
+
+where T is retention time. The last one, ni, is cell-to-cell interference (CCI) caused by the voltage changing of neighbor cells, and it can be estimated and efficiently eliminated by pre-distortion [33], [34].
+In summary, the cell threshold voltage of each state can be approximated using a Gaussian model [11], given by
+
+Ps11∼s01 (v) ≈ N (µs11∼s01 , σs11∼s01 )
+
+(8)
+
+where
+
+µs11 = Vs11 − µrs11
+
+µs10∼s01 = Vs10∼s01 +
+
+Vpp 2
+
+− µrs10∼s01
+
+σs211 = σe2 + σw2 + σr2s11
+
+σs210∼s01 = σp2 + σw2 + σr2s10∼s01
+
+(9) (10) (11) (12)
+
+In the system model (1), retention noise is the major factor in state threshold voltage changing [2]. Fig. 1 gives the impact of retention noise on threshold voltage distribution. It is easy to see those threshold voltages of programmed state (s10∼01) decrease (shift left) obviously when the parameters PE and T of retention noise increase, while the threshold voltage of erased state (s11) is almost unaffected by these parameters.
+
+60628
+
+FIGURE 1. This figure shows the impact of retention noise on threshold voltage distribution.
+FIGURE 2. This diagram shows the structure of the discrete retention error recovery system. The information passing between function blocks are unsigned integers. The dotted rectangle blocks denote the process of first decoding attempt. If this decoding attempt failed, the retention error recovery is triggered, which is illustrated in the rectangle blocks.
+III. DECISION TREE BASED CHANNEL UPDATING The key components of discrete retention error recovery system are channel updating and LDPC-IB decoder. In the decoding process, the sensing operations are performed with the raw reference voltages designed for the scenario of PE = T = 0. Then, the indexes of quantization intervals are fed to the LDPC-IB decoder. If the decoding successes, the reading process is terminated and outputs the decoded bits; otherwise, the retention error recovery is triggered.
+The proposed discrete retention error recovery structure is shown in Fig. 2. We can see that in retention error recovery, the inputs of channel updating procedure are the count numbers of cell threshold voltages falling into different quantization intervals with raw threshold voltages. The channel updating outputs the index of the group of optimized reference voltages. Then, the sensing operation is performed with the new reference voltages, and the subsequent procedures are same as those in normal decoding.
+In this section, proposed decision tree based channel updating is introduced, and LDPC-IB decoding will be introduced in next section.
+A. CHANNEL UPDATING STRUCTURE In conventional methods, channel updating contains two procedures, channel estimation and reference voltages design. Channel estimation is usually implemented by utilizing the
+VOLUME 8, 2020
+
+W. Sun, J. Zheng: Discrete Detection and Decoding of MLC NAND Flash Memory With Retention Noise
+
+FIGURE 3. In the orthodox method (dashed lines), the count numbers contain the information about the possibility distributions of cell states. Thus, those numbers are sent to estimator to acquire the channel parameters which are further used to design reference voltages. In the proposed method (solid line), the whole channel updating process can be viewed as a classification problem which obtains the reference voltages directly from the count numbers by decision tree based learning.
+FIGURE 4. The flash memory channel distributions and reference voltages.
+count numbers of cell threshold voltages falling into different quantization intervals with raw threshold voltages. The outputs of estimation, which are the parameters of distributions of every states, are further used to design reference voltages. However, either the estimation or the reference voltages design has high complexity. In this section, a decision tree based method is proposed to avoid these complex calculations, as given in Fig. 3. In this method, the channel updating process can be viewed as a classification problem which obtains the reference voltages directly from the count numbers by decision tree based learning.
+As shown in Fig. 4, one read operation needs Nv reference voltages. Here Nv is set to 6 to achieve a good balance between performance and reading cost [11]. The Nv reference voltages in read operation are collected as v, i.e., v = [v0, v1, . . . , vNv−1]T .
+In practical, read reference voltages should be chosen from a set consisting of some discrete values [30]. To reduce the complexity, all the candidate reference voltages should be clustered into several clusters, in which neighbored voltages are represented by the central reference voltages vc. Assuming the amount of vc is Ng, those vc can be stored in a table Tv, i.e., Tv = {vc0, vc1, . . . , vNc g−1}. So the reference voltage design can be viewed as a clustering and classification problem, where the channel information is the feature and the index of reference voltages is the label. The channel information here is defined as the count numbers of cell threshold voltages falling into different quantization intervals with raw threshold voltages during reading process within a block. Next, a decision tree is trained for channel updating.
+B. TRAINING DATA PRE-PROCESSING To begin with, we build the data set for decision tree training. A sample is created under a specific channel condition
+VOLUME 8, 2020
+
+decided by PE cycles npe and retention time nt . Here, nt is selected from Tmin = 102 to Tmax = 105 with a step size 100, and npe is selected from PEmin = 102 to PEmax = 104 with the same step size. Therefore, the total quantity of samples is 105. A sample in the training data set has two
+properties c and v, in which c is the input feature vector
+and v is the corresponding reference voltage vector. Specially, c = [c0, . . . , cNc−1]T contains count numbers of cell threshold voltages falling into Nc = Nv + 1 quantization
+intervals with raw reference voltages. Here, c is calculated
+by cn = Npn, n = 0, 1, . . . , Nc − 1, where N is the total
+quantity of cells, and pn is the probability of a sample in the
+nth interval at npe = nt = 0, i.e.,
+
+vn
+
+pn =
+
+psi (v)dv,
+
+i={11,10,00,01} vn−1
+
+(13)
+
+where v−1 = −∞, vNv = +∞, and v0,. . . , vNv−1 are the raw reference voltages, and psi is the PDF of cell threshold voltage at state si. The reference voltage v = [v0, . . . , vNv−1]T is acquired by the MMI method [13] which depends on (npe, nt ). v has 105 different values and each associated with a different (npe, nt ).
+Before the classification tree training, samples are clustered into Ng groups according to reference voltage vector v. The clustering algorithm employed here is K-means, which is a simple and effective cluster method. In K-means clustering, every sample is placed into the cluster where v has the least L2 distance to the centre of this cluster. The center of each cluster is updated as the mean of samples in this cluster during iterations, and in the first iteration the centers are set randomly. This iteration stops until the centers do not change or reach the max iterations. Then, all the reference voltage vectors in the same cluster are represented by the center of this cluster, and labeled by the index of the reference voltage vector associated with this center. After clustering, a training sample {c, v} can be represented as {c, v}, where v is the label of the cluster including v.
+Note that a big Ng may not increase the prediction precision but make the tree overfitting, while a small Ng may lead to underfitting. Here, Ng is set to 50, which shows good balance from simulation tests.
+
+C. BINARY TREE GENERATION Decision tree is a regression and classification algorithm, which has low complexity and good performance. There are several decision tree algorithms, such as ID3, C4.5, and CART [35]. Here, CART algorithm is employed to generate the decision tree, since it is easy to train and the output is a binary tree. The training process can be done offline, and the online process is just searching the binary tree.
+The process of CART decision tree generation is described in Algorithm 1. The goal of training at a certain node is to find a proper threshold to split the samples of this node into two sub groups, and this process is based on a predetermined cost function, whose input is the features c of this node, such as
+60629
+
+W. Sun, J. Zheng: Discrete Detection and Decoding of MLC NAND Flash Memory With Retention Noise
+
+Algorithm 1 Decision Tree Generation
+
+1: Input: Training set Xtrain = {xs0, xs1, . . . , xs99999}, with xs = [c, v] containing a feature array c with length Nc
+and a label v.
+
+2: Set set U = ∅ storing the node unprocessed.
+
+3: Set set D = ∅ storing the node processed. 4: A node is defined as n◦ = [X , h, l, fleaf , nl , nr ] marked
+with circle.
+
+5: Set least Gini gim = 0.25. 6: Set a root node n◦init = [X = Xtrain, h = 0, l = 0, fleaf =
+0, nl = NULL, nr = NULL]. 7: Add n to U .
+
+8: repeat
+
+9: Set nodes n◦left = nr◦ight = [X = ∅, h = 0, l = 0, fleaf = 0, nl = NULL, nr = NULL] and gmin = 1.
+10: Pick up a node m◦ from U .
+
+11: for i = 0 to Nc − 1 do
+
+12:
+
+Sort elements xs in m◦ X according to xs c[i].
+
+13:
+
+for j in m◦ X do
+
+14:
+
+if j is not the last element in m◦ X then
+
+15:
+
+Xleft ={x | index of x ≤ index of j, x ∈ m◦ X }
+
+16:
+
+Xright ={x | index of x > index of j, x ∈ m◦
+
+X}
+
+17:
+
+pleft = 0,pright = 0
+
+18:
+
+for k = 0 to Ng − 1 do
+
+19:
+
+lt = the number of xs v equals to k in Xleft
+
+20:
+
+lf = the number of xs v not equals to k in
+
+Xright
+
+21:
+
+pleft
+
+=
+
+pleft
+
++
+
+(
+
+lt
+|Xleft
+
+|
+
+)2
+
+22:
+
+pright
+
+=
+
+pright
+
++
+
+(
+
+lf
+|Xright
+
+|
+
+)2
+
+23:
+
+end for
+
+24:
+
+gini
+
+=
+
+|Xleft |
+|m◦ X |
+
+(1
+
+−
+
+pleft )
+
++
+
+|Xright |
+|m◦ X |
+
+(1
+
+− pright )
+
+25:
+
+if gini < gmin then
+
+26:
+
+Set m◦ h = j.c[i], m◦ l = i, ginimin = gini,
+
+nl◦eft X = Xleft , nr◦ight X = Xright and gmin = gini.
+
+27:
+
+end if
+
+28:
+
+end if
+
+29:
+
+end for
+
+30: end for
+
+31: if gmin ≤ gim then
+
+32:
+
+m◦ l = the most label in m◦ X
+
+33:
+
+m◦ fleaf = 1
+
+34: else
+
+35:
+
+m◦ nl = nl◦eft , m◦ nr = nr◦ight
+
+36:
+
+Add nl◦eft and nr◦ight to U .
+
+37: end if
+
+38: Delete m◦ from U .
+
+39: Add m◦ to D.
+
+40: until U is ∅
+
+41: Delete X from all branch nodes in D.
+
+42: Delete X , h, nl and nr from all leaf nodes in D.
+
+43: Output: Binary Decision tree D.
+
+FIGURE 5. The illustration of decision tree generation algorithm in one node. The goal of each iteration is to find a proper feature threshold h, which splits the state space into two parts Xleft and Xright . By traversing all the candidate thresholds and all the features, h is set to the threshold which have the ability to extract the largest quantity of samples meanwhile keeping the Gini function minimized. Here, the threshold h1 from feature c1 is selected as the optimal h for this node.
+the Gini function used here. An illustration of the procedure to determine the threshold is given in Fig. 5. This samplesplitting process is repeated until every path has reached the leaf node.
+In Algorithm 1, a node has six components, X , h, l, fleaf , nl, nr . Here, X is the set of samples at a certain node, and h is the threshold to be compared in searching process. If the node is a leaf node, then fleaf = 1, and l is the output label; otherwise, fleaf = 0, and l indicates which feature should be compared with the threshold h. The pointers nl and nr are used to call its child nodes. The goal of outer repeat loop is to find the least Gini. The inner loop controlled by i traverses all features, and the loop controlled by j traverses all alternative splitting points of the certain feature. To prevent overfitting and constrain the tree size, we set the threshold gim = 0.25 for node splitting. When the least Gini function of a node is less than gim, set this node to a leaf node; otherwise, generate two child nodes and add them to the unprocessed node set U. Note that the notation ‘‘ ’’ in Algorithm 1, such as m◦ X in line 12, means to call the variable inside the node or vector.
+D. BINARY TREE SEARCHING The binary tree searching procedure is shown in Algorithm 2. The searching starts at the root node. When the searching process reaches a node n with a feature index l and a threshold h, it compares the certain feature in this sample with h. If the feature of the sample is less than the threshold stored in this node, go to the left node; otherwise go to the right node. When the next node is a leaf node, the search process terminates and output the label of the leaf node. This label indicates which group of reference voltages will be used in decoding process.
+
+60630
+
+VOLUME 8, 2020
+
+W. Sun, J. Zheng: Discrete Detection and Decoding of MLC NAND Flash Memory With Retention Noise
+
+FIGURE 6. The inputs of Seq-IB are p(x, y ) and |Z|, and the outputs are p(z|y ) and p(x, z). Other probabilities can be obtained by marginal probability calculation and Bayes’ theorem.
+
+Algorithm 2 Tree Searching
+
+1: Input: sample c and a tree set D, in which a branch node
+n◦p = [h, l, fleaf , nl , nr ] and a leaf node nl◦ = [l, fleaf ]. 2: Set m◦ to the root node.
+
+3: repeat
+
+4: if c[m◦ l] ≤ m◦ h then
+
+5:
+
+m◦ = m◦ nl
+
+6: else
+
+7:
+
+m◦ = m◦ nr
+
+8: end if
+
+9: until m◦ fleaf = 1 10: Output: v = m◦ l
+
+IV. LDPC-IB DECODER IB has the ability to compress observed variable while keeping the mutual information between compressed variable and relevant variable maximized, which can be denoted as
+
+min I (Y ; Z ) − βI (X ; Z )
+
+(14)
+
+p(t |y)
+
+where Y is observed variable, X is relevant variable, Z is compressed variable, and β is the Lagrangian multiplier. IB has been applied in LDPC decoding to reduce computational complexity. In LDPC-IB decoder [18], the float-point calculation in sum-product algorithm can be replaced by LUTs, and the messages passed between variable and check noses are unsigned integers. In the following, we first introduce the LUT generation method based on BPSK-AWGN channel, then present a method to reduce the size of LUT dynamically. Finally, the channel re-mapping method is given to process the mismatching between MLC NAND flash memory channel and BPSK-AWGN channel.
+
+A. LOOKUP TABLE GENERATION
+A channel model is first required to provide probability values in LUT generation process [18]. The MLC NAND flash memory channel can’t be directly used for LUT generation, because the flash memory channel is hard to calibrate to guarantee the decoding performance. Besides, the channel parameters are not fixed due to various PE cycles and retention times and need to be adapted by the channel updating procedure, which means tables designed for a certain set of parameters may not suit the others. Here, BPSK-AWGN channel is selected for the table design, because it’s easy to analyze and calibrate. To bridge the gap between MLC NAND flash memory channel and BPSK-AWGN channel, a channel remapping method will be discussed in Section IV-C.
+
+VOLUME 8, 2020
+
+FIGURE 7. LUT construction at check node by Seq-IB method. It has
+dc − 1 inputs yn, n = 0, 1, 2, . . . , dc − 2, from variable nodes, and an output z which will be fed to variable nodes.
+
+To begin with the channel quantization process, the received signal in BPSK-AWGN channel should be uniformly split into some small intervals, whose index denoted as y, and the joint distribution p(x, y) of normalized BPSK input signal x and received signal index y can be calculated directly. The discrete received signals should be compressed to z by Seq-IB. Denote Z = {0, 1, . . . , |Z| − 1} as the candidate set of z with size |Z|. Then, as shown in Fig. 5, p(x, y) and |Z| are sent to Seq-IB algorithm whose outputs are p(z|y) and p(x, z). Here, p(x, z) is the joint probability of x and compressed variable z. By determined IB, p(z|y) = 1 if y is compressed to be z; otherwise, p(z|y) = 0.
+
+1) LUT AT CHECK NODE
+The construction of LUTs at check node is first given here. The calculation of check node in SPA can be viewed as a mapping between several input variables and an output variable. There, the modulo 2 sum operation can be split into several sub-tables, and mapping with same inputs can use the same table. The LUTs at check node with degree dc can be arranged into a tree structure to reduce memory consumption [36] as shown in Fig. 7. In this arrangement, total log2(dc − 1) + 1 tables will be generated. Here, for simplicity, we assume log2(dc − 1) is an integer. The processing for the non-integer case can be found in [18]. At sub node m, m = 0, . . . , log2(dc − 1), the two inputs are denoted as
+
+wm = [y0, y1]T , m = 0
+
+(15)
+
+wm =
+
+zm0 −1, zm1 −1
+
+T
+,m > 0
+
+(16)
+
+where y0 and y1 are the compressed messages from variable
+node and are initiated to be the received signal in the first iteration, and z0m−1 and z1m−1 are the outputs of sub node m−1 of the associated variables.
+The relevant information variable xm is the bit modulo 2
+sum, i.e.,
+
+xm = b0 ⊕ b1, m = 0
+
+(17)
+
+xm = x0m−1 ⊕ x1m−1, m > 0
+
+(18)
+
+60631
+
+W. Sun, J. Zheng: Discrete Detection and Decoding of MLC NAND Flash Memory With Retention Noise
+
+FIGURE 8. LUT construction at variable node by Seq-IB method. It has
+dv − 1 inputs ym, m = 1, 1, 2, . . . , dv − 2, from check nodes and one input y0 from channel quantization, and an output z which will be fed to check nodes.
+
+where b0 and b1 are the coded bits, x0m−1 and x1m−1 are the bit outputs of sub node m − 1. Then, the joint distributions p (xm, wm) required in information bottleneck algorithm can
+be computed by
+
+p xm, wm =
+
+p(b0, y0)p(b1, y1), m = 0 (19)
+
+x m =b0 ⊕b1
+
+p xm, wm =
+
+p x0m−1, z0m−1 p x1m−1, zm1 −1 ,
+
+x m =x0m−1⊕x1m−1
+
+m>0
+
+(20)
+
+In the first iteration, p(b0, y0) and p(b1, y1) are the corresponding probabilities p(x, z), which is the output of the
+channel quantization process.
+
+2) LUT AT VARIABLE NODE
+At variable node, the LUT design is almost the same as check node except the sub tables are arranged as sequential structure shown in Fig. 8 [18], since the variable node degree dv is usually small. For tablen, n = 0, . . . , dv − 2, the input joint probability can be computed by
+
+p xn, wn
+
+=
+
+1 p (xn) p
+
+xn, y0
+
+p
+
+xn, y1
+
+,
+
+n=0
+
+(21)
+
+p xn, wn
+
+1 = p (xn) p
+
+xn, yn+1
+
+p
+
+xn, zn−1
+
+,
+
+n > 0 (22)
+
+Here, p (xn, y0) comes from channel and equals to p(x, z) in channel quantization step, p (xn, yn+1), n = 0, 1, . . . , dv−2, come from check nodes, and p xn, zn−1 is the output of sub
+node n − 1.
+
+B. QUANTIZATION REDUCTION
+Although LDPC-IB decoder shows excellent complexity performance, it requires a large storage space [18]. An effective way to save the storage space is to reduce the quantization level of LUTs. Here, we present a method to reduce the quantization level q = |Z| in LUT generation gradually with iterations, i.e. reduce the LUT size dynamically.
+In [18], it shows that the decoder will have desired performance only when the mutual information of variable node
+
+60632
+
+FIGURE 9. A dynamic quantization reduction strategy. The quantization level decreases from 16 to 14 after the 20th iteration, to 12 after the 30th iteration, and to 10 after the 40th iteration. This reduction can save about 25% memory.
+
+I (X , Z ) converges to one at the desired iteration time; otherwise, it will suffer from performance loss. Therefore, to guarantee the performance of decoder with reduced size, the final mutual information of variable needs to converge to one at the desired iteration time. This also means that after the table generating process, the iteration number of LDPC-IB decoder is fixed.
+The SNR of BPSK-AWGN channel is chosen by experiment. if the SNR is too high, the mutual information may converge to one at fewer iterations, which will degrade the decoding performance and vice versa[18]. the mutual information curves will be shown in next section.
+In our configuration with quantization reduction for a (8000,7200) LDPC code, the quantization level decreases from 16 to 14 after the 20th iteration, from 14 to 12 after the 30th iteration, and from 12 to 10 after the 40th iteration, as shown in Fig. 9.
+
+C. CHANNEL RE-MAPPING
+
+Note that the input of LDPC-IB is the index z of com-
+
+pressed received signal over BPSK-AWGN channel from
+
+Section IV-A, while the output of binary tree searching from
+
+Section III-C is the index v of reference voltage vector. The
+
+integer input of LDPC-IB decoder is the index of the quan-
+
+tization region of the LLR. To match the inputs between
+
+NAND flash memory channel and the LDPC-IB decoder, the
+
+channel re-mapping procedure is introduced, which maps v
+
+to z by employing the closest-LLRs based message alignment
+
+strategy [38].
+
+Given the index v and the corresponding vector v = [v0, v1, . . . , vNv−1]T , the LLRs in MLC flash memory channel with 7-level quantization can be calculated by
+
+Lmsb(n) = log
+
+vn vn−1 vn vn−1
+
+ps00 (v) + ps01 (v) dv ps10 (v) + ps11 (v) dv
+
+(23)
+
+Llsb(n) = log
+
+vn vn−1 vn vn−1
+
+ps00 (v) + ps10 (v) dv ps01 (v) + ps11 (v) dv
+
+(24)
+
+for n = 0, · · · , 6 with v−1 = −∞ and v6 = +∞, and Psm (v), m = 00, 01, 10, 11, is the probability density of threshold
+
+voltage v at state sm [11].
+
+VOLUME 8, 2020
+
+W. Sun, J. Zheng: Discrete Detection and Decoding of MLC NAND Flash Memory With Retention Noise
+
+FIGURE 10. Channel re-mapping: Flash memory channel index is mapped to BPSK-AWGN channel index through LLR matching.
+TABLE 1. Channel re-mapping table.
+
+Furthermore, denote LzBA, z = 0, . . . , |Z| − 1 as the LLR for the z-th quantization region of the received BPSKAWGN signal, and LnMLC , n = 0, · · · , 6 as the LLR for the n-th quantization region of the cell read voltage from (23)
+(24). Then, in the channel re-mapping, for n = 0, · · · , 6, it
+computes
+
+In = arg min |LnMLC − LzBA|
+
+(25)
+
+z
+
+Then index n is mapped to In. For each candidate index v, v = 0, · · · , Ng − 1, of the reference voltage vector, a LUT of size (Nv + 1) × |Z| is constructed.
+An example is shown in Fig. 10. The re-mapping rule between the BPSK-AWGN LLR table with |Z| = 16 level quantization and the flash memory LLR table with 7 level quantization is given for a certain reference voltage vector. Because the flash memory channel is not symmetric, its LLR table is asymmetrical, and not all the elements in BPSKAWGN LLR table are matched since the quantization level of BPSK-AWGN received signal is larger than that of cell read voltage. The resulted channel re-mapping rule is shown in Table 1.
+
+V. NUMERICAL RESULTS The LDPC code used in simulation is a (8000,7200) regular code with dc = 51 and dv = 5, and generated by PEG [37]. We assume that a decoding process is performed in a block with one upper page and one lower page, and LLR are calculated as (23)(24). The maximum number of decoding iterations is set to 50.
+Following [11], the channel noise parameters are set as: Vs11 = 1.4, Vs10 = 2.6, Vs00 = 3.2, Vs01 = 3.93, Vpp = 0.20, σe = 0.35, σp = 0.05, x0 = 1.4, At = 0.000035, Bt = 0.000235, αi = 0.62 and αo = 0.30.
+In MLC flash memory channel, 2 coded bits are stored in one cell. Thus, the total number of cell threshold voltages is N = 4000 in Section III-A. In simulation, there are 4000 bits in a upper page and 4000 bits in a lower page, and they are encoded into 8000 coded bits. The other parameters are Nc = 7 and Ng = 50. In the following, the mutual information in table generating, the memory complexity, the
+
+VOLUME 8, 2020
+
+FIGURE 11. Mutual information of variable node between relevant variable and compared variable. The notation ‘‘QR’’ is the abbreviation of quantization reduction.
+TABLE 2. Memory Complexity of The Binary Tree Channel Estimator.
+time complexity and frame error rate (FER) are studied, respectively.
+The mutual information of variable node in table generating process is illustrated in Fig. 11. The performance of original tables without quantization reduction at SNR=3.90dB and tables with quantization reduction at both SNR=3.90dB and 3.91dB is given. It is shown in Fig. 11 that compared with mutual information curve without reduction, the mutual information curve with reduction start to decline at the trigger point of reduction. However, through increasing the designed SNR from 3.90dB to 3.91dB, the mutual information with quantization reduction still can converge to 1 at 50 iterations.
+Table 2 shows the memory consumption of the binary tree and reference voltage table. The memory size of decision tree is based on the structure of output nodes of algorithm I in Section III, whose memory consumption can be simply calculated by npNp + nl Nl , where np and nl are the memory usage of a branch node and a leaf node, and Np and Nl are the numbers of branch nodes and leaf nodes.
+A branch node has five components, h, l, fleaf , nl and nr, and a leaf node only has two components l and fleaf . Since the threshold satisfies h ≤ N , it occupies a storage size of 12 bits.
+In branch node, l indicates which feature should be used to compare with h, and l ≤ Nc; thus it consumes 3 bits storage space. In leaf node, l is the label with l ≤ Ng; thus it can be stored in 6 bits space. The flag variable fleaf ∈ {0, 1} takes 1 bit space, and both nl and nr are 32-bit pointers. In the simulation, the designed tree has 143 nodes, in which 72 nodes are leaf nodes and 71 nodes are branch nodes; therefore, the memory consumption of binary tree is 773 Bytes. The memory size of reference voltage table can be simply calculated as 4Ng(Nc − 1), and here we assume that a reference voltage are stored in a 32-bit space.
+60633
+
+W. Sun, J. Zheng: Discrete Detection and Decoding of MLC NAND Flash Memory With Retention Noise
+
+TABLE 3. Memory Complexity of The LDPC-IB Decoder and Re-mapping Tables.
+
+TABLE 4. Number of classification tree searching.
+
+Table 3 shows the memory consumption of the LDPC-IB
+decoder and re-mapping tables. The quantization level q of
+LDPC-IB is set to 16, which means that each element in
+mapping table occupies 4 bits space. The Ng mapping tables have Nc elements each, thus the memory space of re-mapping tables is 0.5NcNg Bytes. Memory consumption of LDPC-IB LUTs in each iteration can be computed by q2(kc + kv)qbit , where kc is the number of sub-tables at one check node, kv is the number of sub-tables at one variable node and qbit is the space every element occupied. Moreover, in the last iteration,
+there should be a table for final judgement. According to
+the dynamic quantization reduction strategy given in Fig. 9, the memory consumption is qbit (20q02(kc + kv) + 10q12(kc + kv) + 10q22(kc + kv) + 10q23(kc + kv) + q23), where q0 = 16,
+
+q1 = 14, q2 = 12, q3 = 10, and qbit = 4 is the memory size for memory alignment in the last iteration. Based on the sub table arrangement in Section IV, kc is 8 and kv is 4 since dc = 51 and dv = 5. Note that all the variable (check) nodes share the same LUTs designed in Section IV-A-1 (Section IV-A-2). The total Memory consumption is 57170 Bytes for all iterations.
+The complexity of binary tree searching is O(log n) in the best case, and O(n) in the worst case, depending on the tree structure [39]. The numbers of searching in the binary decision tree with 143 nodes trained in this simulation is shown in TABLE 4, where the searching time depends on the inputs, but even in the worst case it is still very small.
+The time complexity of LDPC-IB decoder is determined by the message passing procedure at check node and variable
+
+FIGURE 12. Average error of reference voltages at different retention time with PE=5000 (a) and PE=10000 (b).
+
+FIGURE 13. FER performance of the benchmark scheme TSE-SP, consisting of TSE channel estimation and float-point SPA decoding, and proposed method with and without quantization reduction. (a) is simulated at PE=5000 and (b) at PE=10000.
+
+60634
+
+VOLUME 8, 2020
+
+W. Sun, J. Zheng: Discrete Detection and Decoding of MLC NAND Flash Memory With Retention Noise
+
+node. Because the tables are stored linearly, the time complexity is O(kc) for check node LUT searching and O(kv) for variable node.
+Next, the average estimation error is evaluated. The average estimation error is defined as
+
+vei rr = |vei st − vrieal |
+
+(26)
+
+where vrieal , i = 0, . . . , 5, is the reference voltages computed by mutual information maximization with true channel
+
+parameters. Figs. 12 gives the average estimation errors at
+
+PE = 5000 and 10000, respectively. From these figures, first,
+
+the estimation error of v0 increases while the errors of other reference voltages vary slightly when PE increases from 5000
+
+to 10000. Second, the proposed channel updating method
+
+can achieve a good reference voltage estimation with error
+
+smaller than 0.02 in both figures.
+
+Fig. 13 gives the FER performance at PE = 5000 and
+
+10000. In this figure, channel updating is performed at a
+
+certain retention time T , and the FER performance can show
+
+how long the retention time flash memory can endure. The
+
+reading scheme with TSE channel estimation and float-point
+
+SPA decoding [12] is considered here as the benchmark,
+
+abbreviated as TSE-SP in this figure. Also, the RABP-CUF
+
+[11] (abbreviation of the RABP-CU processing when the first
+
+decoding with raw reference voltages is failure) is consid-
+
+ered as the benchmark at PE=10000. Obviously, the FER
+
+performance of the proposed low-complexity discrete scheme
+
+(abbreviated as BST-IB in this figure) is similar with that of
+
+TSE-SP at PE=5000 and PE=10000, and it is also similar
+
+with that of RABP-CUF at PE=10000. Moreover, the pro-
+
+posed dynamical quantization reduction method (abbreviated
+
+as BST-IB-QR in this figure) shows nearly no performance
+
+loss compared with BST-IB.
+
+VI. CONCLUSION In this paper, we proposed a discrete NAND flash memory retention data recovery scheme consisting of channel updating and LDPC-IB decoding, which largely reduced the computational complexity and maintained high performance in the simulation using PEG-constructed regular LDPC code (8000, 7200). The channel updating is transformed into a classification problem, which is solved by CART trees. By this learning-based method, the counts of cell threshold voltages falling into different quantization intervals are directly mapped to reference voltages, which can avoid the complex computation of reference voltages in conventional methods. In the LDPC-IB decoder, the IB LUT was designed based on the BPSK-AWGN channel assumption, and a channel re-mapping strategy was given to process the mismatch between MLC flash memory channel and AWGN-BPSK channel. Moreover, a quantization reduction method was presented to reduce memory consumption. Using PEG-constructed regular LDPC code (8000, 7200), the simulation result shows that the proposed method has good FER performance with low computational complexity and mild memory consumption.
+
+VOLUME 8, 2020
+
+REFERENCES
+[1] Y. Cai, S. Ghose, E. F. Haratsch, Y. Luo, and O. Mutlu, ‘‘Error characterization, mitigation, and recovery in Flash-Memory-Based solid-state drives,’’ Proc. IEEE, vol. 105, no. 9, pp. 1666–1704, Sep. 2017.
+[2] Y. Cai, E. F. Haratsch, O. Mutlu, and K. Mai, ‘‘Error patterns in MLC NAND flash memory: Measurement, characterization, and analysis,’’ in Proc. Design, Autom. Test Eur. Conf. Exhib. (DATE), Dresden, Germany, Mar. 2012, pp. 521–526.
+[3] Y. Cai, G. Yalcin, O. Mutlu, E. F. Haratsch, A. Cristal, O. S. Unsal, and K. Mai, ‘‘Flash correct-and-refresh: Retention-aware error management for increased flash memory lifetime,’’ in Proc. IEEE 30th Int. Conf. Comput. Design (ICCD), Montreal, QC, USA, Sep. 2012, pp. 94–101.
+[4] V. Mohan, S. Sankar, S. Gurumurthi, and W. Redmond, ‘‘Refresh SSDS: Enabling high endurance, low cost flash in datacenters,’’ Univ. Virginia, Charlottesville, VA, USA, Tech. Rep. CS-2012-05, 2012.
+[5] Y. Cai, G. Yalcin, O. Mutlu, E. F. Haratsch, A. Crista, O. S. Unsal, and K. Mai, ‘‘Error analysis and retention- aware error management for NAND flash memory,’’ Intel Technol. J., vol. 17, no. 1, pp. 140–165, May 2012.
+[6] S. Tanakamaru, Y. Yanagihara, and K. Takeuchi, ‘‘Error-prediction LDPC and error-recovery schemes for highly reliable solid-state drives (SSDs),’’ IEEE J. Solid-State Circuits, vol. 48, no. 11, pp. 2920–2933, Nov. 2013.
+[7] J. Jeong, Y. Song, and J. Kim, ‘‘Flashdefibrillator: A data recovery technique for retention failures in NAND flash memory,’’ in Proc. IEEE NonVolatile Memory Syst. Appl. Symp. (NVMSA), Hong Kong, Aug. 2015, pp. 1–6.
+[8] Y. Cai, Y. Luo, E. F. Haratsch, K. Mai, and O. Mutlu, ‘‘Data retention in MLC NAND flash memory: Characterization, optimization, and recovery,’’ in Proc. IEEE 21st Int. Symp. High Perform. Comput. Archit. (HPCA), Burlingame, CA, USA, Feb. 2015, pp. 551–563.
+[9] D.-H. Lee and W. Sung, ‘‘Decision directed estimation of threshold voltage distribution in NAND flash memory,’’ IEEE Trans. Signal Process., vol. 62, no. 4, pp. 919–927, Feb. 2014.
+[10] D.-H. Lee and W. Sung, ‘‘Estimation of NAND flash memory threshold voltage distribution for optimum soft-decision error correction,’’ IEEE Trans. Signal Process., vol. 61, no. 2, pp. 440–449, Jan. 2013.
+[11] C. A. Aslam, Y. L. Guan, and K. Cai, ‘‘Decision-directed retention-failure recovery with channel update for MLC NAND flash memory,’’ IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 65, no. 1, pp. 353–365, Jan. 2018.
+[12] W. Sun and J. Zheng, ‘‘A low-complexity retention noise parameter estimation for MLC NAND flash memory,’’ in Proc. ICC IEEE Int. Conf. Commun. (ICC), Shanghai, China, May 2019, pp. 1–6.
+[13] J. Wang, K. Vakilinia, T.-Y. Chen, T. Courtade, G. Dong, T. Zhang, H. Shankar, and R. Wesel, ‘‘Enhanced precision through multiple reads for LDPC decoding in flash memories,’’ IEEE J. Sel. Areas Commun., vol. 32, no. 5, pp. 880–891, May 2014.
+[14] R. Gallager, ‘‘Low-density parity-check codes,’’ IRE Trans. Inf. Theory, vol. 8, no. 1, pp. 21–28, Jan. 1962.
+[15] S. Lin and D. J. Costello, Error Control Coding. London, U.K.: Pearson, 2001.
+[16] Z. Zhang, L. Dolecek, M. Wainwright, V. Anantharam, and B. Nikolic, ‘‘Quantization effects in low-density parity-check decoders,’’ in Proc. IEEE Int. Conf. Commun., Glasgow, Scotland, Jun. 2007, pp. 6231–6237.
+[17] A. Balatsoukas-Stimming, M. Meidlinger, R. Ghanaatian, G. Matz, and A. Burg, ‘‘A fully-unrolled LDPC decoder based on quantized message passing,’’ in Proc. IEEE Workshop Signal Process. Syst. (SiPS), Hangzhou, China, Oct. 2015, pp. 1–6.
+[18] J. Lewandowsky and G. Bauch, ‘‘Information-optimum LDPC decoders based on the information bottleneck method,’’ IEEE Access, vol. 6, pp. 4054–4071, 2018.
+[19] J. Lewandowsky, G. Bauch, M. Tschauner, and P. Oppermann, ‘‘Design and evaluation of information bottleneck LDPC decoders for software defined radios,’’ in Proc. 12th Int. Conf. Signal Process. Commun. Syst. (ICSPCS), Cairns, Australia, Dec. 2018, pp. 1–9.
+[20] J. Lewandowsky, G. Bauch, M. Tschauner, and P. Oppermann, ‘‘Design and evaluation of information bottleneck LDPC decoders for digital signal processors,’’ IEICE Trans. Commun., vol. E102.B, no. 8, pp. 1363–1370, Aug. 2019.
+[21] N. Tishby, F. C. Pereira, and W. Bialek, ‘‘The information bottleneck method,’’ in Proc. 37th Allerton Conf. Commun. Comput., Monticello, VA, USA, Apr. 1999, pp. 368–377.
+[22] S. Hassanpour, D. Wübben, and A. Dekorsy, ‘‘Overview and investigation of algorithms for the information bottleneck method,’’ in Proc. 11th Int. ITG Conf. Syst. Commun. Coding (SCC), Hamburg, Germany, Feb. 2017, pp. 1–6.
+60635
+
+W. Sun, J. Zheng: Discrete Detection and Decoding of MLC NAND Flash Memory With Retention Noise
+
+[23] N. Slonim, N. Friedman, and N. Tishby, ‘‘Unsupervised document classification using sequential information maximization,’’ in Proc. 25th Annu. Int. ACM SIGIR Conf. Res. Develop. Inf. Retr. SIGIR, Tampere, Finland, Aug. 2002, pp. 129–136.
+[24] S. Buddha, K. So, J. Carmena, and M. Gastpar, ‘‘Function identification in neuron populations via information bottleneck,’’ Entropy, vol. 15, no. 12, pp. 1587–1608, 2013.
+[25] N. Tishby and N. Zaslavsky, ‘‘Deep learning and the information bottleneck principle,’’ in Proc. IEEE Inf. Theory Workshop (ITW), Jerusalem, Israel, Apr. 2015, pp. 1–5.
+[26] L. Breiman.Classification Regression Trees. Abingdon, U.K.: Routledge, 2017.
+[27] C. A. Aslam, Y. L. Guan, and K. Cai, ‘‘Read and write voltage signal optimization for Multi-Level-Cell (MLC) NAND flash memory,’’ IEEE Trans. Commun., vol. 64, no. 4, pp. 1613–1623, Apr. 2016.
+[28] G. Dong, Y. Pan, N. Xie, C. Varanasi, and T. Zhang, ‘‘Estimating information-theoretical NAND flash memory storage capacity and its implication to memory system design space exploration,’’ IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 20, no. 9, pp. 1705–1714, Sep. 2012.
+[29] G. Dong, Y. Pan, and T. Zhang, ‘‘Using lifetime-aware progressive programming to improve SLC NAND flash memory write endurance,’’ IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 22, no. 6, pp. 1270–1280, Jun. 2014.
+[30] G. Dong, N. Xie, and T. Zhang, ‘‘Enabling NAND flash memory use soft-decision error correction codes at minimal read latency overhead,’’ IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 60, no. 9, pp. 2412–2421, Sep. 2013.
+[31] H. Wang, T.-Y. Chen, and R. D. Wesel, ‘‘Histogram-based flash channel estimation,’’ in Proc. IEEE Int. Conf. Commun. (ICC), London, U.K., Jun. 2015, pp. 283–288.
+[32] Q. Xu, P. Gong, T. M. Chen, J. Michael, and S. Li, ‘‘Modelling and characterization of NAND flash memory channels,’’ Measurement, vol. 70, pp. 225–231, Jun. 2015.
+[33] G. Dong, S. Li, and T. Zhang, ‘‘Using data postcompensation and predistortion to tolerate Cell-to-Cell interference in MLC NAND flash memory,’’ IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 57, no. 10, pp. 2718–2728, Oct. 2010.
+[34] C. A. Aslam, Y. L. Guan, and K. Cai, ‘‘Detector for mlc nand flash memory using neighbor-a-prioriinformation,’’ IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 24, no. 9, pp. 2827–2836, Sep. 2016.
+[35] J. Franklin, ‘‘The elements of statistical learning: Data mining, inference and prediction,’’ Math. Intelligencer, vol. 27, no. 2, pp. 83–85, Mar. 2005.
+
+[36] M. Stark, J. Lewandowsky, and G. Bauch, ‘‘Information-bottleneck decoding of high-rate irregular LDPC codes for optical communication using message alignment,’’ Appl. Sci., vol. 8, no. 10, p. 1884, 2018.
+[37] X.-Y. Hu, E. Eleftheriou, and D.-M. Arnold, ‘‘Irregular progressive edgegrowth (PEG) tanner graphs,’’ in Proc. IEEE Int. Symp. Inf. Theory, Lausanne, Switzerland, Jun. 2002, p. 480.
+[38] J. Lewandowsky, M. Stark, and G. Bauch, ‘‘Message alignment for discrete LDPC decoders with quadrature amplitude modulation,’’ in Proc. IEEE Int. Symp. Inf. Theory (ISIT), Aachen, Germany, Jun. 2017, pp. 2925–2929.
+[39] T. H. Cormen, C. E. Leiserson, R. L. Rivest, and C. Stein, Introduction to Algorithms. Cambridge, MA, USA: MIT Press, 2009.
+WENHAO SUN received the B.S. degree from Qingdao University, Qingdao, China, in 2017. He is currently pursuing the M.S. degree with the School of Telecommunications Engineering, Xidian University, Shaanxi, China. His research interests include flash memory and information bottleneck algorithm.
+JIANPING ZHENG received the B.S., M.S., and Ph.D. degrees in information and communication engineering from Xidian University, in 2003, 2006, and 2008, respectively. From 2010 to 2011, he was a Research Fellow with the PWTC Laboratory, Nanyang Technological University, Singapore. He joined the School of Telecommunications Engineering, Xidian University, in 2006, where he is currently an Associate Professor. His current research interests include MIMO, 5G techniques, and signal processing for wireless communications.
+
+60636
+
+VOLUME 8, 2020
+
+

@@ -1,0 +1,1256 @@
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 71, NO. 7, JULY 2023
+
+3835
+
+Decoding LDPC Codes by Using Negative Proximal Regularization
+Yiming Chen , Rui Wang , Jinglong Zhu , and Zaiwen Wen
+
+Abstract— The low-density parity-check (LDPC) decoding problem can be expressed as an integer linear programming (ILP) problem. One efficient method to solve the ILP problem is to relax the integer constraints and add penalty terms to the objective function, and the revised problem can be solved via the alternating direction method of multipliers (ADMM) algorithm. These penalty terms can punish the non-integral solutions and improve the decoding performance of the decoder. However, ADMM decoders are easily trapped in a local solution, which limits the frame error rate (FER) performance of the decoders at low signal-to-noise ratios (SNR). In this paper, we propose a restartable ADMM-based decoder using a negative proximal regularization. The negative proximal term will be updated whenever the decoder finds a new local solution. Therefore, the decoder can be restarted several times and the candidate solution which satisfies the parity-check equations and has the lowest objective function value can be selected as the decoder’s output. Some properties, together with several choices of penalty terms are discussed. We also investigate the convergence of our proposed decoder, and prove that the possibility of decoding errors is independent of the codeword that is transmitted. Simulation results show that our proposed decoder outperforms other ADMM-based decoders in most cases, while the decoding complexity maintains the same.
+Index Terms— LDPC, ADMM, negative proximal regularization, restartable decoder.
+I. INTRODUCTION
+LOW-DENSITY parity-check (LDPC) codes were first introduced by [1] in 1962, and they were rediscovered
+by [2] and [3] in 1990s. The decoders for LDPC codes were most commonly based on belief propagation (BP),
+including the sum-product decoder and other variants [4], [5]. When using BP decoding, LDPC codes can perform near the Shannon limit. However, in the high signal-to-noise ratio (SNR) region, BP decoding often suffers the “error floor” phenomenon, which refers that the error-rate cannot drop rapidly as the SNR increases.
+Manuscript received 2 October 2022; revised 14 March 2023 and 24 April 2023; accepted 28 April 2023. Date of publication 9 May 2023; date of current version 17 July 2023. The work of Zaiwen Wen was supported in part by the National Natural Science Foundation of China (NSFC) under Grant 11831002. The associate editor coordinating the review of this article and approving it for publication was A. E. Pusane. (Corresponding author: Rui Wang.)
+Yiming Chen, Rui Wang, and Zaiwen Wen are with the Beijing International Center for Mathematical Research, and Changsha Institute for Computing and Digital Economy, Peking University, Beijing 100871, China (e-mail: abcdcym@stu.pku.edu.cn; ruiwang@bicmr.pku.edu.cn; wenzw@pku.edu.cn).
+Jinglong Zhu is with Huawei Beijing Research Center, Beijing 100095, China (e-mail: zhujinglong@huawei.com).
+Color versions of one or more figures in this article are available at https://doi.org/10.1109/TCOMM.2023.3274150.
+Digital Object Identifier 10.1109/TCOMM.2023.3274150
+
+The decoding problem can be equivalently expressed as an integer linear programming (ILP) problem, and then solved by linear programming (LP) relaxation. LP decoding for LDPC codes was first introduced by [6] and another method to transform the decoding problem to an LP problem was later proposed by [7]. Compared with BP decoding, LP decoding has several outstanding attributes. Firstly, LP decoding has a better decoding performance at a high SNR level. Secondly, LP decoding has the “maximum-likelihood (ML) certificate” property, which refers that the integral solution to the LP decoding problem is also the ML solution. One drawback of LP decoding is the high computation consumption. In [8], [9] and [10], several algorithms were proposed to reduce the complexity of the LP decoders. In [10], the alternating direction method of multipliers (ADMM) technique was introduced to the LP decoders. The ADMM decoder has closed-form solutions in each iteration, which significantly improves the efficiency of LP decoding.
+In the past decade, there have been two directions to improve ADMM decoding. One direction is to accelerate the decoding process. In the ADMM decoding process, an Euclidean projection onto the parity-check polytope is to be conducted in each iteration, which dominates the complexity of ADMM decoding. Therefore, many works [11], [12], [13], [14], [15], [16] focus on reducing the complexity of the projection process. In [15], an iterative projection algorithm was proposed, which had a linear complexity in the worst case. In [16], a line segment projection algorithm was introduced, which reduced the projection time evidently without iterative operations. There are also some works improving the efficiency of ADMM decoding from other aspects. In [17], the authors proposed a check-polytopefree ADMM framework for the LP model in [7], where a linear complexity in terms of the length of codewords can be guaranteed.
+The other direction is to improve the decoding performance. Since the LP model relaxes the binary constraints to continuous ones, the optimal solution to the LP decoding problem may be fractional. The ADMM decoder fails whenever a non-integral solution, which is called pseudocodeword, is output. In [18], the authors added a penalty term to the objective function of the LP model. The penalty term is a symmetric function that takes smaller values at integral points than that at fractional ones. Thus the decoder is more likely to output an integral solution. The authors also investigated several types of penalty functions and compared their decoding performance. Reference [19] used a segmented function as
+
+0090-6778 © 2023 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:33:41 UTC from IEEE Xplore. Restrictions apply.
+
+3836
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 71, NO. 7, JULY 2023
+
+the penalty term, which gained improvement in decoding performance. In [20], a new penalty term was proposed, which penalized the check nodes instead of the variable nodes. Additionally, some authors improved the decoding performance by introducing new constraints that play the same role as the penalty term. Reference [21] introduced the ℓpbox constraints, while [22] added an auxiliary variable and introduced constraints that force the variable to be 0 or 1.
+In this paper, we focus on improving the frame-error-rate (FER) performance of ADMM decoding at low SNRs. Since there is no guarantee that the ADMM decoding algorithm can converge to the ML solution, the ADMM iterations may be trapped in a local solution or a pseudo-codeword. Therefore, we propose a restartable ADMM framework, which is obtained by adding a negative proximal term to the objective function of the LP model. Whenever the ADMM algorithm converges to a stationary point, the negative proximal term will be adjusted such that the ADMM algorithm can be restarted. The negative proximal term suppresses the stationary points found during the decoding process, pushing the algorithm to converge to a new local minimum. There are many choices of negative proximal terms, and we investigate the ℓ1-norm and ℓ2-normsquare penalty functions in this paper.
+There are two major differences between our proposed decoder and other existing ADMM penalized decoders. First, the penalty terms are different. We choose a symmetric function that has a peak at a given point xˆ as the penalty function. The point xˆ is initialized as a vector whose entries are all 0.5. Thus our objective function is the same as that of the ADMM penalized decoder [18] at the beginning of the decoding process. However, after the ADMM algorithm finds a stationary point, xˆ will be updated and our model will have a different form from other decoders. Second, the decoding processes are distinct. For other ADMM-based decoders, the ADMM algorithm will be executed once, and only one solution will be output by the decoder, even if the solution is not a codeword. For our proposed decoder, the ADMM algorithm will be conducted by several times, and several candidate solutions will be found during the decoding process. The optimal solution with the smallest objective function value can be selected as the output of our decoder.
+The main contributions in this paper are listed as follows: • We propose a restartable ADMM decoding framework
+by adding a negative proximal term to the LP decoding model. We investigate several types of penalty functions as the negative proximal term and design penalty functions with weighted forms for irregular LDPC codes. • We conduct theoretical analysis including the convergence property of the ADMM algorithm and the all-zero assumptions of our proposed decoder. The rest of the paper is organized as follows. In Section II, we review the LP decoding model and the ADMM penalized decoder. Then we introduce our restartable decoding model. In Section III, we present the ADMM algorithm to solve our decoding model and introduce the restartable decoding framework. Section IV includes the analysis of convergence and other properties of our decoder. Simulation results, which show the performance improvement of our proposed decoder,
+
+are presented in Section V. Section VI makes a conclusion of this paper.
+
+II. PRELIMINARIES
+
+Throughout this paper, we consider LDPC codes C of length n, each specified by an m × n parity check matrix H. Let I = {1, 2, . . . , m} and J = {1, 2, . . . , n} denote the sets of check nodes and variable nodes of C, respectively. Suppose a codeword x = (x1, x2, . . . , xn)T ∈ C is transmitted over a noisy memoryless binary-input output-symmetric channel, resulting in a corrupted signal y = (y1, y2, . . . , yn)T . The corresponding log-likelihood ratios are defined as
+
+γj = log
+
+Pr(yj|xj = 0) , Pr(yj|xj = 1)
+
+j ∈J.
+
+(1)
+
+A. ML Decoding Problem
+
+The ML decoding problem can be formulated as the following integer programming problem [6]:
+
+min γT x,
+
+(2a)
+
+s.t. [Hx]2 = 0,
+
+(2b)
+
+x ∈ {0, 1}n,
+
+(2c)
+
+where γ is an n-dimensional vector composed of the above log-likelihood ratios and [.]2 denotes the modular-2 operator.
+The difficulty of solving the ML decoding problem (2) comes from the parity check constraints (2b) and the discrete constraints (2c). In [6], J. Feldman et al. relaxed these constraints and proposed an LP form of the decoding problem.
+
+B. LP Relaxation
+
+Denote the set Ci = {x ∈ {0, 1}n : [hix]2 = 0}, where hi is the i-th row of H. Then the integer programming problem (2) can be relaxed to the following form
+
+min γT x,
+
+(3a)
+
+s.t. x ∈ ∩i∈I conv(Ci),
+
+(3b)
+
+where conv(Ci) denotes the convex hull of Ci. We now introduce the notation Pi as the di ×N binary selection matrix which selects the sub-vector of x that participates the i-th parity-check equation, where di denotes the number of 1s in hi. An equivalent expression of (3) is
+
+min γT x,
+
+(4a)
+
+s.t. Pix ∈ PPdi , ∀i ∈ I.
+
+(4b)
+
+Here PPdi is the parity polytope of dimension di, which is the convex hull of all binary vectors that have even weights. Solving (4) directly by a general LP optimizer is not efficient. [10] reformulated (4) as the following problem and solved it by the ADMM algorithm:
+
+min γT x,
+
+(5a)
+
+s.t. Pix = zi,
+
+(5b)
+
+zi ∈ PPdi , ∀i ∈ I,
+
+(5c)
+
+where zi is a di-dimensional vector. The introduction of auxiliary variable zi makes the model fit the ADMM algorithm.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:33:41 UTC from IEEE Xplore. Restrictions apply.
+
+CHEN et al.: DECODING LDPC CODES BY USING NEGATIVE PROXIMAL REGULARIZATION
+
+3837
+
+C. Penalized Decoding Model
+
+LP decoding fails whenever it outputs a fractional solution which is called a pseudo-codeword. Therefore, [18] tightened the constraints (4b) by adding the penalty term g(xj) for each variable xj to the objective function (4a) and proposed an ADMM penalized model. This model is given as follows:
+
+min γT x + j∈J g(xj),
+
+(6a)
+
+s.t. Pix = zi,
+
+(6b)
+
+zi ∈ PPdi , ∀i ∈ I.
+
+(6c)
+
+The penalty function g(x) is an increasing function on [0, 0.5], and is symmetric about 0.5. This makes the fractional solutions to this model more costly than the integral ones.
+
+D. Restartable Decoding Model
+
+Though the penalty function penalizes the fractional solution of (6) efficiently, there is no guarantee that the ADMM algorithm for (6) can converge to the global minimum. In this paper, we propose a restartable decoding algorithm, which can be restarted whenever the algorithm converges to a local minimum. To achieve this, we introduce a new penalty function f (x) to the model (6). We are partially motivated by [23], in which the authors added a negative proximal term to the objective function to obtain an improvement of the performance. We also discuss some properties of the penalty function. Then several examples of the penalty functions and their variable update rules are presented.
+We formally state the restartable ADMM decoding problem as follows:
+
+min γT x − ρf (x − xˆ),
+
+(7a)
+
+s.t. Pix = zi,
+
+(7b)
+
+zi ∈ PPdi , ∀i ∈ I.
+
+(7c)
+
+In (7), ρ is the penalty parameter, and f (x − xˆ) is the penalty
+term. xˆ is set as the average of 0.5 and several stationary
+points that have been reached during the iterations. Thus the
+penalty term plays a role in pushing the algorithm to find
+another integral solution which is far away from all the existing
+solutions. The penalty function f = j∈J fj(xj), where each fj should have the following properties:
+• fj is an increasing function on [0, 1]. • fj is symmetric about 0. • fj is non-negative and fj(x) > 0 at some x ∈ [0, 1]. Let ν be any positive constant satisfying
+
+|γT x − γT y| ≥ ν, ∀x, y ∈ C, γT x ≠ γT y, (8)
+
+where C denotes the set of all codewords. Since C is a finite
+
+set, we can always find a proper ν satisfying the condition
+
+(8). Then the next theorem shows that the integral solution of
+
+(7) is also a solution of problem (2) when the parameter ρ is
+
+chosen suitably.
+
+Theorem 1: Suppose that the penalty parameter satisfies
+
+0
+
+<
+
+ρ
+
+<
+
+ν M
+
+,
+
+where M
+
+=
+
+maxx∈[−1,1]n f (x).
+
+Then any
+
+solution x∗ρ of (7) is also optimal for (2). Moreover, for any
+
+solution x∗ of (2), we have
+
+f (x∗ρ − xˆ) ≥ f (x∗ − xˆ).
+
+(9)
+
+Fig. 1. A simple illustration of our proposed restartable decoding process, where the feasible solutions and the optimal solution are denoted as the blue crosses and red cross, respectively.
+
+Proof: From the optimality and feasibility of x∗ρ, we have γT x∗ρ − ρf (xρ∗ − xˆ) ≤ γT x∗ − ρf (x∗ − xˆ), (10)
+
+which implies that
+
+γT x∗ρ ≤ γT x∗ + ρ(f (x∗ρ − xˆ) − f (x∗ − xˆ)) ≤ γT x∗ + ρM < γT x∗ + ν.
+
+Moreover, the optimality of x∗ yields that γT x∗ − γT x∗ρ ≤ 0 < ν. Thus we have |γT xρ∗ − γT x∗| < ν. Together with the
+assumption (8), it follows that
+
+γT x∗ = γT x∗ρ.
+
+(11)
+
+From (10) and (11), the inequality (9) can be obtained
+immediately.
+Fig. 1 gives an explanation of our proposed restartable
+decoding process. We apply our model to solve a two-
+dimensional ILP problem. We use the crosses to denote all
+the feasible solutions. Additionally, we use the blue polygon
+and the orange polygon to represent the feasible region of the
+LP relaxation and the convex hull of the feasible solutions,
+respectively. The red cross is the optimal solution of this
+problem. Our decoding process starts at the optimal solution of the LP relaxation problem, which is denoted as x1. As shown in Fig. 1(a), we set xˆ1 as x1 at the first restart, and the gray circle centered on xˆ1 will be cut due to the negative proximal term. Therefore, a new solution x2 will be found. In Fig. 1(b), we set xˆ2 as the average of x1 and x2. The green circular region centered on xˆ2 will be cut after the second restart, and the decoder will find the third solution x3, which is exactly
+the optimal solution of the ILP problem.
+
+III. RESTARTABLE ADMM DECODING
+In this section, we present the restartable ADMM decoding framework. We discuss several choices of the negative proximal term and design a weighted penalty function for irregular LDPC codes. We also propose an algorithm to produce a feasible codeword from a given binary vector, which can be implemented as a post-treatment of our decoder to improve the decoding performance.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:33:41 UTC from IEEE Xplore. Restrictions apply.
+
+3838
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 71, NO. 7, JULY 2023
+
+A. ADMM Decoding Algorithm
+We next present the ADMM algorithm for solving problem (7). The augmented Lagrangian function is
+
+L(x, z, λ) = γT x − ρf (x − xˆ) + i λiT (Pix − zi)
+
+µ +
+2
+
+i ∥Pix − zi∥22. (12)
+
+The iterative scheme of ADMM for this problem is given by
+
+zk+1 = arg min L(xk, z, λk),
+zi ∈P P di
+xk+1 = arg min L(x, zk+1, λk),
+x∈[0,1]n
+λik+1 = λki + µ(Pixk+1 − zki +1).
+
+(13a) (13b) (13c)
+
+Note that the minimization in (13a) is separable in zi, the z-update rule can be expressed as
+
+zik+1
+
+=
+
+arg
+
+min
+zi ∈P P di
+
+µ 2
+
+∥zi
+
+∥2
+
+−
+
+(µPixk
+
++
+
+λik )T
+
+zi.
+
+(14)
+
+Thus we can derive the explicit form of the z-update rule as
+
+zik+1 = ΠPPdi
+
+Pixk
+
++
+
+λki µ
+
+.
+
+(15)
+
+We now simplify the x-update rule. It can be seen that PTi Pi = Diag(hi) due to the property of the selection matrix. By denoting w = i hi, i.e., the j-th coordinate wj equals the number of the check nodes connected with variable j, the
+augmented Lagrangian function can be rewritten as
+
+L(x, z, λ) = µ xT Diag(w)x + (γ + 2
+
+PiT (λi − µzi))T x
+
+i
+
+− ρf (x − xˆ) +
+
+i
+
+µ 2
+
+∥zi∥22
+
+−
+
+λiT
+
+zi
+
+.
+
+(16)
+
+For simplicity, we introduce the following notations:
+
+D = µ Diag(w), tk = −γ −
+
+i PTi (λki − µzki +1). (17)
+
+Then the x-update rule can be expressed as
+xk+1 = arg min 1 xT Dx − xT tk − ρf (x − xˆ). (18) x∈[0,1]n 2
+The explicit forms of the x-update formula for particular choices of penalty term are given in Section III-B.
+The ADMM algorithm for solving (7) is summarized in Algorithm 1.
+
+Algorithm 1 ADMM Algorithm
+Input: ρ, xˆ. Output: local solution x.
+1: repeat 2: Initialize x0 and λ0. Set k = 0. 3: Update z by (15). 4: Update x by (18). 5: Update λ by (13c). 6: until some convergence criteria have been satisfied.
+
+B. Examples of Penalty Functions
+In the following, we focus on two examples of penalty functions.
+1) ℓ1-Norm: f (1)(x) = ∥x∥1. In this case (12) becomes
+
+L(x, z, λ) = γT x − ρ∥x − xˆ∥1 + i λTi (Pix − zi)
+
+µ +
+2
+
+i ∥Pix − zi∥22. (19)
+
+By applying (18) to (19), we derive the x-update rule for this case as
+
+xk+1 = Π[0,1]n D−1 tk − ρ sign(Dxˆ − tk) . (20)
+
+2) ℓ2-Norm-Square: f (2)(x) = ∥x∥22. Then (12) becomes
+
+L(x, z, λ) = γT x − ρ∥x − xˆ∥22 + i λiT (Pix − zi)
+
+µ +
+2
+
+i ∥Pix − zi∥22. (21)
+
+In this case, the x-update rule can be expressed as
+
+xk+1 = Π[0,1]n [(D − 2ρI)−1 tk − 2ρxˆ ].
+
+(22)
+
+For irregular codes, we can consider a weighted penalty
+
+term assigning varied parameters to variables with different
+
+degrees. The penalty function f can be selected as:
+
+(a) f (3)(x) =
+
+j κj|xj|; (b) f (4)(x) =
+
+j κj x2j ,
+
+corresponding to the ℓ1 and ℓ2 penalty respectively. Set W
+
+as the total number of the non-zero elements in H. Then the
+
+weighted vector κ can be selected as
+
+κj
+
+=
+
+n wj W
+
+.
+
+(23)
+
+Then the x-update rule for penalty functions (a) and (b) can be expressed in a coordinate-wise form:
+• weighted ℓ1 norm:
+
+xkj +1 = Π[0,1]
+
+1 µκj
+
+(tkj
+
+−
+
+ρκj
+
+sign(wj xˆj )
+
+;
+
+(24)
+
+• weighted ℓ2 norm:
+
+xkj +1 = Π[0,1]
+
+µwj
+
+1 −
+
+2ρκj
+
+(tkj
+
+−
+
+2ρκj xˆj )
+
+.
+
+(25)
+
+C. Restartable ADMM Algorithm
+We now present our restartable ADMM decoding framework. In our proposed restartable decoding algorithm, xˆ is initialized as ζ, which denotes the vector whose entries are all 0.5. The coefficient ρ is initialized as ρ0 = α+β0, where α and β0 are two non-negative parameters. Whenever Algorithm 1 stops, we update xˆ and ρ according to the following rules and restart Algorithm 1. To be specific, in the N -th restart iteration, the parameter β is updated as βN = ξβN−1, where ξ ∈ (0, 1) is an attenuation coefficient. Then the coefficient ρ is updated by
+
+ρN = α + βN .
+
+(26)
+
+Denote xl as the output of the l-th restart of Algorithm 1, we calculate the average of the historical outputs
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:33:41 UTC from IEEE Xplore. Restrictions apply.
+
+CHEN et al.: DECODING LDPC CODES BY USING NEGATIVE PROXIMAL REGULARIZATION
+
+3839
+
+x¯N
+
+:=
+
+1 N −1
+
+N −1 l=0
+
+xl
+
+.
+
+Then
+
+xˆN
+
+is
+
+set
+
+as
+
+a
+
+convex
+
+combination of ζ and x¯N , i.e.,
+
+xˆN
+
+=
+
+α α + βN
+
+ζ
+
++
+
+βN α + βN
+
+x¯N .
+
+(27)
+
+Now we present the restartable decoding algorithm in Algorithm 2.
+
+Algorithm 2 Restartable ADMM Decoding Algorithm
+
+Input: log-likelihood ratio γ.
+
+Output: ˆc.
+
+1: Initialization: Initialize xˆ0 = ζ, parameters α, β0, βL and ξ ∈ (0, 1). Compute ρ0 = α + β0. Set N = 0 and T .
+
+2: repeat 3: xN ← ADMM(ρN , xˆN ) using a relaxed convergence
+
+criterion in Remark 1.
+
+4: N ← N + 1.
+5: Compute βN ← max(ξβN−1, βL). 6: Compute ρN ← α + βN .
+
+7: Compute S ← max(N, T ), L ← N − S.
+
+8:
+
+Compute
+
+x¯N
+
+←
+
+1 S
+
+N −1 l=L
+
+xl
+
+.
+
+9: Compute xˆN according to (27).
+
+10: Compute ˆc ← round(xN ).
+
+11: until H⊗ˆc = 0 or the maximal iteration number has been
+
+reached.
+
+In each iteration of Algorithm 2, the ADMM framework is applied to solve the problem (7). Whenever the ADMM algorithm converges to a stationary point, the negative proximal term will be updated and the ADMM solver will be restarted. Since xˆ is an average of 0.5 and all the local solutions that have been reached during the decoding process, the negative proximal term will push the decoder to find new solutions.
+Remark 1: (i) To accelerate the ADMM iterations, we set a relaxed convergence criterion for Algorithm 1. We calculate the nearest binary vector to xk in each iteration, and stop the ADMM process whenever this vector remains the same after one iteration, i.e., round(xk) = round(xk+1). Thus the ADMM algorithm can stop in a few iterations and output a local solution. (ii) To reduce the memory usage and computational complexity, we set xˆ as the average of at most the last T solutions that the ADMM algorithm has generated instead of all the historical ones. A lower bound βL is set to avoid the parameter β from vanishing. (iii) Although our algorithm needs some extra computation derived from the updates of xˆ, α, β, it still has similar computational complexity as other ADMM-based algorithms, since the main computational complexities are from the updates of the variables x, z, λ in the ADMM steps which need multiplication of matrices and vectors, and the extra computation of xˆ, α, β only needs the multiplication of scalars and the addition of vectors whose complexities are significantly lower than the multiplication of matrices and vectors. Besides, the extra variables xˆ, α, β are only updated in the outer iterations, while the updates of the variables x, z, λ are conducted in each inner iteration.
+
+IV. PERFORMANCE ANALYSIS
+In this section, we make an analysis of Algorithms 1 and 2. We consider two aspects of our proposed algorithm, including convergence property and decoding performance analysis.
+
+A. Convergence Property
+
+We consider the case that f (x) = ∥x∥22 and define r(x) := γT x − ρf (x − xˆ). Obviously, r(x) is Lipschitz differentiable
+
+with constant 2ρ. We let δZ(·) denote the indicator function of
+
+the set Z, i.e., δZ (z) =
+
++∞, if z ∈ Z, 0, if z ∈/ Z.
+
+Define the matrix
+
+P := [P1; P2; . . . ; Pm] and observe that
+
+PT P = i PTi Pi = Diag(w).
+
+We denote τ by the smallest element of w. It is easy to see
+
+that τ > 0. Definition 1: (x∗, z∗, λ∗) is a stationary point of the
+
+problem (7) if it satisfies the first-order necessary optimality
+
+condition, that is,
+
+ 0
+
+=
+
+∇r(x∗)
+
++
+
+
+
+0 = Pix∗ − z∗i ,
+
+i PTi λi∗, ∀ i ∈ I,
+
+(28)
+
+λ∗i ∈ ∂δPPdi (zi∗), ∀ i ∈ I. Our main goal is to find conditions that ensure the
+
+convergence of the proposed algorithm. We split the proof
+
+of the main result into several lemmas.
+
+Lemma 1: It holds that for any k = 1, 2, . . .,
+
+∥λk+1 − λk∥ ≤ √2ρ ∥xk+1 − xk∥.
+
+(29)
+
+τ
+
+Proof: It follows from the optimality condition of xk
+
+that
+
+∇r(xk) + i PTi λki −1 + µ i PiT (Pixk − zki ) = 0,
+
+which together with the iteration of λk in (13c) yields that
+
+−∇r(xk) = i PTi λik = PT λk.
+
+(30)
+
+Note that the image of selection matrix Pi satisfies Im(I) =
+
+Im(Pi) = Rdi , which implies that λki +1 − λik = µ(Pixk+1 − zki +1) ∈ Im(Pi) for every i ∈ I. Then λk+1 − λk ∈ Im(P),
+
+and thus there exists a vector v such that
+
+λk+1 − λk = Pv.
+
+(31)
+
+It gives us
+
+∥λk+1 − λk∥2 = ∥Pv∥2 ≥ λmin(PT P)∥v∥2 = τ ∥v∥2,
+
+which
+
+implies
+
+that
+
+∥v∥
+
+≤
+
+√1 τ
+
+∥λk+1
+
+−
+
+λk
+
+∥.
+
+This
+
+together
+
+with
+
+(31) yields that
+
+∥λk+1 − λk∥2 = (λk+1 − λk)T Pv ≤ ∥PT (λk+1 − λk)∥∥v∥
+
+≤
+
+√1 τ
+
+∥PT
+
+(λk+1
+
+− λk)∥∥λk+1
+
+− λk∥.
+
+Therefore,
+
+∥λk+1 − λk∥
+
+≤
+
+1 √
+τ
+
+∥PT
+
+(λk+1
+
+−
+
+λk )∥
+
+(30)
+=
+
+1 √
+
+∥∇r(xk+1) − ∇r(xk)∥
+
+τ
+
+=
+
+2ρ √
+
+∥xk+1
+
+−
+
+xk ∥,
+
+τ
+
+which completes the proof.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:33:41 UTC from IEEE Xplore. Restrictions apply.
+
+3840
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 71, NO. 7, JULY 2023
+
+The next lemma ensures the descent property of the proposed algorithm.
+Lemma 2: If µ ≥ (4ρ + 2)/τ , there is a constant C1 > 0 such that for any k = 1, 2, . . .,
+L(xk, zk, λk) − L(xk+1, zk+1, λk+1) ≥ C1 ∥xk − xk+1∥2 + ∥zk − zk+1∥2 . (32)
+Proof: We first prove L(xk, zk, λk) − L(xk, zk+1, λk) ≥ µ ∥zk − zk+1∥2. (33)
+2
+The optimality of zk+1 implies that for any i ∈ I,
+
+λik + µ(Pixk − zik+1) ∈ ∂δPPdi (zki +1).
+Since the sub-differential of the indicator function at zki +1 is known as the normal cone of PPdi , it can be seen directly from its definition that
+T
+λik + µ(Pixk − zik+1) zki − zik+1 ≤ 0.
+
+Then for zki , zki +1 ∈ PPdi , we have the estimate
+
+L(xk, zk, λk) − L(xk, zk+1, λk)
+
+=−
+
+T
+λki + µ(Pixk − zki +1) zki − zki +1
+
+i
+
++ µ ∥zk − zk+1∥2 ≥ µ ∥zk − zk+1∥2.
+
+2
+
+2
+
+We next prove
+
+L(xk, zk+1, λk) − L(xk+1, zk+1, λk+1) ≥ ∥xk − xk+1∥2.
+
+Since the matrix P has full column rank, we can obtain
+
+L(xk, zk+1, λk) − L(xk+1, zk+1, λk+1)
+
+= r(xk) − r(xk+1) + (λik+1)T (Pixk − Pixk+1)
+
+i
+
+µ +
+2
+
+∥Pixk
+
+−
+
+Pixk+1∥2
+
+−
+
+1 ∥λk+1 µ
+
+−
+
+λk ∥2
+
+i
+
+(30)
+=
+
+r(xk )
+
+−
+
+r(xk+1)
+
+−
+
+⟨∇r(xk+1), xk
+
+−
+
+xk+1⟩
+
++
+
+µ 2
+
+∥Pxk
+
+−
+
+Pxk+1∥2
+
+−
+
+1 ∥λk+1 µ
+
+−
+
+λk ∥2
+
+(29)
+≥
+
+−ρ∥xk
+
+−
+
+xk+1∥2
+
++
+
+µτ
+
+∥xk
+
+−
+
+xk+1∥2
+
+2
+
+− 4ρ2 ∥xk − xk+1∥2 ≥ ∥xk − xk+1∥2,
+
+(34)
+
+τµ
+
+where the last inequality holds because
+
+µτ 4ρ2
+
+ρ2
+
+−ρ + − ≥ −ρ + 2ρ + 1 −
+
+≥ 1.
+
+2 τµ
+
+2ρ + 1
+
+Summing up (34) and (33) yields (32), where
+
+C1
+
+:=
+
+min{−ρ +
+
+µτ 2
+
+−
+
+4ρ2 τµ
+
+,
+
+µ 2
+
+}.
+
+Now we are ready to prove the convergence property of the
+
+proposed ADMM algorithm. Theorem 2: The sequence {(xk, zk, λk)} generated by
+
+Algorithm 1 converges globally to the unique limit point
+
+(x∗, z∗, λ∗) for any sufficiently large µ ≥ (4ρ + 2)/τ , and
+
+(x∗, z∗, λ∗) is a stationary point of the problem (7).
+
+Proof: It suffices to verify the conditions in [24] for ADMM to converge to a stationary point. Observe that the model (7) can be equivalently written as
+
+min r(x) + δPPdi (zi),
+
+i
+
+s.t. Pix = zi, ∀ i ∈ I.
+
+(35)
+
+We can observe that δPPdi (zi) is a prox-regular function since the set PPdi is the convex hull of all the binary vectors. The matrix Pi satisfies Im(I) ⊆ Im(Pi) for every i ∈ I. We can deduce from Lemma 2 that the sequence {(xk, zk)} generated by the proposed algorithm is bounded. Then the conditions from Theorem 1 in [24] hold for the problem (7). Hence the sequence generated by Algorithm 1 is bounded and it has at least one limit point.
+Furthermore, we can easily verify that L(x, z, λ) +
+i δPPdi (zi) is a Kurdyka-Łojasiewicz (KŁ) function [25]. Then (xk, zk, λk) converges globally to the unique limit point (x∗, z∗, λ∗), which is a stationary point.
+Remark 2: Benefiting from the special structure of the model (7), we show the convergence properties of Algorithm 1 even though the problem is nonconvex. Since the objective function of our decoding model changed in each restart, it is not straightforward to construct global convergence results for Algorithm 2. However, in our simulation result, one can find that Algorithm 2 can converge in most cases.
+
+B. Decoding Performance Analysis
+1) ML Test: Our proposed Algorithm 2 has the following ML certificate properties.
+Proposition 1: If the output from Algorithm 2 is a feasible solution of (7) and is also integral, then it is a valid codeword.
+Proof: This follows from all the feasible integral solutions of (7) are valid codewords.
+Proposition 2: If the output from Algorithm 2 is a global minimizer of (7) and is also integral, and the corresponding ρ satisfies the conditions in Theorem 1, then it is an ML solution.
+Proof: This follows directly from Theorem 1. In general, we cannot determine whether the output of Algorithm 2 is a global solution of (7). However, Algorithm 2 has an ML certificate property similar to [18], where we can test whether the integral output is the ML solution or not. This test is shown as follows. Proposition 3: If the output of Algorithm 2 is an integral solution, we do one more restart by setting the parameter ρ to zero. If the new output obtained in this way maintains the same, then this solution is an ML solution.
+Proof: By setting the parameter ρ to zero, we obtain the LP decoding problem. Since the ADMM algorithm for the LP problem has the guarantee to converge to a global minimum, the output of Algorithm 2 is a global solution of (4). Therefore, it is the ML solution by the ML certificate of LP decoding.
+2) All-Zero Assumptions: Our proposed decoder satisfies the all-zero assumption. Thus we can assume the codeword transmitted by the channel is all-zero without loss of generality. This property is presented formally as follows.
+Theorem 3: The failure probability of Algorithm 2 is independent of the transmitted codeword.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:33:41 UTC from IEEE Xplore. Restrictions apply.
+
+CHEN et al.: DECODING LDPC CODES BY USING NEGATIVE PROXIMAL REGULARIZATION
+
+3841
+
+TABLE I PARAMETER SELECTION
+Proof: We give a sketch of proof here, and the details are shown in the appendix. Let c denote any codeword, and B(c) denote the set of outputs of the channel that make the decoder fail to decode c. We can prove that a one-to-one mapping between B(c) and B(0) exists. Therefore the failure probability for transmitting any codeword equals the failure probability for transmitting the all-zero codeword.
+V. SIMULATION RESULTS
+In this section, several simulation results are presented to show the effectiveness of the restartable ADMM decoder. In Section V-A, we compare the decoding FER performance and decoding efficiency of the restartable ADMM decoder using both ℓ1 and ℓ2-square penalties with the min-sum decoder, the sum-product decoder and other ADMM-based decoders. In section V-B, we show the choice of parameters of our proposed decoder.
+A. Performances of the Proposed Algorithm
+In this subsection, we present simulation results for six binary LDPC codes. We choose three regular codes, denoted by C1, C2 and C3, which are (96, 48) MacKay 96.33.964 LDPC code, rate-0.89 MacKay (999, 888) LDPC code, and WiFi (648, 432) LDPC code, respectively. We also test three irregular LDPC codes, denoted by C4, C5 and C6, which are 5G-LDPC code with base graph 1 and Zc = 16, rate0.5 WiMax (576, 288) LDPC code, and rate-0.75 WiMax (1152, 864) LDPC code. The considered decoders include QP-ADMM decoder [17], ADMM-based penalized decoder (ADMM-PD) [18], and the classical sum-product decoder.
+The parameters for our proposed decoder are set as follows: µ is chosen to be 3 for the ℓ1 penalty and 4 for the ℓ2-square penalty. The rest parameters of the ℓ2-square penalty for six binary LDPC codes are set according to Table I. For the irregular LDPC codes C4, C5 and C6, we apply the weighted form penalty function claimed in Section III-B, where the parameter κ is chosen according to (23). The parameters for other ADMM-based decoders are chosen based on a grid search. We stop iterations when the early termination scheme [Hx]2 = 0 is satisfied or the maximum number of iterations is reached. We set the maximum iteration number of all the decoders as 500. Since our proposed decoding algorithm contains inner iterations (ADMM updates) and outer iterations (restarts), we consider the number of total iterations when counting the iteration number of our proposed decoder. All the codewords are transmitted over the additive white Gaussian noise (AWGN) channel.
+Fig. 2 shows the FER performance of the mentioned six LDPC codes. The points plotted in all the curves are based on collecting 100 frame errors except for the last two SNR
+
+values, where we generate 20 errors due to limited computing resources. We also impose a minimum number of simulated frames as 50000 to reduce the statistical error. From Fig. 2(a), one can see that our proposed decoder displays better FER performance than other considered decoders in low SNR regions. However, in high SNR regions, the gap between our proposed decoder and the ADMM penalized decoder [18] narrows. A similar phenomenon can also be observed in Fig. 2(b). The sum-product decoder surpasses our proposed decoder at high SNRs. Fig. 2(c) shows that our proposed decoder using ℓ2 penalty achieves better FER performance than other considered decoders at both low and high SNRs. In Fig. 2(d), it can be seen that our proposed decoder obtains a significant improvement in the FER performance compared with other ADMM-based decoders. This is because the degrees of variable nodes in 5G LDPC codes vary dramatically. The negative proximal terms with weighted forms can improve the error-correction performance in this case. Fig. 2(e) shows that our proposed decoder outperforms the other ADMMbased decoders and the min-sum decoder in a wide SNR region, and performs similarly to the sum-product decoder. Similarly to Fig. 2(a) and Fig. 2(b), the FER performance of our proposed decoder in Fig. 2(e) gets close to that of the ADMM penalized decoder in high SNR regions. In Fig. 2(f), one can observe that the restartable decoder using ℓ2-square penalty has the best decoding performance. Our decoder using ℓ1 penalty performs similarly to the ADMM penalized decoder and the sum-product decoder, and outperforms the QP-ADMM decoder [17] and the min-sum decoder. From Fig. 2, one can see that our proposed decoder attains better error-correction performance in most cases.
+Figs. 3(a)-8(a) compare the average number of total iterations to output a codeword, i.e., a binary vector satisfies Hx = 0, of C1-C6 between our proposed algorithm with other considered ADMM-based decoders. In cases where the algorithm cannot find a binary vector satisfying Hx = 0, the number of total iterations will be counted as 500, i.e., the maximum number of iterations. From these figures, one can find that all of the compared decoders at low SNRs need more iterations to output a codeword. The reason is that in low SNR regions transmitted bits are affected by stronger noise, which makes it harder to recover the codeword and the algorithm often reaches the maximum number of iterations. Moreover, it can also be seen that our proposed decoder shares similar iteration numbers with the ADMM penalized decoder [18] in C1 and C2, and needs less number of iterations in C3-C6. QP-ADMM decoder needs more iterations to find a codeword in these cases. Thus, our proposed decoder achieves lower decoding complexity than other ADMM-based decoders in most cases. The min-sum decoder needs more iteration numbers than our proposed decoder in the low SNR region. However, it surpasses our proposed decoder at high SNRs. The sum-product decoder needs the least iteration number in many cases, but its computational complexity can be higher due to the calculation of the tanh function in each iteration.
+Figs. 3(b)-8(b) plot the average number of restarts for our proposed decoding algorithm to output a codeword using both
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:33:41 UTC from IEEE Xplore. Restrictions apply.
+
+3842
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 71, NO. 7, JULY 2023
+
+Fig. 2. Comparisons of FER performance for six LDPC codes using different decoders, where “R-ADMM-l1” and “R-ADMM-l2” denote the restartable ADMM decoder using ℓ1 and ℓ2 penalties, respectively.
+
+Fig. 3. Numerical experiments on the convergence property of our decoder and other ADMM-based decoders for C1.
+
+Fig. 4. Numerical experiments on the convergence property of our decoder and other ADMM-based decoders for C2.
+
+ℓ1 and ℓ2 penalty functions. It can be seen that the number of restarts decreases as the SNR increases. The reason is that in high SNR regions, the ADMM algorithm can easily find a codeword within a few iterations, and thus there is no need for our decoder to restart. These curves can also explain the phenomenon that the decoding performance of our proposed decoder and the ADMM penalized decoder [18] get close in high SNR regions.
+
+Figs. 3(c)-8(c) show the convergence performance of our proposed decoder for codes C1-C6. The y-axis denotes the linear term of the objective function, and the x-axis denotes the restart iteration, i.e., the current number of restarts of our proposed decoder. All curves in Figs. 3(c)-8(c) are plotted based on one million LDPC frames. We use all-zero vectors as our transmitted code because our proposed decoder satisfies the all-zero assumptions. When our decoding framework
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:33:41 UTC from IEEE Xplore. Restrictions apply.
+
+CHEN et al.: DECODING LDPC CODES BY USING NEGATIVE PROXIMAL REGULARIZATION
+
+3843
+
+Fig. 5. Numerical experiments on the convergence property of our decoder and other ADMM-based decoders for C3. Fig. 6. Numerical experiments on the convergence property of our decoder and other ADMM-based decoders for C4.
+
+Fig. 7. Numerical experiments on the convergence property of our decoder and other ADMM-based decoders for C5.
+
+Fig. 8. Numerical experiments on the convergence property of our decoder and other ADMM-based decoders for C6.
+
+converges, the value of the linear term in our decoding model (7) should be zero. From these figures, one can find that our proposed decoding framework can converge within at most 30 times of restarts in most cases, though the negative proximal term is updated and the objective function of our model is changed after each restart.
+
+B. Choices of Parameters The parameters in our proposed decoder can affect the
+decoding performance. In this subsection, we show several simulations based on different choices of these parameters. From the simulation results, we can find the suitable choice of parameters to obtain the best decoding performance.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:33:41 UTC from IEEE Xplore. Restrictions apply.
+
+3844
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 71, NO. 7, JULY 2023
+
+independent of the transmitted codeword. We implement numerical experiments which demonstrate that our proposed decoder outperforms other ADMM-based in most cases and obtains similar decoding complexity.
+
+Fig. 9. FER performance of the (1152, 864) WiMax LDPC code plotted as a function of α or µ with different SNRs.
+
+APPENDIX PROOF OF THEOREM 3
+In [18], the authors established this property for ADMM penalized decoder which solved the problem (6). We now prove Theorem 3 following the path in [18]. Denote the set of all the possible outputs of the channel when transmitting codeword c by A(c), then our target theorem is a straightforward consequence of the following lemma:
+Lemma 3: There exists a one-to-one mapping Z : y → y0 from A(c) to A(0) that satisfies
+1) Pr(y|c) = Pr(y0|0). 2) y ∈ B(c) if and only if y0 ∈ B(0).
+Proof: The framework of our proof is the same as in [18]. We define the mapping Z : y → y0 as
+
+Fig. 10. FER performance of the (1152, 864) WiMax LDPC code plotted as a function of β0 with different βL/β0.
+In Fig. 9, we plot the FER performance of code C6 as the function of parameters α and µ at two different SNRs with other parameters fixed according to Table I. We collect 100 frame errors for each data point in these curves. From Fig. 9, one can find that the FER curves take on an initially downward and then upward trend for parameters α and µ. In comparison with the FER curve, we find that α ∈ [1.2, 1.8] and µ ∈ [3, 4] lead to better decoding performance.
+In Fig. 10, we investigate the effects of the parameters β0 and βL. Since βL should never be greater than β0, we plot the FER performance as the function of β0 with fixed βL/β0 lower than 1. We consider two different SNR levels in Fig. 10, and each curve is plotted based on 100 frame errors. From Fig. 10, one can find that β0 ∈ [0.1, 0.5] and βL = 0.3β0 can be a suitable choice for our decoder in this case.
+VI. CONCLUSION
+In this paper, we propose a restartable ADMM-based decoding algorithm. By introducing a negative proximal term to the LP decoding problem, we present a restartable decoding model and use the ADMM algorithm to solve it. Whenever the ADMM algorithm converges, the negative proximal term will be updated and the ADMM algorithm will be restarted. The negative proximal term penalizes all the stationary points that have been found during the decoding process, and pushes the algorithm to find new local minimums. Therefore plenty of candidate solutions will be found during one decoding process, which can raise the possibility to obtain a codeword that satisfies the parity-check equation. We propose some properties the negative proximal term should have, and investigate several choices of the negative proximal term. We also discuss the convergence property of our proposed decoder, and prove that the decoding error possibility is
+
+yi0 =
+
+yi, yi′ ,
+
+if ci = 0, if ci = 1,
+
+where yi′ is the symmetric symbol of yi with respect to the channel. To complete our proof, we only need to verify that Lemmas 18 and 19 in [18] also hold for our proposed decoder. Therefore, we prove the following lemmas, where Lemmas 4 and 5 correspond to Lemma 18 in [18], and Lemma 7 corresponds to Lemma 19 in [18].
+We use the same definitions for operators Rc and Tc with respect to a codeword c as in [18]:
+
+Rc(a)i =
+
+ai, 1 − ai,
+
+if ci = 0, if ci = 1,
+
+Tc(a)i = Rc(a)i + ci.
+
+We represent Rc(zi) by taking the same operations to zi with respect to the corresponding sub-vector of c. Then we have
+
+the following lemmas which claim that there exists a one-to-
+
+one mapping between the iteration sequences of decoding any
+
+codeword c and the all-zero codeword.
+
+Lemma 4: Suppose that zi, x and λi are the variables in
+
+the k-th iteration of Algorithm 1 when decoding y with input
+
+ρ and xˆ. zi+, x+ and λ+i are the (k + 1)-th iteration of Algorithm 1. Meanwhile, suppose that zi0, x0 and λi0 are the
+
+variables in the k-th iteration of Algorithm 1 when decoding
+
+y0 with input ρ and xˆ0. zi0,+, x0,+ and λ0i ,+ are the (k +1)-
+
+th λi
+
+iteration of Algorithm 1. If = Tc(λ0i ) and xˆ = Rc(xˆ0),
+
+thzei n=weRhca(vzei0)z, +ix==RRc(cz(0ix,+0
+
+), ),
+
+x+ = Rc(x0,+) and λ+i = Tc(λi0,+).
+
+Proof: Let γ and γ0 denote the log-likelihood ratios
+
+corresponding to y and y0 respectively. Now we verify x+ =
+
+Rc(x0,+). From the definition of Rc, we only need to consider the indices j that satisfy cj = 1. From Algorithm 1, xj+ is
+
+the optimal solution to the following equation that has the
+
+maximal distance with 0.5:
+
+xj+ = arg minxj∈[0,1]
+
+1 2
+
+µwj xj2
+
+−
+
+tj xj
+
+−
+
+ρfj (xj
+
+−
+
+xˆj ).
+
+(36)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:33:41 UTC from IEEE Xplore. Restrictions apply.
+
+CHEN et al.: DECODING LDPC CODES BY USING NEGATIVE PROXIMAL REGULARIZATION
+
+3845
+
+Now we define u+j as the root of the following equation:
+
+µwjx − tj − ρfj′(x − xˆj) = 0.
+
+(37)
+
+Similarly, uj0,+ denotes the root of
+
+µwjx − t0j − ρfj′(x − xˆ0j ) = 0.
+
+(38)
+
+Thus we have x+j = Π[0,1](u+j ) and x0j,+ = Π[0,1](uj0,+). Now we introduce the notations zi(j) and λ(ij) to denote the j-th coordinate of PiT zi and PiT λi, respectively, then
+
+tj = −γj −
+
+i∈N(j)(λi(j) − µzi(j)),
+
+where N (j) denotes the set of all indices i that satisfy Hi,j = 1. From the assumption, zi0,(j) = 1 − zi(j), λi0,(j) = −λi(j), xˆj0 = 1 − xˆj and γj0 = −γj hold due to the symmetry of the channel. Therefore,
+
+tj0 = −γj0 −
+
+i∈N(j)(λi0,(j) − µzi0,(j))
+
+= γj − i∈N(j)(−λ(ij) − µ(1 − zi(j)))
+
+= γj +
+
+i∈N(j)(λ(ij) − µzi(j)) + µ
+
+1
+i∈N (j)
+
+= −tj + µwj.
+
+We now verify 1−uj+ is the root of equation (38). Substituting x = 1 − u+j in the left-hand side of equation (38), we have
+µwj (1 − uj+) − tj0 − ρfj′(1 − uj+ − xˆ0j ) = −µwj u+j + tj − ρfj′(xˆj − u+j ) = −µwj u+j + tj − ρfj′(u+j − xˆj ) = 0,
+where the last equation is because uj+ is a root of (37) and fj is symmetric about 0. We have shown that u+j = 1 − u0j,+, it is clear that Π[0,1](u+j ) = Π[0,1](1 − u0j,+). Thus we have xj+ = x0j,+.
+Since the update rule for z and λ in Algorithm 1 is similar
+to that in [18], we refer the reader to [18, Lemma 18] for the
+rest of the proof. Lemma 5: We now use Algorithm 2 to decode two channel
+outputs, y and y0. Suppose that x[N] denotes the N -th output of the ADMM algorithm when decoding y, i.e., the output of the N -th iteration of Algorithm 2. Similarly, we denote the N -th output of the ADMM algorithm when decoding y0 as x0,[N]. If we initialize Algorithm 2 by letting x0 = 0.5, λi = 0 for all i, xˆ[0] = 0.5, and set the convergence criterion of Algorithm 1 as round(xk) = round(xk+1), then we have x[N] = Rc(x0,[N]) for any N .
+Proof: We use induction to prove our conclusion. Note that x, λi and xˆ are initialized such that x = Rc(x0) = 0.5, zi = Rc(z0i ) = 0.5, λi = −λ0i = 0 and xˆ = Rc(xˆ0) = 0.5. By Lemma 4, we conclude that for every ADMM iteration k,
+we have
+
+x[1],k = Rc(x0,[1],k),
+
+where x0,[1],k denotes the variable x in the k-th iteration of Algorithm 1 with the input ρ and xˆ[0]. According
+to the assumption, the ADMM iteration stops when round(xk) = round(xk+1). Therefore, x[1] = x[1],k1+1
+
+and x0,[1] = x0,[1],k2+1, where k1, k2 are the smallest integers such that round(x[1],k1 ) = round(x[1],k1+1) and round(x0,[1],k2 ) = round(x0,[1],k2+1), respectively.
+It remains to prove that round(x[1],k) = round(x[1],k+1) if and only if round(x0,[1],k) = round(x0,[1],k+1). It is true
+because for any real numbers a, b we have round(a) =
+round(b) if and only if round(1 − a) = round(1 − b).
+We now assume that the conclusion holds for 1, 2, . . . ,
+N − 1. From the above proof, we only need to show that xˆ[N] = Rc(xˆ0,[N]). By definition, we have
+
+xˆ [N ]
+
+=
+
+α α + β[N] ζ
+
++
+
+β α + β[N]
+
+1 S
+
+xˆ0,[N] =
+
+α ζ+
+
+β
+
+1
+
+α + β[N] α + β[N] S
+
+N−1 x[l],
+l=L
+N−1 x0,[l].
+l=L
+
+From the assumptions we know that x[l] = Rc(x0,[l]) for
+l = 1, 2, . . . , N − 1 and ζ = Rc(ζ) by the definition of ζ.
+Thus we obtain the conclusion from the following lemma since xˆ[N](xˆ0,[N]) is a convex combination of ζ and x[l](x0,[l]).
+Lemma 6: Let x = l λlxl and y = l λlyl, where l λl = 1 and xl = Rc(yl), then x = Rc(y).
+Proof: We only need to consider indices j such that cj = 1. Then yjl = 1 − xjl , and we have yj = l λlyjl =
+l λl(1 − xjl ) = 1 − xj. The next lemma claims that there exists a one-to-one
+mapping between the output of our proposed algorithm for
+decoding any codeword c and the all-zero codeword. Lemma 7: Let ˆc and ˆc0 be the output of Algorithm 2 for the
+channel output y and y0, respectively. Suppose that we apply
+the same initialization and convergence criterion as that stated in Lemma 5. Then ˆc = Rc(ˆc0).
+Proof: By Lemma 5, x[N] = Rc(x0,[N]) for all N .
+It remains to prove that Algorithm 2 stops for decoding y and y0 at the same iteration. We denote ˆc[N] := round(x[N]) and ˆc0,[N] := round(x0,[N]). Note that Algorithm 2 stops whenever [Hˆc[N]]2 = 0. Thus we only have to verify [Hˆc[N]]2 = 0 if and only if [Hˆc0,[N]]2 = 0.
+Since x[N] = Rc(x0,[N]), we have ˆc[N] = Rc(ˆc0,[N]). We now assume that [Hˆc[N]]2 = 0 to prove the “only if” part. To simplify the notation, we denote ˆc[N] and ˆc0,[N] by r and r0, respectively. Note that any row of H induces the
+equation [rj1 + rj2 + . . . + rjd ]2 = 0, which means that there are even number of 1s among rj1 , . . . , rjd . Since
+
+rj0 =
+
+rj , 1 − rj,
+
+if cj = 0, if cj = 1.
+
+Therefore,
+
+
+
+
+
+
+
+rj0k = 
+
+rjk  + 
+
+(1 − rjk )
+
+k
+
+2
+
+{k:cjk =0}
+
+2
+
+{k:cjk =1}
+
+2
+
+
+
+
+
+=
+
+rjk + 
+
+1 = 0.
+
+k
+
+2
+
+{k:cjk =1} 2
+
+The last equation holds because c is a codeword and thus
+
+there are even numbers of 1s among cj1 , . . . , cjd . Therefore we finish the “only if” part of the proof. The “if” part is similar
+
+and we will not repeat it here.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:33:41 UTC from IEEE Xplore. Restrictions apply.
+
+3846
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 71, NO. 7, JULY 2023
+
+ACKNOWLEDGMENT The authors thank Yixuan Hua and Haoming Liu for their helpful discussion and comments on the restartable ADMM.
+REFERENCES
+
+[24] Y. Wang, W. Yin, and J. Zeng, “Global convergence of ADMM in nonconvex nonsmooth optimization,” J. Scientific Comput., vol. 78, no. 1, pp. 29–63, Jan. 2019.
+[25] H. Attouch, J. Bolte, and B. F. Svaiter, “Convergence of descent methods for semi-algebraic and tame problems: Proximal algorithms, forward–backward splitting, and regularized Gauss–Seidel methods,” Math. Program., vol. 137, nos. 1–2, pp. 91–129, Feb. 2013.
+
+[1] R. G. Gallager, “Low-density parity-check codes,” IRE Trans. Inf. Theory, vol. 8, no. 1, pp. 21–28, Jan. 1962.
+[2] D. J. C. MacKay and R. M. Neal, “Near Shannon limit performance of low density parity check codes,” Electron. Lett., vol. 33, no. 6, pp. 457–458, 1997.
+[3] M. C. Davey and D. J. C. MacKay, “Low density parity check codes over GF(q),” in Proc. Inf. Theory Workshop, 1998, pp. 70–71.
+[4] J. Chen, A. Dholakia, E. Eleftheriou, M. P. C. Fossorier, and X.-Y. Hu, “Reduced-complexity decoding of LDPC codes,” IEEE Trans. Commun., vol. 53, no. 8, pp. 1288–1299, Aug. 2005.
+[5] W. Ryan and S. Lin, Channel Codes: Classical and Modern. Cambridge, U.K.: Cambridge Univ. Press, 2009.
+[6] J. Feldman, M. J. Wainwright, and D. R. Karger, “Using linear programming to decode binary linear codes,” IEEE Trans. Inf. Theory, vol. 51, no. 3, pp. 954–972, Mar. 2005.
+[7] K. Yang, X. Wang, and J. Feldman, “A new linear programming approach to decoding linear block codes,” IEEE Trans. Inf. Theory, vol. 54, no. 3, pp. 1061–1072, Mar. 2008.
+[8] M. Taghavi and P. Siegel, “Adaptive linear programming decoding,” in Proc. IEEE Int. Symp. Inf. Theory, Jul. 2006, pp. 1374–1378.
+[9] M. H. Taghavi, A. Shokrollahi, and P. H. Siegel, “Efficient implementation of linear programming decoding,” IEEE Trans. Inf. Theory, vol. 57, no. 9, pp. 5960–5982, Sep. 2011.
+[10] S. Barman, X. Liu, S. C. Draper, and B. Recht, “Decomposition methods for large scale LP decoding,” IEEE Trans. Inf. Theory, vol. 59, no. 12, pp. 7870–7886, Dec. 2013.
+[11] X. Jiao, J. Mu, Y.-C. He, and C. Chen, “Efficient ADMM decoding of LDPC codes using lookup tables,” IEEE Trans. Commun., vol. 65, no. 4, pp. 1425–1437, Apr. 2017.
+[12] H. Wei, X. Jiao, and J. Mu, “Reduced-complexity linear programming decoding based on ADMM for LDPC codes,” IEEE Commun. Lett., vol. 19, no. 6, pp. 909–912, Jun. 2015.
+[13] X. Jiao, Y. He, and J. Mu, “Memory-reduced look-up tables for efficient ADMM decoding of LDPC codes,” IEEE Signal Process. Lett., vol. 25, no. 1, pp. 110–114, Jan. 2018.
+[14] F. Gensheimer, T. Dietz, S. Ruzika, K. Kraft, and N. Wehn, “A lowcomplexity projection algorithm for ADMM-based LP decoding,” in Proc. IEEE 10th Int. Symp. Turbo Codes Iterative Inf. Process. (ISTC), Dec. 2018, pp. 1–5.
+[15] H. Wei and A. H. Banihashemi, “An iterative check polytope projection algorithm for ADMM-based LP decoding of LDPC codes,” IEEE Commun. Lett., vol. 22, no. 1, pp. 29–32, Jan. 2018.
+[16] Q. Xia, Y. Lin, S. Tang, and Q. Zhang, “A fast approximate check polytope projection algorithm for ADMM decoding of LDPC codes,” IEEE Commun. Lett., vol. 23, no. 9, pp. 1520–1523, Sep. 2019.
+[17] J. Bai, Y. Wang, and Q. Shi, “Efficient QP-ADMM decoder for binary LDPC codes and its performance analysis,” IEEE Trans. Signal Process., vol. 68, pp. 503–518, 2020.
+[18] X. Liu and S. C. Draper, “The ADMM penalized decoder for LDPC codes,” IEEE Trans. Inf. Theory, vol. 62, no. 6, pp. 2966–2984, Jun. 2016.
+[19] B. Wang, J. Mu, X. Jiao, and Z. Wang, “Improved penalty functions of ADMM penalized decoder for LDPC codes,” IEEE Commun. Lett., vol. 21, no. 2, pp. 234–237, Feb. 2017.
+[20] H. Wei and A. H. Banihashemi, “ADMM check node penalized decoders for LDPC codes,” IEEE Trans. Commun., vol. 69, no. 6, pp. 3528–3540, Jun. 2021.
+[21] Q. Wu, F. Zhang, H. Wang, J. Lin, and Y. Liu, “Parameter-free ℓp-box decoding of LDPC codes,” IEEE Commun. Lett., vol. 22, no. 7, pp. 1318–1321, Jul. 2018.
+[22] Y. Wei, M.-M. Zhao, M.-J. Zhao, and M. Lei, “A PDD decoder for binary linear codes with neural check polytope projection,” IEEE Wireless Commun. Lett., vol. 9, no. 10, pp. 1715–1719, Oct. 2020.
+[23] B. Jiang, Y.-F. Liu, and Z. Wen, “Lp-norm regularization algorithms for optimization over permutation matrices,” SIAM J. Optim., vol. 26, no. 4, pp. 2284–2313, 2016.
+
+Yiming Chen received the B.Sc. degree in mathematics from Sichuan University, Beijing, China, in 2020. He is currently pursuing the Ph.D. degree in computational mathematics with Peking University. His research interests include combinatorial optimization, stochastic optimization, and their applications in machine learning.
+Rui Wang received the B.Sc. degree in information and computing science and the Ph.D. degree in operational research from Beijing Jiaotong University, Beijing, China, in 2015 and 2021, respectively. She is currently a Post-Doctoral Researcher with Peking University, Beijing. Her current research interests include large-scale classification optimization problems, sparse optimization, and numerical computing.
+Jinglong Zhu received the B.Sc. and Ph.D. degrees in mathematics from Peking University in 2012 and 2017, respectively. He is currently a PHY Algorithm Design Engineer with Huawei HiSilicon. His main research interests include application of novel mathematical methods in low complexity algorithm design.
+Zaiwen Wen received the Ph.D. degree in operations research from Columbia University in 2009. He is currently a Professor with Peking University. His research interests include optimization algorithms and theory and their applications in machine learning. He received the China Youth Science and Technology Award in 2016 and the Beijing Outstanding Youth Zhongguancun Award in 2020. He was funded by the National Ten Thousand Talents Program for Science. He is an Associate Editor of Journal of Scientific Computing, Communications in Mathematics and Statistics, Journal of the Operations Research Society of China, and Journal of Computational Mathematics, and a Technical Editor of Mathematical Programming Computation.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:33:41 UTC from IEEE Xplore. Restrictions apply.
+
+

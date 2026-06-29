@@ -1,0 +1,965 @@
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 71, NO. 10, OCTOBER 2024
+
+4767
+
+A Heterogeneous and Reconfigurable Decoder for the IEEE 1901 Standard
+Yuxing Chen and Zhongfeng Wang , Fellow, IEEE
+
+Abstract— The IEEE 1901 standard plays a crucial role in the extensive fields of smart grids, electric vehicles, and the Internet of Things. The forward error correction (FEC) codes specified in this standard include low-density parity-check convolutional codes (LDPC-CCs), Reed-Solomon (RS) codes, and RS convolutional concatenated (RSCC) codes. This work proposes a low-complexity decoder fully compliant with the standard. First, a heterogeneous scheme is introduced to LDPC-CC decoding. The new scheme assigns different data formats among processing elements (PEs), which reduces the overall storage size and enables a customized datapath down to the PE level. Then, to efficiently support diverse FEC demands in the standard, a reconfigurable architecture is thoroughly explored from both memory and datapath aspects. Leveraging these techniques, the first decoder compatible with the IEEE 1901 standard is developed and implemented with 55nm technology. Implementation results demonstrate that the proposed decoder satisfies the standard’s requirements while exhibiting low hardware complexity.
+Index Terms— IEEE 1901, low-density parity-check convolutional codes, heterogeneous scheme, reconfigurable design.
+I. INTRODUCTION
+THE implementation of standard-compatible forward error correction (FEC) codecs has garnered considerable interest owing to their practical significance. For example, lowdensity parity-check block code (LDPC-BC) codecs for IEEE 802.11 standard [1], [2], polar codecs for 5G-NR standard [3], [4], low-density parity-check convolutional code (LDPC-CC) codecs for IEEE 1901 standard [5], [6].
+The IEEE 1901 standard is developed by the IEEE Communications Society together with many corporations as participants (e.g., Broadcom, Intel, Texas Instruments, Panasonic) and plays a unique role in the broad areas of smart grids, electric vehicles, and the Internet of Things [7], [8]. The FEC types specified in the IEEE 1901 standard are very diverse. A 4-bit FEC type parameter is adopted to distinguish between different code types, shown in Table I. When the
+Manuscript received 14 May 2024; revised 8 July 2024; accepted 30 July 2024. Date of publication 12 August 2024; date of current version 2 October 2024. This work was supported by the National Key Research and Development Program of China under Grant 2022YFB4400604. This article was recommended by Associate Editor L. Gan. (Corresponding author: Zhongfeng Wang.)
+Yuxing Chen is with the School of Electronic Science and Engineering, Nanjing University, Nanjing 210023, China (e-mail: yxing.chen@outlook.com).
+Zhongfeng Wang is with the School of Electronic Science and Engineering, Nanjing University, Nanjing 210023, China, and also with the School of Integrated Circuits, Sun Yat-sen University, Shenzhen 518107, China (e-mail: zfwang@nju.edu.cn).
+Color versions of one or more figures in this article are available at https://doi.org/10.1109/TCSI.2024.3439338.
+Digital Object Identifier 10.1109/TCSI.2024.3439338
+
+TABLE I PARAMETERS OF FEC CODES IN THE IEEE 1901 STANDARD
+type parameter values 0, the FEC is chosen as rate-239/255 Reed-Solomon (RS) code. When the type parameter values 1 to 4, the FEC is selected as LDPC-CCs with rates 1/2, 2/3, 3/4, and 4/5. When the type parameter values 8 to 14, the FEC is selected as Reed-Solomon convolutional concatenated (RSCC) codes with seven different rates. The RSCC code is the concatenation of RS code and convolutional code (CC). The remaining values of the type parameter are reserved for potential future applications. The requirement of various codewords and code rates poses challenges for designing a decoder in full support of the standard. Several LDPC-CC decoders compliant with the IEEE 1901 standard are designed [6], [9], [10], but LDPC-CC is only part of the specified FEC types.
+In this work, we design a low-complexity reconfigurable decoder in full support of the FEC types defined in the IEEE 1901 standard. The contributions are summarized as follows.
+• To reduce area consumption, we propose a heterogeneous scheme for LDPC-CC decoding which allocates different message formats among processing elements. Compared to prior arts, the LDPC-CC decoder equipped with the proposed scheme exhibits the lowest area and improves the area efficiency by 35%.
+• To support various FEC types specified in the standard, reconfigurable hardware architecture is fully explored from both memory and datapath aspects. Memory usage in different decoding modes is carefully designed to achieve optimal sharing. Some critical components in the datapath are equipped with reconfigurable techniques to reduce the overall area.
+• The error correction performances of different FECs in the standard are analyzed and compared. Equipped with the heterogeneous scheme and reconfigurable method, the first decoder complying with the IEEE 1901 standard is proposed and optimized. Compared to the aggregation of individual decoders, the area of the proposed decoder is reduced by more than 25%.
+The rest of this work is organized as follows. Section II introduces the background. In Section III, details of the heterogeneous scheme are presented. In Section IV, designs of
+
+1549-8328 © 2024 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:07:16 UTC from IEEE Xplore. Restrictions apply.
+
+4768
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 71, NO. 10, OCTOBER 2024
+
+TABLE II PARAMETERS OF LDPC-CCS DEFINED IN THE IEEE 1901 STANDARD
+
+the reconfigurable decoder are elaborated. Section V describes implementation results. Section VI concludes.
+II. BACKGROUND Background information of LDPC-CC, RS, and CC decoders will be discussed in this section.
+
+A. LDPC-CC Decoder
+
+An LDPC-CC is characterized by a time-varying parity-
+
+check matrix H. The transpose of the parity-check matrix is denoted as HT , and an LDPC-CC codeword v satisfies v HT = 0. For an LDPC-CC with memory size ms,
+
+H0T (0) H1T (1) · · · HmT s (ms )
+
+
+
+HT =  
+
+H0T (1) H1T (2) ...
+
+··· ...
+
+HmT s (ms ...
+
++
+
+1)
+
+ 
+
+,
+
+(1)
+
+where HiT (t) (i = 0, 1, . . . , ms) are submatrices of size b × e,
+
+and
+
+t
+
+denotes
+
+the
+
+time
+
+stamp.
+
+The
+
+code
+
+rate
+
+is
+
+b−e b
+
+.
+
+The
+
+submatrix HiT (t) satisfies the equalities HiT (t) = HiT (t + Tp),
+
+where Tp is the code period. The i-th column and j-th row
+
+of H can be regarded as a variable node (VN) vi and a
+
+check node (CN) c j , respectively. As for regular LDPC-CCs,
+
+the VN degree dv and the CN degree dc are the number of ones in each column and row of H, respectively. As for
+
+LDPC-CCs specified in the IEEE 1901 standard, the period
+
+Tp = 3, and other parameters are listed in Table II. The
+
+channel log-likelihood ratio (LLR) and a posteriori LLR
+
+(AP-LLR) of vi are denoted as Ivi and Lvi , respectively. The check to variable (C2V) messages and variable to check (V2C)
+
+messages are marked as Qcn→vi and Pvi →cn . Let wL , wQ, wP denote the bit-width of Lvi , Qcn→vi , Pvi →cn , respectively. C2V messages are stored in a compressed format with a bit-width
+
+of wcQ.
+
+The decoding algorithms can be categorized into two types,
+
+hard-decision and soft-decision algorithms. Hard-decision
+
+algorithms are based on bit-flipping decoding [11], [12],
+
+[13], and soft-decision algorithms are based on the iterative
+
+message passing decoding [14], [15]. Compared to hard-
+
+decision algorithms, soft-decision algorithms offer much better
+
+error-correction performance at the expense of increased
+
+complexity. Among soft-decision algorithms, the flooding
+
+algorithm and the layered algorithm [10], [16] are two promi-
+
+nent examples. The layered algorithm demonstrates better
+
+decoding performance than the flooding one [10]. The layered
+
+decoding architecture of LDPC-CC consists of N p processing
+
+elements (PEs) and a storage module for AP-LLR and C2V
+
+messages. Messages follow the rule of first-in first-out [14].
+
+Therefore, the storage module is also named as FIFO. The
+
+inputs and outputs of the FIFO are channel LLRs and AP-
+
+LLRs, respectively. Each PE manages a window of width l,
+
+where the window width l is no less than ms + 1 to avoid data hazards.
+The layered decoding algorithm comprises the following steps. ➀ Initialize the messages: Lvi = Ivi , Qcn→vi = 0. ➁ Each PE updates the corresponding layer (or CN), according to (2-4), where \ represents exclusion. Assume cn as the updating CN for PE i˜, and vi ∈ N (cn), where N (cn) denotes the neighbors of cn.
+
+V2C Recovery:
+
+Pvi →cn
+
+=
+
+L
+
+ol d vi
+
+−
+
+Q
+
+ol d cn →vi
+
+.
+
+(2)
+
+CN Update:
+
+Q
+
+new cn →vi
+
+=
+
+β·
+v j ∈N (cn )\vi
+
+sign(
+
+Pv
+
+j
+
+→cn
+
+)
+
+·
+
+v
+
+j
+
+min
+∈N (cn )\vi
+
+| Pv j →cn |.
+
+(3)
+
+AP-LLR Update:
+
+L
+
+new vi
+
+=
+
+Pvi →cn
+
++
+
+Q
+
+new cn →vi
+
+.
+
+(4)
+
+The CN update is performed by the normalized min-sum (NMS) algorithm [17], with the normalized factor β set to 3/4. Fig. 1 illustrates the layered decoding flow of the LDPC-CC, where the example code is with e = 1, b = 2, ms = 3, Tp = 3. In the middle is the 90-degree clockwise rotation of the transpose of the parity-check matrix HT , where 1 and 0 denote with
+and without connection between the VN and CN. As shown in Fig. 1, N (cn) = {vm+7, vm+6, vm+5, vm+4, vm+2, vm+1}. The updating CN for PE i˜ + 1 is cn−4, and N (cn−4) = {vm−1, vm−2, vm−3, vm−5, vm−6, vm−8}. For each PE, the processing of a layer updates one CN. The red boxes denote
+the layers (CNs) being processed. The FIFO is of two
+parts, the AP-LLR FIFO and the C2V FIFO. The AP-LLR
+FIFO stores the AP-LLR messages. The C2V messages are stored in the compressed format, Qcn→N (cn), in the C2V FIFO. For details of the compressed format, please
+refer to [9] and [18]. During the processing of CN cn, messages Qcn→N (cn), Lvm+7 , Lvm+6 , Lvm+5 , Lvm+4 , Lvm+2 , and Lvm+1 are sent to PE i˜. After the decompression of Qcn→N (cn), we obtain Qcn→vm+7 , Qcn→vm+6 , Qcn→vm+5 , Qcn→vm+4 , Qcn→vm+2 , Qcn→vm+1 . Those input messages are taken as old messages. After the calculation of (2-4) and the compression of C2V messages by PE i˜, old messages
+are updated into new ones and stored back to the FIFO. ➂ The third step involves the shifting of the FIFO and the hard decision operation. The C2V FIFO is shifted up by 1, and the AP-LLR FIFO is shifted right by b (in this example, b = 2). After the shifting, CN cn+1 will be processed by PE i˜. During the hard decision, the output of the decoder
+(either 0 or 1) is generated, which depends on the sign of the
+AP-LLR message.
+
+B. RS Decoder
+
+RS codes are nonbinary Bose-Chauduri-Hocquenghem (BCH) codes over GF(2m), where GF is the short form of Galois field. The primitive element of GF(2m) is denoted as α.
+
+A (nrs, krs) RS code is defined by the generator polynomial
+
+g(x) =
+
+j +nr i=j
+
+s
+
+−kr
+
+s
+
+−1(x
+
++
+
+αi
+
+),
+
+where
+
+j
+
+is
+
+an
+
+integer,
+
+usually
+
+j = 0 or 1. The RS decoder comprises four sequential steps
+
+(Fig. 2), namely syndrome computation (SC), key equation
+
+solver (KES), Chien search & Forney (CSF), and correction.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:07:16 UTC from IEEE Xplore. Restrictions apply.
+
+CHEN AND WANG: HETEROGENEOUS AND RECONFIGURABLE DECODER FOR THE IEEE 1901 STANDARD
+
+4769
+
+Fig. 1. Decoding flow of LDPC-CC.
+
+Fig. 2. Block diagram of the RS decoder.
+
+Fig. 3. Encoding and decoding of the RSCC code.
+The received symbols are fed into the SC module to compute the syndromes, and also saved in the storage unit for later usage by the correction module. The KES module is originally solved by the Berlekamp-Massey (BM) algorithm. Later, reformulated inversionless BM (riBM) algorithm reduces the critical path of KES to one multiplier and one adder [19]. The complexity of the KES is further reduced in the enhanced parallel inversionless BM (ePIBM) architecture [20]. In this work, we adopt the ePIBM algorithm for KES implementation for its low complexity. The error positions and values are calculated by CSF. At last, the correction module performs the addition operation of received symbols and error patterns. Operations are all performed on the GF. For the RS code specified in the IEEE 1901 standard, nrs = 255, krs = 239, m = 8.
+C. CC Decoder
+The RSCC code is the concatenation of RS code and CC, where RS is the outter code and CC is the inner code. The encoding and decoding scheme for the RSCC code is shown in Fig. 3.
+As specified in the IEEE 1901 standard, the generator polynomials of the rate-1/2 CC are 171 and 133 with memory size ms = 6. CCs of the other code rates are punctured from the rate-1/2 code. The top-level architecture of the CC decoder based on the Viterbi algorithm is shown in Fig. 4. It consists of the branch metric calculation (BMC) unit, path metric update (PMU) unit, path metric normalize (PMN) unit, traceback (TB) unit, state transition (ST) storage unit, and path metric (PM) storage unit.
+
+Fig. 4. Top-level architecture of the CC decoder.
+
+The BMC unit calculates the value of BM. BM represents the normed distance between the received and candidate code sequence. As for soft-decision decoders, the BM is calculated as follows [21],
+
+B M00 = Ik + Ik+1,
+
+(5)
+
+B M01 = Ik + neg(Ik+1),
+
+(6)
+
+B M10 = neg(Ik ) + Ik+1,
+
+(7)
+
+B M11 = neg(Ik ) + neg(Ik+1),
+
+(8)
+
+where Ik stands for the channel LLR at time k, and neg denotes the negate operation. The PMU unit has 2ms (64) add-
+compare-select units (ACSUs) [22]. Each ACSU performs the
+following operations.
+
+P Minew
+
+=
+
+max{
+
+P
+
+M
+
+ol d j
+
++
+
+B M f ( j,i),
+
+P
+
+M
+
+ol d j +1
+
++
+
+B M f ( j+1,i)},
+
+(9)
+
+j=
+
+2i
+
+i < 32
+
+2(i − 32) i ≥ 32
+
+,
+
+(10)
+
+where the function f (·) is determined by the state diagram of the CC. The hardware architecture of an ACSU is shown in Fig. 5. Each ACSU mainly includes two adders, one comparator, and one multiplexer. In the continuous operation of the decoder, the PMs increase proportionally with the length of the received sequence. To prevent potential overflow or saturation, it is necessary to normalize the metrics. The PMN unit first finds the minimum and its index out of 64 updated PMs by the Min1 Finder module. Then, each PM subtracts the minimum value for normalization. The state transition decisions and the index of the minimum PM are utilized by
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:07:16 UTC from IEEE Xplore. Restrictions apply.
+
+4770
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 71, NO. 10, OCTOBER 2024
+
+Fig. 5. Hardware architecture of an add-compare-select unit (ACSU).
+
+Fig. 7. Probability density functions of AP-LLR messages.
+
+Fig. 6. Architecture for LDPC-CC decoder.
+the TB unit to reconstruct a nearly maximum likelihood path. The double-pointer even traceback algorithm is adopted [23]. Therefore, the ST storage unit needs 4 memory banks, the size of each of which is dt × 64 bits, where dt denotes the truncation depth and is set as 120 according to [24]. The PM storage unit comprises 64 D flip-flops.
+III. HETEROGENEOUS LDPC-CC DECODER
+In this section, first, the heterogeneous storage scheme will be proposed for the LDPC-CC decoder. Then, corresponding hardware architecture is designed.
+A. Heterogeneous Storage Scheme
+As shown in Fig. 6, the LDPC-CC decoder consists of APLLR storage, C2V storage, datapath, and control units. The datapath mainly contains PEs. The number of PEs N p is 10 in Fig. 6. First, a comprehensive analysis is conducted on the LDPC-CC decoder of the IEEE 1901 standard to identify the components that contribute significantly to the overall area consumption. The area breakdown analysis of the state-ofthe-art categorized memory-based (CMem-based) LDPC-CC decoder [9] is as follows. The datapath and control module occupies 16.2% and 0.8% of the total area, respectively. The AP-LLR memory and C2V memory occupy 51.9% and 31.1% of the overall area, respectively. In other words, the memory part consumes more than 80% of the total area. Therefore, design efforts should be primarily given to the reduction of memory size. Then, an experiment is performed to examine the distribution of AP-LLR message values among different PEs. The number of PEs and the bit-widths of messages are set the same as those in previous IEEE 1901 standard LDPC-CC decoders [6], [9], [10], where N p = 10, wL = 8, and wQ = 6. In other words, the number of PEs is set as 10, and the bit-widths of AP-LLR and C2V messages are 8 and 6. Probability density functions of absolute values for AP-LLR messages among different PEs are drawn in Fig. 7. The value range of AP-LLR messages exhibits significant variations across different PEs. As the PE index increases, both the peak value and the value range of AP-LLR messages
+
+become larger. For PE 0, more than 99% of the absolute values
+
+of AP-LLR messages range from 0 to 31, and less than 1%
+
+of the absolute values range from 32 to 127. For PE 5, more
+
+than 97% of the absolute values of AP-LLR messages range
+
+from 0 to 63, and less than 3% of the absolute values range
+
+from 64 to 127.
+
+Inspired by this phenomenon, we propose a heterogeneous
+
+storage scheme that strategically allocates different message
+
+formats among PEs with the objective of minimizing the
+
+overall storage size. The heterogeneous design follows two
+
+rules. ➀ Due to the relatively small absolute value ranges of
+
+AP-LLR messages in low-index PEs, it is possible to reduce
+
+the integer bit-width of messages associated with those PEs.
+
+➁ Besides, the fraction bit-width of messages in high-index
+
+PEs can be reduced, the reason for which is as follows. The
+
+final step of decoding, the hard-decision, is performed after the
+
+calculation of the last PE and solely focuses on determining
+
+whether the AP-LLR messages are positive or negative. As a
+
+result, the resolution of messages in PEs with high indices
+
+can be relaxed. In other words, the fraction bit-width can be
+
+cut down. Similar results can be obtained for C2V messages.
+
+To ensure a concise elaboration, we present the following
+
+notations. The bit-width of Lvi , Pvi →cn , in PE p (0 ≤ p < N p) is denoted as
+
+wQ(Lcpn)→, vwi (Pmp)e,sswa(Qgpe)s,
+
+respectively. The bit-width of compressed C2V messages in
+
+PE p is denoted as wc(pQ). The optimal bit-widths for the hetero-
+
+geneous storage scheme are found through a numerical search
+
+and are listed in Table III. The bit-error-rate (BER) curves
+
+of the LDPC-CCs specified in the IEEE 1901 standard under
+
+N p = 10 are shown in Fig. 8, which is simulated under AWGN
+
+channel and BPSK modulation. The CN update is performed
+
+by NMS algorithm. The black curves represent the floating-
+
+point error-correction performance of the layered algorithm.
+
+The blue curves depict the error-correction performance of
+
+the layered algorithm using the conventional quantization
+
+method, where the quantization method is set identical to [6],
+
+[9]db@IntegMemoryBanks , and [10]. The floating-point and
+
+quantized error-correction performance of the rate-4/5 LDPC-
+
+CC in flooding algorithm [16] is marked purple and pink. The
+
+orange curves illustrate the error-correction performance of the
+
+proposed heterogeneous decoding scheme. Compared to the
+
+flooding algorithm [16], the proposed heterogeneous decoding
+
+scheme has more than 0.25 dB error-correction performance
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:07:16 UTC from IEEE Xplore. Restrictions apply.
+
+CHEN AND WANG: HETEROGENEOUS AND RECONFIGURABLE DECODER FOR THE IEEE 1901 STANDARD
+
+4771
+
+TABLE III BIT-WIDTH UNDER HETEROGENEOUS STORAGE SCHEME
+
+Fig. 8. BER curves of the LDPC-CCs in IEEE 1901 standard under different decoding algorithms.
+
+gain. Compared to the quantized layered algorithm [10], the error-correction performance loss caused by the heterogeneous storage scheme is within 0.03 dB, which is negligible. Besides, the decoder equipped with the heterogeneous scheme improves the area efficiency and energy efficiency by more than 35% compared to related works, as described later in Section V. Compared to other LDPC-CC decoding schemes, the heterogeneous LDPC-CC decoding scheme reduces the decoding complexity at the cost of little or negligible error-correction performance loss. Therefore, the tradeoff is worthwhile.
+
+B. Hardware Architecture
+
+The top-level hardware architecture of the proposed het-
+
+erogeneous LDPC-CC decoder is illustrated in Fig. 9. It is
+
+mainly composed of AP-LLR storage, C2V storage, datapath,
+
+and control units. The storage units are marked green and the
+
+control unit is marked gray. The other circuits belong to the
+
+datapath. In contrast to traditional designs, the heterogeneous
+
+decoder incorporates data format conversion (DFC) modules,
+
+the details of which will be elucidated later.
+
+1) Storage: The state-of-the-art CMem-based storage pat-
+
+tern [9] with l = 228 is adopted in our design. The AP-LLR
+
+memory is composed of three groups of memory banks,
+
+as shown in Fig. 10(a). In order to support the maximum
+
+symbol length (b = 5), each group consists of five banks.
+
+Therefore, the AP-LLR memory has 15 banks in total. The
+
+size of each bank is l/3 ×
+
+N p−1 p=0
+
+w(Lp).
+
+The
+
+5-bit
+
+bank
+
+enable
+
+(enbB) signal generated by the control module decides whether
+
+certain banks are active or not. If the symbol length is less
+
+than 5, certain banks can be disabled for power savings. The
+
+C2V memory owns one bank as shown in Fig. 10(b), the size
+
+of which is l ×
+
+N p−2 p=0
+
+wc( pQ).
+
+Each
+
+compressed
+
+C2V
+
+message
+
+is composed of the signs of all C2V messages, the index of
+
+the minimum (Min1 index), the minimum (Min1), and the
+
+second minimum (Min2), as shown in Fig. 10(c). The signs
+
+of C2V messages are 15-bit, and the index of Min1 is 4-bit. The Min1 and Min2 are both unsigned numbers of (w(Qp) − 1) bits. Therefore, the bit-width of the compressed C2V message
+
+is calculated as follows,
+
+wc(
+
+p) Q
+
+=
+
+15
+
++
+
+4
+
++
+
+(w(Qp)
+
+−
+
+1)
+
++
+
+(w(Qp)
+
+−
+
+1).
+
+(11)
+
+By combining Table III and (11), it is derived that the size of an AP-LLR memory bank is 76 × 66 bits, and the size of the C2V memory is 228 × 255 bits.
+The Memory Compiler software can generate single-port SRAM, dual-port SRAM, single-port register-file, two-port register-file, and ROM. Since messages in the LDPC-CC decoder need to be read from and written into the memory in one cycle, dual-port SRAM and two-port register-file are suitable. We carry out an experiment to compare the area of dual-port SRAM and two-port register-file with respect to the number of words, as shown in Fig. 11. The number of bits is set as 64. From Fig. 11, when the number of words is smaller than 512, the two-port register-file consumes less area. Otherwise, the dual-port SRAM is smaller. Besides, the power of two-port register-file is less than dual-port SRAM. In terms of the proposed LDPC-CC decoder, the numbers of words for an AP-LLR memory bank and the C2V memory are 76 and 228, both of which are less than 512. Thus, we choose twoport register-files to build the memory of the decoder.
+2) Datapath: The datapath mainly contains PEs, multiplexers, the hard-decision module, and DFC modules.
+The hardware architecture of the PE aligns with the equations of the layered decoding algorithm, i.e., (2-4). Concretely, the three dashed boxes in Fig. 12, from left to right, represent V2C recovery module, CN update module, and AP-LLR update module, respectively. The V2C recovery module takes in 15 old AP-LLR messages and a compressed C2V message from the memory, and outputs V2C messages. In CN update module, new C2V messages are calculated by the V2C messages using (3). In AP-LLR update module, new AP-LLR messages are computed by adding the V2C messages with the new C2V messages. New AP-LLR messages and a new compressed C2V message are written into the memory. As a result of the compression of C2V messages, the recovery of C2V messages necessitates decompress modules. Sign-magnitude to two’s complement (SM2TC) and TC2SM modules carry out format conversions. The negative (Neg) module is responsible for negating a TC number. The Min1 Min2 Finder calculates Min1, Min2, and the index of Min1 from 15 inputs by a tree structure [25]. The sign generator first XORs the signs of V2C messages into a product of signs. Then, the sign of C2V message at index i is produced by XORing the sign of index-i V2C message with the product of signs, where 0 ≤ i < 15. Each PE is separated into three stages by two pipeline registers (the gray rectangles).
+Since message formats vary with PE, combinational logics in each PE are re-designed to fit the corresponding bit-width.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:07:16 UTC from IEEE Xplore. Restrictions apply.
+
+4772
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 71, NO. 10, OCTOBER 2024
+
+Fig. 9. Top-level architecture for heterogeneous LDPC-CC decoder.
+
+Fig. 10. (a) AP-LLR memory. (b) C2V memory. (c) Compressed C2V message.
+Fig. 12. A PE in the proposed decoder.
+
+Fig. 11. Area and power of dual-port SRAM and two-port register-file.
+
+The adders is (w(Qp) −
+
+in PE 1)-bit.
+
+p are w(Lp)-bit. Therefore, PEs
+
+The Min1 Min2 Finder are also heterogeneous.
+
+As depicted in Fig. 9, there exist three classes of PEs. The
+
+first class is PE 0 and 1. The second class is PE 2 to 7.
+
+The third class is PE 8 and 9. When messages pass across
+
+different classes of PEs, DFC modules are a must. Details of
+
+the inner structures of DFC modules are illustrated in Fig. 13.
+
+The DFC 0 module converts a 6-bit AP-LLR message into a
+
+7-bit one by sign extension. The DFC 1 module converts a
+
+7-bit AP-LLR message into a 6-bit one by removing the least
+
+significant bit. The DFC 2 and DFC 3 modules handle the
+
+compressed C2V message, in which the index of Min1 and
+
+the signs of C2V messages remain unchanged. Since Min1
+
+and Min2 are unsigned numbers, they are converted from a
+
+4-bit format to a 5-bit format by zero extension, as shown in
+
+Fig. 13(c). Min1 and Min2 are converted from a 5-bit format
+
+Fig. 13. Data format conversion (DFC) modules. (a) DFC 0, (b) DFC 1, (c) DFC 2, and (d) DFC 3 modules.
+into a 4-bit format by removing the least significant bit in the DFC 3 module. DFC modules are basically wire connections. The hardware overhead of the DFC modules is less than 0.1% of the total area, which is negligible.
+IV. RECONFIGURABLE DECODER The design of a reconfigurable decoder involves two key aspects: memory and datapath, both of which are delved into in this section.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:07:16 UTC from IEEE Xplore. Restrictions apply.
+
+CHEN AND WANG: HETEROGENEOUS AND RECONFIGURABLE DECODER FOR THE IEEE 1901 STANDARD
+
+4773
+
+Fig. 14. Reshaped RS memory.
+TABLE IV CONTROL SIGNALS FOR WRITE OPERATIONS OF RS MEMORY
+
+Fig. 15. A CC memory bank by word expansion.
+TABLE V CONTROL SIGNALS OF CC MEMORY
+
+A. Reconfigurable Memory
+To minimize area consumption, the memory of the LDPC-CC decoder can be reused by the RS and CC decoders. Memory usage in different decoding modes is carefully designed to achieve optimal sharing.
+The size of the memory in the RS decoder is 255 × 8 bits. In order to fit into the size of an AP-LLR bank, the number of words must ≤ 76, and the number of bits must ≤ 66. We propose a memory reshape method to resize the memory in the RS decoder into 64 × 32 bits. As shown in Fig. 14, the hardware overhead is three buffers and several multiplexers. Addr is the short form for address. The patterns of write addresses and write enable signals before and after memory reshaping are listed in Table IV. To write an RS codeword into the original RS memory, the 8-bit write address signal increments by one in each cycle, and the write enable signal maintains logic high. In each cycle, a byte of the RS codeword is written into the 255 × 8 bits memory. After memory reshaping, the input data is 1 byte, but a word of the memory is 4 bytes. Additional buffers are incorporated to aggregate every 4 bytes into a complete unit, which is subsequently written into the memory upon successful aggregation. Besides, three signals, the write word address signal, the write byte address signal, and the write enable signal, are used to control the write logic. The 6-bit write word address signal increments by one every four cycles. The write byte address is a 2-bit signal for
+
+selecting the write position within a word (4 bytes). The write byte address signal follows a repeating pattern of 0, 1, 2, and 3. The write enable signal is set to logic high only at the end of every four cycles and during the last cycle. As shown in Fig. 14, inputs of the three buffers (buf 0, buf 1, buf 2) are connected to multiplexers controlled by select signals selbu f 0, selbu f 1, selbu f 2. The select signal selbu f i equals to (write byte addr == i), where i = 0, 1, 2. The output of buf 2 is connected to a multiplexer controlled by select signal selld , which is set as logic high only when the input data is the last RS symbol. For ease of design, the write word address and write byte address are set as the most significant 6 bits and least significant 2 bits of the 255-ary counter. Each buffer is implemented by an 8-bit D flip-flop. Read word address and read byte address signals behave similarly to the write addresses. However, the read enable signal maintains logic high. The read byte address signal acts as the select signal of the output multiplexer to choose the output 1-byte data from the 4-byte word.
+The CC decoder has four memory banks. The size of each memory bank is 120 × 64 bits, larger than the size of an AP-LLR bank and less than the size of two AP-LLR banks. Therefore, at least two AP-LLR banks are needed to build a CC memory bank. A 56 × 64 bits upper bank and a 64 × 64 bits lower bank are used to build a CC memory bank by word expansion, as shown in Fig. 15. The patterns of the control signals of the CC memory are shown in Table V. To write a word of 64 bits into the original 120 × 64 bits CC memory, the 7-bit write/read address signal increments by one in each cycle. As for the CC memory by word expansion,
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:07:16 UTC from IEEE Xplore. Restrictions apply.
+
+4774
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 71, NO. 10, OCTOBER 2024
+
+Fig. 16. Top-level architecture of the memory system.
+
+two signals, write/read word address and bank select signals are utilized to manage the memory. The first 64 words are delivered to the lower bank and the last 56 words are fed into the upper bank. For ease of design, the write/read word address and bank select are set as the least significant 6 bits and most significant bit of the 120-ary counter.
+The top-level architecture of the memory system is shown in Fig. 16. The memory system is divided into two subsystems: the reconfigurable memory subsystem and the LDPC-CC private memory subsystem. The blue, green, and orange arrows denote the dataflow for LDPC-CC, RS, and CC decoder, respectively. The black arrows denote the shared dataflow. The reconfigurable memory subsystem consists of 9 shared memory banks, the size of each of which is 76 × 66 bits. The shared bank 0 can be used by the RS decoder or the LDPC-CC decoder. The shared banks 1 to 8 can be configured to be utilized by the CC decoder or the LDPC-CC decoder. The LDPC-CC private memory subsystem has six AP-LLR memory banks and a C2V memory. The size of an AP-LLR memory bank is 76 × 66 bits, and the size of the C2V memory is 228 × 255 bits. When the reconfigurable decoder is in RS mode, shared bank 0 is active and configured as RS memory. When the reconfigurable decoder is in RSCC mode, shared bank 0 is configured as RS memory, and shared banks 1 to 8 are configured as CC memory. When the reconfigurable decoder is in LDPC-CC mode, shared banks 0 to 8 are configured as nine AP-LLR memory banks. Plus the six AP-LLR memory banks in the LDPC-CC private memory subsystem, there are 15 AP-LLR memory banks in total. Besides, the C2V memory is active.
+B. Reconfigurable Datapath
+The Min1 Min2 Finder in the LDPC-CC decoder and the Min1 Finder in the CC decoder share similarities. However, the Min1 Min2 Finder operates on unsigned numbers, but the Min1 Finder operates on signed numbers. To solve this, we convert the metrics in the CC decoder from signed numbers to unsigned numbers. The channel LLRs are quantized into nL -bit signed numbers with n f fraction bits. Therefore, the resolution δ equals to 2−n f . Besides, −2nL −1 × δ is forbidden to achieve a balance between the quantity of positive and negative numbers, i.e., the value range is
+(−2nL −1 + 1) × δ ≤ quan(Ik ) ≤ (2nL −1 − 1) × δ, (12)
+
+where quan(·) denotes quantization operation. An offset is
+
+added to the quantized channel LLR to convert it into a
+
+nonnegative number Ik′ , as shown in (13),
+
+Ik′ = quan(Ik ) + [(2nL −1 − 1) × δ].
+
+(13)
+
+Correspondingly, change Ik into Ik′ in (5) to (8). The negate operation of Ik′ is calculated by
+neg(Ik′ ) = (2nL − 2) × δ − Ik′ = −quan(Ik ) + [(2nL −1 − 1) × δ]. (14)
+
+The value ranges of Ik′ and neg(Ik′ ) lie in
+
+0 ≤ Ik′ or neg(Ik′ ) ≤ (2nL − 2) × δ,
+
+(15)
+
+both of which are nonnegative numbers. The correctness of the Viterbi algorithm is preserved through this conversion, which can be explained as follows. The Viterbi decoding algorithm selects the maximum-likelihood path, which depends solely on the metric differences [21]. Since only an offset is introduced to the channel LLR, the relative value of Ik′ remains unaltered. This, along with (5) to (8), ensures that the metric differences remain consistent.
+Through the proposed conversion, operations of the Min1 Finder in the CC decoder are performed on unsigned numbers. Since the Min1 Min2 Finder in the LDPC-CC decoder also operates on unsigned numbers, some circuitries can be shared to reduce hardware complexity. To achieve this, we propose a reconfigurable Min Finder, illustrated in Fig. 17(a). It is composed of four 16-to-2 Min1 Min2 Finders, one 4-to-1 Min1 Finder, and several multiplexers. The blue and orange arrows denote signals for the LDPC-CC decoder and CC decoder, respectively. The black arrows denote signals shared by both decoders. When the reconfigurable decoder is in LDPC-CC mode, four 16-to-2 Min1 Min2 Finders act as the Min1 Min2 Finders in PE 2 to 5, respectively. The last input of each 16-to-2 Min1 Min2 Finder is the maximum value, and the other inputs are 15 V2C magnitudes. When the reconfigurable decoder is in RSCC mode, 64 PMs are divided into four groups and delivered into the 16-to-2 Min1 Min2 Finders. The results of 16-to-2 Min1 Min2 Finders are fed into the 4-to-1 Min1 Finder to calculate the Min1 and Min1 index of the 64 PMs.
+The LDPC-CC, CC, and RS decoders all include adders. Adders in the LDPC-CC and CC decoders handle binary numbers, but adders in the RS decoder handle finite field numbers.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:07:16 UTC from IEEE Xplore. Restrictions apply.
+
+CHEN AND WANG: HETEROGENEOUS AND RECONFIGURABLE DECODER FOR THE IEEE 1901 STANDARD
+
+4775
+
+Fig. 17. (a) Reconfigurable Min Finder. (b) Reconfigurable adder.
+
+Fig. 19. BER of RSCCs specified in the IEEE 1901 standard.
+
+Fig. 18. Top-level architecture of the datapath.
+TABLE VI POWER, THROUGHPUT, AND ENERGY EFFICIENCY OF THE HETEROGENEOUS LDPC-CC DECODER
+
+Fig. 20. BER of RS, RSCC, LDPC-CC specified in the IEEE 1901 standard.
+
+Therefore, adders in LDPC-CC and CC decoders can be shared for area reduction, but adders in the RS decoder can not be shared. The PMU unit in the CC decoder contains 64 ACSUs, each of which includes two adders. Thus, a total number of 128 adders is needed in the PMU unit. A PE in the LDPC-CC decoder includes 30 adders. All the traditional adders in PE 2 to 5 and eight traditional adders in PE 6 (30 × 4.8 = 128 adders in total) are modified into reconfigurable ones. The reconfigurable adders insert multiplexers at the input ports, shown in Fig. 17(b). When the reconfigurable decoder is in RSCC mode, data from the CC decoder are delivered to the adders. When the reconfigurable decoder is in LDPC-CC mode, data from the LDPC-CC decoder are delivered to the adders.
+The top-level architecture of the datapath is shown in Fig. 18. The datapath is divided into five parts: the RS datapath, CC private datapath, LDPC-CC private datapath, reconfigurable Min Finder, and reconfigurable adders. When the reconfigurable decoder is in RS mode, only the RS datapath is active. When the reconfigurable decoder is in RSCC mode, RS datapath, CC private datapath, reconfigurable Min Finder, and reconfigurable adders are active. When the reconfigurable decoder is in LDPC-CC mode, LDPC-CC private datapath, reconfigurable Min Finder, and reconfigurable adders are active.
+
+V. IMPLEMENTATION RESULTS
+The BER curves of the RSCCs specified in the IEEE 1901 standard are shown in Fig. 19. The BER is measured under the AWGN channel using BPSK modulation. The black curves represent the floating-point error-correction performance, and the blue curves depict the quantized errorcorrection performance. The quantization brings about within 0.2 dB performance loss. The floating-point error-correction performance of LDPC-CCs is described before in Fig. 8. The floating-point and quantized error-correction performance of the RS code is the same, since the hard-decision decoding algorithm is adopted.
+The error-correction performance of the FEC specified in the standard is illustrated and compared in Fig. 20. At the BER of 10−4, the RSCC codes exhibit at least a 1.2 dB gain compared to the RS code. At the BER of 10−5, the rate-4/5 LDPC-CC achieves a 2.3 dB gain over the rate-239/255×6.7 RSCC code, where code rates of both codewords are around 0.8. This observation effectively confirms the design methodology employed in the standard. LDPC-CC, RSCC, RS codes are regarded as high, medium, low error correction performance codes, respectively, showcasing their versatility in meeting the needs of different scenarios.
+The hardware architecture is written by Verilog hardware description language. The proposed heterogeneous LDPC-CC
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:07:16 UTC from IEEE Xplore. Restrictions apply.
+
+4776
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 71, NO. 10, OCTOBER 2024
+TABLE VII COMPARISON WITH OTHER IEEE 1901 STANDARD LDPC-CC DECODERS
+
+Fig. 21. Power breakdown of the heterogeneous LDPC-CC decoder.
+
+Fig. 22. Layout of the reconfigurable decoder.
+TABLE VIII RESULTS AND COMPARISONS OF THE RECONFIGURABLE DECODER
+AND INDIVIDUAL DECODERS UNDER 55NM TECHNOLOGY
+
+decoder and reconfigurable decoder are synthesized by Syn-
+
+opsys Design Compiler, and placed and routed by Synopsys
+
+IC Compiler under the SMIC 55nm CMOS technology. The
+
+power, throughput, and energy efficiency of the heterogeneous
+
+LDPC-CC decoder under various code rates are presented
+
+in Table VI. The throughput only takes the information bits
+
+into account. Since (b − e) information bits and e parity bits
+
+are outputted from the proposed decoder in each cycle, the
+
+throughput is calculated by (b − e) × frequency. The energy
+
+efficiency
+
+is
+
+defined
+
+as
+
+throughput power
+
+.
+
+With
+
+an
+
+increase
+
+in
+
+the
+
+code rate, a higher number of memory banks are activated,
+
+resulting in a rise in power consumption. Nevertheless, the
+
+throughput and energy efficiency increase with the code rate.
+
+The proposed decoder can achieve a peak energy efficiency of
+
+11.04 Gbits/J. The power breakdown of the decoder is shown
+
+in Fig. 21. The datapath unit and the control unit take 31.8%
+
+and 1.7% of the total power consumption, respectively. The
+
+C2V memory and the AP-LLR memory consume 19.0% and
+
+47.5% of the total power, respectively. Table VII presents
+
+the comparison with other IEEE 1901 standard LDPC-CC
+
+decoders, where only the 1/2-rate codes are considered. The
+
+area
+
+efficiency
+
+is
+
+calculated
+
+by
+
+throughput area
+
+.
+
+The
+
+latency
+
+of
+
+the
+
+proposed
+
+decoder
+
+is
+
+calculated
+
+by
+
+N p×l frequency
+
+.
+
+Compared
+
+to
+
+the state-of-the-art CMem-based decoder [9], the proposed
+
+decoder reduces the area by 21.3%. To make a fair com-
+
+parison, metrics of IEEE 1901 standard LDPC-CC decoders
+
+are normalized to the same technology (55nm) and voltage (1.2V) as Frequency ∼ 1/st , Area ∼ st2, Power ∼ st sv2, where
+
+the technology scaling factor st = 55nm/Technology and the voltage scaling factor sv = 1.2V/Voltage [26], [27]. The normalized area efficiency of our design is improved by 98.7% and 35.0% compared to the register-based decoder and CMembased decoder [9]. In terms of normalized energy efficiency, the proposed decoder is the most optimal, with an increase of 64.9% compared to the CMem-based decoder. In summary, the proposed decoder exhibits favorable characteristics in terms of both area efficiency and energy efficiency.
+The reconfigurable decoder is equipped with methods proposed in Sections III-IV, and its layout is shown in Fig. 22. The implementation results of the reconfigurable decoder and the individual decoders are shown in Table VIII, where rcfg denotes reconfigurable. For the speed demand of the IEEE 1901 standard (220 Mbps) [7], the throughputs of decoders are set as 220 Mbps. For low-area consideration, the RS decoder adopts the serial architecture based on the ePIBM algorithm [20]. The CC decoder is designed with 64 ACSUs and by the conventional traceback method [23]. For a fair comparison, we replicate the RS and CC decoders and implement them under the 55nm environment. Since an information bit is outputted in each cycle, the throughput of the CC decoder is calculated by 1×frequency. The RS decoder outputs 239 bytes of information symbols in every NRS cycles, where NRS is set
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:07:16 UTC from IEEE Xplore. Restrictions apply.
+
+CHEN AND WANG: HETEROGENEOUS AND RECONFIGURABLE DECODER FOR THE IEEE 1901 STANDARD
+
+4777
+
+as 272 in our design. Thus, the throughput of the RS decoder is
+
+calculated by
+
+239×8×frequency 272
+
+.
+
+The
+
+latency
+
+of
+
+the
+
+CC
+
+decoder
+
+is calculated by
+
+4dt frequency
+
+=
+
+2.2us.
+
+The
+
+latency
+
+of
+
+the
+
+RS
+
+decoder
+
+is
+
+calculated
+
+by
+
+NRS frequency
+
+=
+
+8.7us.
+
+The
+
+total
+
+area
+
+of
+
+the proposed decoder is less than the addition of the areas of
+
+individual decoders, thanks to the reconfigurable design. Com-
+
+pared to the simple combination of individual decoders, the
+
+proposed decoder reduces the hardware complexity by 28.2%.
+
+Besides, the proposed reconfigurable decoder can operate in
+
+the LDPC-CC mode, RSCC mode, and RS mode, which fulfill
+
+the requirements of the IEEE 1901 standard.
+
+VI. CONCLUSION
+In this work, we propose a decoder supporting all FEC types in the IEEE 1901 standard. The LDPC-CC decoding part is optimized by the heterogeneous scheme. To effectively support the required FEC codewords, a reconfigurable method is introduced to the decoder from both memory and datapath aspects. The error rate performances of different FECs are analyzed in detail. Not only does the proposed decoder meet the demands of the standard, but it also possesses low hardware complexity.
+
+REFERENCES
+[1] S. Kumawat, R. Shrestha, N. Daga, and R. Paily, “High-throughput LDPC-decoder architecture using efficient comparison techniques & dynamic multi-frame processing schedule,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 62, no. 5, pp. 1421–1430, May 2015.
+[2] A. Mahdi, N. Kanistras, and V. Paliouras, “A multirate fully parallel LDPC encoder for the IEEE 802.11n/ac/ax QC-LDPC codes based on reduced complexity XOR trees,” IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 29, no. 1, pp. 51–64, Jan. 2021.
+[3] Z. Zhong, W. J. Gross, Z. Zhang, X. You, and C. Zhang, “Polar compiler: Auto-generator of hardware architectures for polar encoders,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 67, no. 6, pp. 2091–2102, Jun. 2020.
+[4] D. Kam, B. Y. Kong, and Y. Lee, “Low-latency SCL polar decoder architecture using overlapped pruning operations,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 70, no. 3, pp. 1417–1427, Mar. 2023.
+[5] Y. Chen, H. Cui, and Z. Wang, “An efficient reconfigurable encoder for the IEEE 1901 standard,” IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 30, no. 9, pp. 1368–1372, Sep. 2022.
+[6] I. Yoo and I.-C. Park, “Low-power LDPC-CC decoding architecture based on the integration of memory banks,” IEEE Trans. Circuits Syst. II, Exp. Briefs, vol. 64, no. 9, pp. 1057–1061, Sep. 2017.
+[7] IEEE Standard for Broadband Over Power Line Networks: Medium Access Control and Physical Layer Specifications, Standard 1901-2020, 2021.
+[8] R. Nieto, R. Mateos, and Á. Hernández, “HW/SW architecture for a broadband power-line communication system with LS channel estimator and ASCET equalizer,” IEEE Trans. Ind. Informat., vol. 16, no. 11, pp. 6740–6749, Nov. 2020.
+[9] Y. Chen, H. Cui, and Z. Wang, “High-throughput LDPC-CC decoders based on storage, arithmetic, and control improvements,” IEEE Trans. Circuits Syst. II, Exp. Briefs, vol. 69, no. 3, pp. 1069–1073, Mar. 2022.
+[10] Y. Chen, Q. Zhang, D. Wu, C. Zhou, and X. Zeng, “An efficient multirate LDPC-CC decoder with a layered decoding algorithm for the IEEE 1901 standard,” IEEE Trans. Circuits Syst. II, Exp. Briefs, vol. 61, no. 12, pp. 992–996, Dec. 2014.
+[11] C. He, K. Deng, S. Song, and Z. Wang, “Column-weighted probabilistic GDBF decoder for irregular LDPC codes,” in Proc. IEEE Comput. Soc. Annu. Symp. VLSI (ISVLSI), Jun. 2023, pp. 1–6.
+[12] Y. Chen, H. Cui, J. Lin, and Z. Wang, “Fine-grained bit-flipping decoding for LDPC codes,” IEEE Trans. Circuits Syst. II, Exp. Briefs, vol. 67, no. 5, pp. 896–900, May 2020.
+[13] O. Laouar, I. Amamra, and N. Derouiche, “Performance evaluation of bit-flipping based algorithms for LDPC convolutional codes,” in Proc. 19th Int. Multi-Conf. Syst., Signals Devices (SSD), May 2022, pp. 15–20.
+
+[14] D. Chang et al., “LDPC convolutional codes using layered decoding algorithm for high speed coherent optical transmission,” in Proc. Opt. Fiber Commun. Conf. (OFC), Los Angeles, CA, USA, Mar. 2012, pp. 1–3.
+[15] L. Liu, C. Yuen, Y. L. Guan, Y. Li, and C. Huang, “Gaussian message passing for overloaded massive MIMO-NOMA,” IEEE Trans. Wireless Commun., vol. 18, no. 1, pp. 210–226, Jan. 2019.
+[16] A. J. Felstrom and K. S. Zigangirov, “Time-varying periodic convolutional codes with low-density parity-check matrix,” IEEE Trans. Inf. Theory, vol. 45, no. 6, pp. 2181–2191, Sep. 1999.
+[17] J. Chen, A. Dholakia, E. Eleftheriou, M. P. C. Fossorier, and X.-Y. Hu, “Reduced-complexity decoding of LDPC codes,” IEEE Trans. Commun., vol. 53, no. 8, pp. 1288–1299, Aug. 2005.
+[18] H. Cui, F. Ghaffari, K. Le, D. Declercq, J. Lin, and Z. Wang, “Design of high-performance and area-efficient decoder for 5G LDPC codes,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 68, no. 2, pp. 879–891, Feb. 2021.
+[19] D. V. Sarwate and N. R. Shanbhag, “High-speed architectures for Reed–Solomon decoders,” IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 9, no. 5, pp. 641–655, Oct. 2001.
+[20] Y. Wu, “New scalable decoder architectures for Reed–Solomon codes,” IEEE Trans. Commun., vol. 63, no. 8, pp. 2741–2761, Aug. 2015.
+[21] R. H. Morelos-Zaragoza, The Art of Error Correcting Coding. Hoboken, NJ, USA: Wiley, 2006.
+[22] A. F. Ajirlou, F. Kenarangi, E. Shapira, and I. Partin-Vaisband, “NoD: A neural network-over-decoder for edge intelligence,” IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 30, no. 10, pp. 1438–1447, Oct. 2022.
+[23] Y. Gang, A. T. Erdogan, and T. Arslan, “An efficient pre-traceback architecture for the Viterbi decoder targeting wireless communication applications,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 53, no. 9, pp. 1918–1927, Sep. 2006.
+[24] B. Moision, “A truncation depth rule of thumb for convolutional codes,” in Proc. Inf. Theory Appl. Workshop, Feb. 2008, pp. 555–557.
+[25] C.-L. Wey, M.-D. Shieh, and S.-Y. Lin, “Algorithms of finding the first two minimum values and their hardware implementation,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 55, no. 11, pp. 3430–3437, Dec. 2008.
+[26] H. Wang, B. Cheng, X. Tan, X. You, and C. Zhang, “An efficient approximate expectation propagation detector with block-diagonal Neumann-series,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 70, no. 3, pp. 1403–1416, Mar. 2023.
+[27] W. Zhou et al., “Approximate belief-selective propagation detector for massive MIMO systems,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 71, no. 6, pp. 2938–2950, Jun. 2024.
+Yuxing Chen received the B.S. degree in electronic information science and technology from Nanjing University, Nanjing, China, in 2021, where he is currently pursuing the Ph.D. degree. His research interests include communications circuits and hardware/software co-design.
+Zhongfeng Wang (Fellow, IEEE) received the B.E. and M.S. degrees from Tsinghua University and the Ph.D. degree from the University of Minnesota, Minneapolis, in 2000. He has been with Nanjing University, China, as a Distinguished Professor since 2016. Previously, he was with Broadcom Corporation, CA, USA, from 2007 to 2016, as a Leading VLSI Architect. Before that, he was with Oregon State University and National Semiconductor Corporation. He is currently a World-Recognized Expert on low-power highspeed VLSI design for signal processing systems. He has published over 200 technical articles with multiple best paper awards received from the IEEE technical societies. In the current record, he has had many articles ranking among top 25 most (annually) downloaded manuscripts in IEEE TRANSACTIONS ON VERY LARGE SCALE INTEGRATION (VLSI) SYSTEMS. In the past, he has served as an Associate Editor for IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS (TCAS-I), IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—II: EXPRESS BRIEFS (TCAS-II), and IEEE TRANSACTIONS ON VERY LARGE SCALE INTEGRATION (VLSI) SYSTEMS (IEEE TVLSI).
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:07:16 UTC from IEEE Xplore. Restrictions apply.
+
+

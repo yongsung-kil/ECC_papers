@@ -1,0 +1,1273 @@
+IEEE TRANSACTIONS ON SIGNAL PROCESSING, VOL. 62, NO. 3, FEBRUARY 1, 2014
+619
+High-Throughput Energy-Efficient LDPC Decoders
+Using Differential Binary Message Passing
+Kevin Cushon, Student Member, IEEE, Saied Hemati, Senior Member, IEEE, Camille Leroux, Member, IEEE,
+Shie Mannor, Senior Member, IEEE, and Warren J. Gross, Senior Member, IEEE
+Abstract—In this paper, we present energy-efficient architec-
+tures for decoders of low-density parity check (LDPC) codes using
+the differential decoding with binary message passing (DD-BMP)
+algorithm and its modified variant (MDD-BMP). We also propose
+an improved differential binary (IDB) decoding algorithm. These
+algorithms offer significant intrinsic advantages in the energy
+domain: simple computations, low interconnect complexity, and
+very high throughput, while achieving error correction perfor-
+mance up to within 0.25 dB of the offset min-sum algorithm.
+We report on fully parallel decoder implementations of (273,
+191), (1023, 781), and (4095, 3367) finite geometry-based LDPC
+codes in 65 nm CMOS. Using the MDD-BMP algorithm, these
+decoders achieve respective areas of 0.28
+, 1.38
+, and
+15.37
+, average throughputs of 37 Gbps, 75 Gbps, and 141
+Gbps, and energy efficiencies of 4.9 pJ/bit, 13.2 pJ/bit, and 37.9
+pJ/bit with a 1.0 V supply voltage in post-layout simulations. At a
+reduced supply voltage of 0.8 V, these decoders achieve respective
+throughputs of 26 Gbps, 54 Gbps, and 94 Gbps, and energy effi-
+ciencies of 3.1 pJ/bit, 8.2 pJ/bit, and 23.5 pJ/bit. We also report on
+a fully parallel implementation of IDB for the (2048, 1723) LDPC
+code specified in the IEEE 802.3an (10GBASE-T) standard. This
+decoder achieves an area of 1.44
+, average throughput of 172
+Gbps, and an energy efficiency of 2.8 pJ/bit with a 1.0 V supply
+voltage; at 0.8 V, it achieves throughput of 116 Gbps and energy
+efficiency of 1.7 pJ/bit.
+Index
+Terms—Binary
+messages,
+energy-efficient,
+high-
+throughput, iterative decoding, LDPC codes, VLSI.
+I. INTRODUCTION
+L
+OW-DENSITY PARITY CHECK (LDPC) codes are a
+class of linear block codes that are well known for their
+near-capacity error correction capabilities under iterative mes-
+sage-passing decoding [1], [2]. The inherently parallel nature of
+Manuscript received March 01, 2013; revised July 07, 2013 and October 30,
+2013; accepted November 03, 2013. Date of publication November 26, 2013;
+date of current version January 14, 2014. The associate editor coordinating the
+review of this manuscript and approving it for publication was Prof. Zhiyuan
+Yan.
+K. Cushon and W. J. Gross are with the Department of Electrical and Com-
+puter Engineering, McGill University, Montreal, QC H3A 2A7, Canada (e-mail:
+kevin.cushon@mail.mcgill.ca; warren.gross@mcgill.ca).
+S. Hemati is with the Department of Electrical and Computer Engineering,
+University of Idaho, Moscow, ID 83844 USA (e-mail: shemati@uidaho.edu).
+C. Leroux is with the Institut Polytechnique de Bordeaux, CNRS IMS, UMR
+5218, Bordeaux, France (e-mail: camille.leroux@ipb.fr).
+S. Mannor is with the Department of Electrical Engineering, Technion—Is-
+rael Institute of Technology, Haifa 32000, Israel (e-mail: shie@ee.technion.ac.
+il).
+Color versions of one or more of the figures in this paper are available online
+at http://ieeexplore.ieee.org.
+Digital Object Identifier 10.1109/TSP.2013.2293116
+these codes allows very high throughput to be achieved. How-
+ever, parallel decoding presents challenging issues with compu-
+tational complexity and routing congestion in VLSI implemen-
+tations [3].
+This is particularly true for energy efficient designs. Many ap-
+plications for LDPC codes are power and energy-sensitive, such
+as portable battery-powered communications, datacenters, and
+energy scavenging devices. However, large numbers of complex
+computational units result in high silicon area, while congested
+routing networks cause significant additional energy to be lost
+through interconnect parasitics.
+In cases where energy efficiency is a design priority, these
+issues regarding logic and interconnect complexity must be
+addressed. Structured LDPC codes permit efficient partially
+parallel designs with simplified routing requirements, such as
+[4], although reduced parallelism results in reduced throughput.
+These designs also require additional message-storage memo-
+ries, so although the power overhead from congested routing is
+decreased, the overhead from memories is increased.
+Highly parallel designs have a major advantage in the power
+domain, in that they can achieve a given throughput for lower
+power than a less parallel design through the use of voltage
+and frequency scaling (VFS) [5]. A number of highly par-
+allel designs have been proposed, using various architectural
+schemes to simplify the routing and logic. Bit-serial min-sum
+[5], [6] and pulse width min-sum [7] use single-wire message
+exchange schemes that also result in simpler computational
+nodes. Split-row decoding [8] partitions the message-passing
+graph to reduce the amount of global wiring. Another in-
+terconnect reduction technique is message broadcasting [9].
+Grouped-parallel decoders of structured codes have also been
+shown to be an effective energy efficient design [10].
+Another approach is to use a decoding algorithm requiring
+simpler computational units and fewer interconnections, trading
+off some error correction performance for improved efficiency.
+At the extreme of the simplicity range are hard decision algo-
+rithms, such as the Gallager A and B algorithms [1], bit flipping
+[11], and majority-based algorithms [12]. While decoders based
+on these algorithms generally have high throughput, low com-
+plexity, and high energy efficiency, they have relatively poor
+error correction performance compared to the soft-decision
+sum-product algorithm (SPA) and min-sum algorithm (MSA).
+Between the extremes are a variety of different decoding
+algorithms, each offering a different balance between com-
+plexity, speed, and error correction performance. Some notable
+examples are hybrid hard-soft algorithms, like weighted bit
+1053-587X © 2013 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+See http://www.ieee.org/publications_standards/publications/rights/index.html for more information.
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:20:18 UTC from IEEE Xplore.  Restrictions apply. 
+620
+IEEE TRANSACTIONS ON SIGNAL PROCESSING, VOL. 62, NO. 3, FEBRUARY 1, 2014
+flipping [13], and differential decoding with binary message
+passing (DD-BMP) [14].
+While DD-BMP has been shown to achieve error correction
+performance equal or superior to MSA when used with LDPC
+codes based on finite geometries (FG-LDPC codes) [15], it
+has never before been implemented in hardware. FG-LDPC
+codes, while very powerful, are also highly complex, which
+has been an obstacle to their widespread use [16]. In this paper,
+we revise the DD-BMP algorithm to make it more amenable to
+VLSI implementation, and implement fully parallel decoders
+using DD-BMP and modified DD-BMP (MDD-BMP) in 65 nm
+CMOS for (273,191), (1023,781), and (4095,3367) FG-LDPC
+codes. We show that these algorithms overcome the implemen-
+tation complexity of FG-LDPC codes, and demonstrate low
+area, high throughput, and high energy efficiency competitive
+with other state-of-the-art decoder designs.
+We also present a new decoding algorithm called IDB, for
+“improved differential binary” message passing, which is suit-
+able for decoding LDPC codes other than FG codes. It was
+noted in [14] that DD-BMP exhibits poor error correction per-
+formance with non-FG codes. In this work, we find that this poor
+performance is due to trapping sets [17] and propose two algo-
+rithmic modifications to overcome them: degeneration, and re-
+launching. We then implement a fully parallel IDB decoder for
+the (2048,1723) Reed-Solomon-based LDPC code specified in
+the IEEE 802.3an (10GBASE-T) standard [18], and show that it
+achieves significant improvements in area, throughput, and en-
+ergy efficiency over other decoders with similar error correction
+performance.
+The motivation for this work is that DD-BMP has a number
+of intrinsic qualities that are of particular interest for energy-ef-
+ficient VLSI LDPC decoding. As noted in [14], binary mes-
+sages and simple computational units translate to lower area
+and power consumption in VLSI chips. Furthermore, DD-BMP
+message exchange is highly amenable to broadcasting, which
+allows the wiring overhead to be reduced even further. These
+qualities allow for efficient fully parallel decoder architectures
+and high clock frequencies, giving DD-BMP very high average
+throughput. Voltage and frequency scaling (VFS) can be ap-
+plied, trading off throughput for reduced dynamic energy con-
+sumption.
+The remainder of this paper is organized as follows. Section II
+provides an overview of LDPC codes and the DD-BMP de-
+coding algorithm. Section III describes the VLSI architecture
+of the implemented DD-BMP and MDD-BMP decoders, while
+the implementation results and comparisons with other decoders
+are presented in Section IV. Issues with the use of these algo-
+rithms to decode non-FG codes are explored in Section V, with
+Section VI specifically addressing trapping sets. The IDB algo-
+rithm is described in Section VII, while implementation results
+for IDB are presented in Section VIII. Finally, concluding re-
+marks are presented in Section IX.
+II. FG-LDPC CODES AND THE DD-BMP ALGORITHM
+LDPC codes are classified into several types based on the
+method used to construct them. One of these types is based
+on Euclidean (EG) and projective (PG) geometries over finite
+fields, collectively known as finite geometric (FG) codes [15].
+These codes are known to have excellent error correction
+performance and high minimum distances. In addition, their
+encoding can be performed in linear time with simple feed-
+back shift registers. However, FG-LDPC codes have a much
+higher number of edges in their Tanner graph representations
+and higher degree nodes than many other types of LDPC
+codes. The (273,191), (1023,781), and (4095,3367) FG-LDPC
+codes used in this work have variable and check node degrees
+of (17,17), (32,32) and (64,64) respectively. This high
+complexity has been an obstacle to their widespread use, as
+noted in the hybrid soft bit-flipping decoder presented in [16].
+This implementation is highly routing-limited, even with a
+partially parallel architecture. With DD-BMP and its variants,
+however, we have produced efficient VLSI implementations of
+FG-LDPC codes, demonstrating that these powerful codes are
+not too complex for widespread application. It should also be
+noted that DD-BMP is not limited to use with FG-LDPC codes,
+as it has also been found to perform well with any code with
+high row and column weights [14].
+The DD-BMP algorithm implemented in this work is based
+on [14]. A number of changes have been made to make it more
+amenable to VLSI implementation. In particular, a random
+process used during initialization has been eliminated, the hard
+decision bits are not functions of their previous values, and
+convergence detection is performed with parity checks as in [5]
+and [7], rather than a syndrome check.
+First, the log-likelihood ratios (LLRs)
+of the received bits
+are read from the channel:
+(1)
+where
+is the
+th transmitted bit, and
+is the
+th value re-
+ceived from the channel.
+Next, the variable nodes are initialized with quantized LLRs:
+if
+if
+if otherwise.
+(2)
+where
+is the memory corresponding to the edge between
+variable node
+and check node
+,
+is the LLR clipping
+threshold, and
+is the number of bits of quantization. For the de-
+coder implementations presented in this paper, we use
+and
+, and thus our quantization step is 0.328125,
+giving the quantized values the equivalent of 4.39 integer bits
+(including sign) and 1.61 fractional bits. However, for the sake
+of simplicity, quantized values are treated internally as
+-bit
+signed integers as per (2), and thus differ from the “true” LLR
+values by a scaling factor equal to the quantization step.
+The variable-to-check messages are determined by the signs
+of the values in the corresponding memories:
+(3)
+where
+is the single-bit message from variable node
+to
+check node
+at iteration
+, with
+being initially set to 0, and
+is a sign function modified so that
+.
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:20:18 UTC from IEEE Xplore.  Restrictions apply. 
+CUSHON et al.: HIGH-THROUGHPUT ENERGY-EFFICIENT LDPC DECODERS USING DIFFERENTIAL BINARY MESSAGE PASSING
+621
+Fig. 1. DD-BMP check node schematics for non-broadcast (a) and broadcast
+(b) versions. Each input and output connects to a neighbouring variable node
+designated by the subscripts
+through
+. In the broadcast version, a single
+output
+connects to all neighbouring variable nodes.
+The check node operation consists of:
+(4)
+where
+is the single-bit message from check node
+to vari-
+able node
+at iteration
+, and
+is the set of variable nodes
+incident to check node .
+At this point, the iteration count
+is incremented and the
+variable node operation updates the memories
+as follows:
+(5)
+where the arbitrary scaling factor
+has been added to the orig-
+inal algorithm to improve performance.
+The hard decision bits of each variable node are computed by
+a majority vote of the sign bits of each memory
+and the
+initial channel data
+:
+if
+if otherwise.
+(6)
+The check and variable node operations are repeated itera-
+tively until either a valid codeword is detected, or the iteration
+count
+reaches a limit
+.
+III. ARCHITECTURAL DESCRIPTION
+The check node function of DD-BMP is implemented in
+CMOS with a network of XOR gates, as shown in Fig. 1.
+Fig. 1(a) shows a direct implementation, with separate con-
+nections to and from each adjacent variable node. The check
+nodes can also be adapted to a “broadcasting” type as shown in
+Fig. 1(b). In this architecture, the 2-input XOR gates are relo-
+cated to the variable nodes, where their intrinsic contribution
+to the global check result is removed locally, and each CN has
+a single “broadcast” output. Because sign computation makes
+up the entirety of the CN operation in DD-BMP, this results in
+a decoder that is logically equivalent to the non-broadcasting
+version. However, the broadcasting version yields a simpler
+inter-node connection structure which tends to produce better
+results with automated place-and-route tools. In [9], broad-
+casting resulted in a 26% reduction in the average node-to-node
+Fig. 2. DD-BMP variable node schematic. Each input and output connects to
+a neighbouring check node designated by the subscripts
+through
+.
+wire length of a generic fully parallel decoder of a (2048, 1723)
+Reed-Solomon (RS)-based LDPC code [19].
+The variable node schematic is shown in Fig. 2. It consists
+of 2-input XOR gates at the inputs to implement broadcasting,
+an adder network to compute the sums of the input messages,
+and accumulators to perform the memory operations. The binary
+logic 0 and 1 respectively correspond to the
+1 and
+1 mes-
+sages used in DD-BMP. The accumulators take the sums of the
+incoming CN-to-VN messages as input, and change their stored
+value by the corresponding amount. The stored values saturate
+at the maximum positive and negative numbers to prevent over-
+flow. The variable-to-check messages are taken from the sign
+bits of these accumulators. The initial values of the accumula-
+tors are set to
+. Finally, the hard decision bit is determined
+by a majority vote of all accumulator signs, plus the sign of the
+initial channel data.
+Modified DD-BMP (MDD-BMP) is a variant of the original
+algorithm in which only a single memory is assigned to each
+variable node, replacing the unique variable-to-check messages
+with a single global message. Hence the memory update func-
+tion of (5) is replaced with:
+(7)
+The variable node schematic for MDD-BMP is shown in
+Fig. 3. This simplification results in a loss in BER performance,
+though it also greatly reduces the complexity of the variable
+node. We demonstrate that in the case of MDD-BMP, the per-
+formance degradation is small, while the complexity reduction
+is significant, so using MDD-BMP in VLSI implementations is
+well justified. Furthermore, it allows the broadcasting concept
+to be applied to the variable-to-check messages. In this work,
+we present results for decoders based on both DD-BMP and
+MDD-BMP.
+At the system level, these architectures posses several merits
+that are useful in energy-efficient designs. The variable and
+check nodes are both simple, which translates to lower area
+and power consumption in VLSI chips. Furthermore, binary
+message exchange and broadcasting reduces wiring overhead.
+Since several successive messages opposing the value stored
+in a VN must be received before the sign of the VN changes,
+switching activity is also low [14]. Furthermore, DD-BMP
+is amenable to efficient highly parallel architectures. Unlike
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:20:18 UTC from IEEE Xplore.  Restrictions apply. 
+622
+IEEE TRANSACTIONS ON SIGNAL PROCESSING, VOL. 62, NO. 3, FEBRUARY 1, 2014
+Fig. 3. MDD-BMP variable node schematic. Each input is from a neighbouring
+check node designated by the subscripts
+through
+, while a single output
+is broadcast to all neighbouring check nodes.
+some recent fully node-parallel decoder architectures such as
+bit-serial min-sum [5] and pulse width min-sum [7], iterations
+in DD-BMP complete in a single clock cycle. As a result,
+DD-BMP tends to converge to a valid codeword rapidly, giving
+it a very high average throughput. Voltage and frequency
+scaling (VFS) can be applied, trading off throughput for re-
+duced dynamic energy consumption.
+IV. IMPLEMENTATION RESULTS
+We implemented DD-BMP and MDD-BMP decoders for a
+(273,191) FG-LDPC code, as well as an MDD-BMP decoders
+for (1023,781) and (4095,3367) codes using TSMC 65 nm
+7LM single-
+CMOS technology. Due to high memory re-
+quirements, implementations of the larger codes with DD-BMP
+turned out to be impractical. All decoders are fully parallel, and
+use an early termination scheme based on parity check satis-
+faction. In addition, none of the decoders employ pipelining,
+and therefore iterations complete in a single clock cycle with
+no additional latency.
+All results presented herein are based on post-layout simu-
+lations of ASIC standard cell designs, and include the clock
+tree, with back-annotated delays and wiring parasitics. Each de-
+coder was produced using the same design flow: we used Ca-
+dence RTL Compiler Ultra for logic synthesis, Cadence EDI
+System for place and route, Synopsys VCS for post-layout sim-
+ulation, and Synopsys Primetime for power estimation. All pre-
+sented results use “typical” operating conditions. For nominal
+supply voltage, these are TT process,
+, and
+. For reduced supply voltage results, these are TT process,
+, and
+. Results for both voltages are
+obtained using design kit libraries.
+Fig. 4 shows the BER performance of our implementations,
+along with baselines of min-sum (MSA) and offset min-sum
+(OMS). All use 6 quantization bits and 31 maximum iterations.
+With these parameters and codes, OMS delivers performance
+within 0.1 dB of floating point SPA (FP-SPA). These measure-
+ments all use random codewords, with binary phase-shift keying
+(BPSK) modulation, and noise added using an emulated ad-
+ditive white Gaussian noise (AWGN) channel. These results
+were obtained with software simulations, and in the case of
+the (273,191) code, with a prototype implemented on a Xilinx
+Virtex-5 LX330 FPGA.
+The number of quantization bits
+and scaling factor
+are
+selected to give the best trade-off between performance and
+area. For the (273,191) decoders,
+and
+are used,
+while for the (1023,781) and (4095,3367) decoders,
+and
+are used. As shown, decoding of the (273,191) code is
+Fig. 4. BER performance of the codes in this work decoded with DD-BMP,
+MDD-BMP, offset MSA (OMS), and MSA. All simulations use 6 quantization
+bits and 31 maximum iterations.
+slightly worse than MSA with both DD-BMP and MDD-BMP.
+The longer codes exhibit performance between OMS and MSA
+when decoded with MDD-BMP, with the (1023,781) code per-
+forming 0.7 dB worse than OMS and 0.4 dB better than MSA
+at a BER of
+. The (4095,3367) code delivers the best rela-
+tive performance, being about 0.4 dB worse than OMS and 0.5
+dB better than MSA. Standard MSA performs quite poorly with
+these codes, because numerical saturation occurs in the high-de-
+gree VNs. Thus, DD-BMP and MDD-BMP can perform better,
+despite having less inter-node information exchange. In addi-
+tion, the updating rules of DD-BMP and MDD-BMP are based
+on relaxed successive substitution, which underestimates the re-
+liability of check node outputs. This has been shown to improve
+the error correction performance of iterative decoders in general
+[20]. MSA, by contrast, overestimates check-to-variable mes-
+sages compared to SPA. These problems can be solved with
+OMS, although it is very costly to implement, due to the high de-
+gree check nodes in these codes. These results demonstrate that
+DD-BMP and MDD-BMP achieve good error correction per-
+formance that is suitable for many applications, despite having
+far lower complexity than MSA. Notably, a highly parallel de-
+coder based on MSA or its variants would be too complex for a
+practical VLSI implementation of the longer FG-LDPC codes.
+Simulation results for throughput, average iteration count,
+power consumption, and energy efficiency are shown in
+Figs. 5, 6, 7, and 8 respectively. The data sets for both nominal
+supply voltage
+and reduced supply voltage
+are obtained by post-layout simulations using
+standard cell libraries for each of the respective supply voltages.
+In these simulations the decoders are operated continuously.
+Once the decoder signals completion, either through conver-
+gence detection or by reaching the iteration limit, another
+codeword is immediately loaded and decoding begins again.
+The values for energy efficiency were calculated by dividing
+power by throughput.
+The full ASIC implementation results are summarized in
+Table I, alongside results for comparable previously published
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:20:18 UTC from IEEE Xplore.  Restrictions apply. 
+CUSHON et al.: HIGH-THROUGHPUT ENERGY-EFFICIENT LDPC DECODERS USING DIFFERENTIAL BINARY MESSAGE PASSING
+623
+Fig. 5. Average throughput for the implemented decoders.
+Fig. 6. Average iteration counts for the implemented decoders.
+decoders. For the shorter codes, DD-BMP and MDD-BMP
+have highly area-efficient implementations, despite their high
+node degrees and edge counts, demonstrating that FG-LDPC
+codes can be efficiently implemented in VLSI. In the case of
+the (4095,3367) code, the huge number of edges (262,080) and
+high node degrees lead to severe routing congestion, which
+results in much lower utilization, clock frequency, and energy
+efficiency. Despite this, our implementation of the (4095,3367)
+code is still practicable. Furthermore, its decoding throughput
+exceeds 200 Gbps for values of
+above 5.5 dB. It also has
+the largest BER performance gain over MSA, and the smallest
+gap to OMS performance.
+Due to differing codes and other parameters, it is difficult to
+make fair comparisons between this work and other energy-effi-
+cient designs. However, scaled throughput per unit area and en-
+ergy per decoded bit are considered to be the most meaningful
+efficiency metrics for comparing decoders under similar condi-
+tions [21].
+Two different designs for an energy-efficient min-sum
+decoder are presented in [8] and [10], the former using a
+Fig. 7. Average power for the implemented decoders.
+Fig. 8. Average energy per decoded bit for the implemented decoders.
+split-row approach and the latter using a grouped-parallel
+approach. Compared to [10], MDD-BMP with the (1023,781)
+code achieves 6.1 times greater throughput per unit area and
+approximately 3.1 times the energy efficiency after scaling to
+a 1.0 V supply voltage. Compared to the split-row decoder
+in [8], this MDD-BMP decoder achieves 2.8 times greater
+throughput at nominal supply voltage, but has 35% higher en-
+ergy consumption per decoded bit after supply voltage scaling
+to 1.0 V. However, since [8] uses a 1.3 V supply, scaling would
+considerably reduce its throughput, and MDD-BMP has 10.6%
+better energy efficiency at the nominal voltages.
+In addition, both [8] and [10] use a (2048,1723) LDPC code
+that is known to have an early error floor—the offset MSA
+of [10] exhibits an error floor at
+that is over-
+come with post processing. Split-row [8], which uses normal-
+ized MSA with check node heuristics, only provides results
+down to
+and does not investigate the presence
+of an error floor. FG-LDPC codes, on the other hand, are well
+known for the absence of early error floors. This is confirmed by
+the BER measurements in Fig. 4, which show that DD-BMP and
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:20:18 UTC from IEEE Xplore.  Restrictions apply. 
+624
+IEEE TRANSACTIONS ON SIGNAL PROCESSING, VOL. 62, NO. 3, FEBRUARY 1, 2014
+TABLE I
+IMPLEMENTATION RESULTS AND COMPARISONS WITH OTHER WORKS
+Averages are measured at
+in this work, at
+in [8], at
+in [10], and at
+in [16].
+Energy scaled to 1.0 V and 65 nm process.
+Average throughput per unit area scaled to 65 nm at constant frequency.
+MDD-BMP do not exhibit any error floor above
+,
+even with the short (273,191) code.
+The hybrid soft bit-flipping (SBF) decoder in [16] uses a
+(1057,813) FG-LDPC code very similar to the (1023,781) code
+used in this work, and achieves performance approximately
+0.2 dB better than MDD-BMP. However, even with a partially
+parallel architecture, this algorithm is more computationally
+intensive and highly routing-limited, and throughput is much
+lower than fully parallel designs. DD-BMP and MDD-BMP
+also achieve better energy efficiency after scaling for process
+technology and supply voltage.
+V. MDD-BMP WITH OTHER LDPC CODES
+Although we have shown that differential binary (DB) al-
+gorithms are an effective, energy-efficient means of decoding
+FG-LDPC codes, it is not always practical or possible to use an
+FG code. In particular, communications standards mandate the
+use of standard codes, and there are currently no standards that
+use FG codes.
+Simulation results in [14] show that DD-BMP can effectively
+decode randomly generated LDPC codes, as long as the VN
+degree is high enough, but suffers from poor error correction
+performance otherwise. We have also verified that MDD-BMP
+has poor decoding performance for a (2048, 1723) RS-based
+LDPC code with
+of (6,32) [19]. This code is used in
+the IEEE 802.3an standard for 10 Gbps Ethernet (10GBASE-T)
+[18], and is also a common benchmark code for highly parallel
+LDPC decoder implementations.
+Fig. 9 plots the BER/FER performance of this code decoded
+using MDD-BMP with
+,
+and
+, and
+offset min-sum (OMS) with
+and
+. MDD-BMP
+performs considerably worse than OMS with this code, and ad-
+ditionally exhibits a high “error floor”—a region in which the
+slope of the curve falls significantly above a certain signal-to-
+noise ratio.
+The topic of error floors and their causes in LDPC codes has
+been the subject of several previous works. It is well known
+Fig. 9. BER/FER performance of IDB with the (2048,1723) RS-LDPC code,
+compared to the original MDD-BMP algorithm with 100 iterations, and 4-bit
+OMS with 20 iterations.
+that a major cause of error floor behavior is the presence of in-
+herent structural flaws in the code’s graph. Due to these flaws,
+certain error patterns occurring in small sub-graphs are main-
+tained or strengthened under iterative message passing. Conse-
+quently, the decoding algorithm is “trapped” in this error pat-
+tern, and fails as it is unable to correct it.
+In [22], this phenomenon was observed in a (2640,1320) Mar-
+gulis LDPC code. The cause was identified as “near-codewords”
+on account of the stability of these structures under iterative de-
+coding, despite them not being valid codewords. The term trap-
+ping sets was introduced in [17] to describe in general the pat-
+terns which cause these failures in LDPC codes over an AWGN
+channel. An
+trapping set is defined as a subgraph con-
+sisting of
+erroneous VNs (the “weight” of the set), with an
+extrinsic message degree (EMD) of
+(i.e., the number of unsat-
+isfied CNs incident to the erroneous VNs).
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:20:18 UTC from IEEE Xplore.  Restrictions apply. 
+CUSHON et al.: HIGH-THROUGHPUT ENERGY-EFFICIENT LDPC DECODERS USING DIFFERENTIAL BINARY MESSAGE PASSING
+625
+The related concept of stopping sets, which determine error
+floor performance of LDPC codes over the binary erasure
+channel, was studied in [23]. Error floor behaviour has also
+proven to be a major issue in the (2048,1723) RS-LDPC code,
+as the 10 Gbps Ethernet specification mandates very low BER
+performance. The dominant trapping sets of this code, termed
+absorbing sets, are defined as a special subclass of trapping set
+which is guaranteed to be stable under Gallager bit-flipping de-
+coding [24]. Additional analysis of the formation and dynamics
+of absorbing sets is performed in [25].
+There have also been a number of implementation-oriented
+methods proposed for lowering the error floors of LDPC
+codes by overcoming or avoiding trapping sets. A prominent
+example is [10], which presents a hardware implementation
+of an OMS decoder for the (2048,1723) RS-LDPC code em-
+ploying a post-processing decoding stage. This technique has
+proven highly effective at overcoming the dominant (8,8)
+absorbing set of this code, and thereby lowering the error
+floor. Another hardware implementation in [26] proposes an
+iterative decoding algorithm with backtracking, which attempts
+to collapse trapping sets by identifying participating bits and
+flipping them. The stochastic decoders in [27] and [28] can
+employ redecoding, which restarts decoding with a different
+random number generator seed—since these algorithms are
+probabilistic, decoding may thus take a different trajectory
+and avoid trapping sets that caused a previous attempt to fail.
+Similarly, in dithered belief propagation, random processes are
+used in attempts to avoid or break out of trapping sets [29].
+Likewise, early error floors and poor error correction perfor-
+mance are issues that must be solved for DB algorithms to be of
+practical use with general (non-FG) LDPC codes. In this work,
+we will focus on the (2048, 1723) RS-LDPC code, due to its im-
+portance to the IEEE 802.3an standard, the large body of prior
+work investigating its trapping sets, and its high popularity as an
+implementation target for highly-parallel decoder architectures.
+VI. TRAPPING SETS
+A detailed examination of the failure cases of MDD-BMP
+with the (2048,1723) code revealed that decoding failures in
+the error floor region occurred due to trapping sets with very
+low weights and high EMDs. The dominant set among these is
+a (4,12) trapping set, the subgraph of which is shown in Fig. 10.
+It is easy to see how this configuration fails under MDD-BMP
+decoding: each of the erroneous VNs receives 3 messages op-
+posing the incorrect bit, and 3 reinforcing it. These messages
+sum to 0, and so the state of the VN does not change. The de-
+coder is therefore deadlocked and unable to correct these errors.
+This set can, in fact, be considered an absorbing set in the
+context of MDD-BMP, because it is stable under bit-flipping op-
+erations. This arises because MDD-BMP employs VN message
+broadcasting (i.e., each VN computes a single global message,
+which is sent to all neighbouring check nodes). We therefore de-
+fine a weak absorbing set as a set of VNs, such that at least
+of each VN’s neighbouring CNs are connected to the set an even
+number of times. This differs from the absorbing set definition
+given in [24] and [25], in which strictly greater than
+of
+each VN’s neighbors must have an even number of connections
+to the set. We henceforth refer to this as a strong absorbing set to
+Fig. 10. The dominant (4,12) trapping set of the (2048,1723) RS-LDPC code
+under MDD-BMP decoding.
+distinguish it from a weak one. The (2048,1723) RS-LDPC code
+contains a great number of weak absorbing sets. Many of these,
+such as the (4,12) set detailed above, are very small in size and
+have very large multiplicities, and thus result in the severe error
+floor seen in Fig. 9 [17]. Furthermore, the use of binary mes-
+sages exacerbates the vulnerability of MDD-BMP to trapping
+sets, as a strong extrinsic message cannot overcome a group of
+weak intrinsic messages. One consequence of this is that once a
+(weak) absorbing set is entered, it cannot be escaped, regardless
+of the LLR values in the participating VNs.
+VII. AN IMPROVED DIFFERENTIAL BINARY ALGORITHM
+While a variety of algorithmic methods have been proposed
+for lessening the impact of trapping sets, none are particularly
+applicable to MDD-BMP, or to the weak absorbing sets that
+dominate its error floor with the 10 Gbps Ethernet LDPC code.
+For instance, in the post-processing decoding phase of [10],
+the magnitudes of messages from unsatisfied check nodes are
+scaled up, while messages from satisfied check nodes are scaled
+down, but this technique is ineffective with binary messages.
+The backtracking algorithm of [26] attempts to escape trapping
+sets by flipping VNs connected to unsatisfied CNs, but this is
+only effective for trapping sets with few candidates. The random
+sign flip (RSF) technique of [29] faces a similar issue. Other
+techniques, such as bi-mode [30] or gear-shift decoding [31],
+significantly increase the complexity of VLSI implementations.
+We propose instead two low-complexity modifications to the
+MDD-BMP algorithm, called degeneration and relaunching.
+We refer to MDD-BMP with either or both of these modifica-
+tions as IDB, for “improved differential binary” decoding algo-
+rithm. The degeneration technique modifies the VN operation
+such that an offset
+is subtracted from the differential value at
+each iteration. The MDD-BMP variable node update function
+of (7) is thus modified to:
+(8)
+This will cause the stored value
+to “degenerate” towards
+zero over time, unless the message sum has a magnitude equal to
+or greater than . Also note that if
+and the message sum
+are sufficiently small,
+will oscillate between positive and
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:20:18 UTC from IEEE Xplore.  Restrictions apply. 
+626
+IEEE TRANSACTIONS ON SIGNAL PROCESSING, VOL. 62, NO. 3, FEBRUARY 1, 2014
+negative values on successive iterations. The primary purpose
+of this is to provide a mechanism to break up weak absorbing
+sets. The VNs in such a set with
+connections to falsely
+satisfied CNs will have an incoming message sum of zero, and
+will therefore eventually change sign and possibly cause the set
+to collapse. Returning to our (4,12) weak absorbing set example
+in Fig. 10, it can be readily seen that flipping the sign of one or
+more VNs will quickly correct the remaining VNs.
+However, while the degeneration technique is effective at
+overcoming the weak absorbing sets that beleaguer MDD-BMP,
+it is ineffective at correcting strong absorbing sets. This is be-
+cause flipping a VN in a strong absorbing set would require a
+large value of
+, which would then cause correct bits outside
+the set to be erroneously flipped and propagate errors through
+the entire graph. In fact, strong absorbing sets, including the
+infamous (8,8) set that has been the subject of much scrutiny in
+priorworks, makeupthe dominantfailure modes of IDB withde-
+generation. We also observe that these sets are encountered with
+much greater frequency than in OMS. As noted above, the use of
+binary messages contributes to this, as an absorbing set cannot
+be disrupted by a small number of strong extrinsic messages.
+In order to further improve the performance of IDB, we
+propose another algorithmic modification called “relaunching”.
+Prior works have noted that since the decoding outcome is
+dependent on the initial state of the decoder, an unsuccessful
+decoding attempt can possibly be corrected by applying small
+perturbations to the initial state and retrying. For example,
+the concept of “redecoding” for stochastic LDPC decoders is
+used in [32] and [27]. As stochastic decoding is a probabilistic
+process, redecoding re-attempts decoding with the same initial
+channel LLR values, but a different random number generator
+(RNG) seed. Similarly, the random initial state (RIS) technique
+proposed in [29] re-attempts decoding with random changes
+applied to the initial channel data.
+With the relaunching technique, we divide the decoding
+process into multiple phases denoted by an index . At the start
+of each phase, the variable nodes are reset to the initial channel
+LLR values with an offset applied as follows:
+(9)
+where
+is a non-negative function of the decoding phase
+and VN index
+. Decoding then proceeds normally, until a
+valid codeword is detected or
+iterations have passed. If the
+decoder did not converge to a valid codeword,
+is incremented
+and the next phase of decoding begins, or if
+is the final phase,
+failure is declared and decoding stops.
+The relaunching technique is similar to RIS in that it attempts
+to circumvent decoding failures by re-attempting decoding with
+different initial channel values. However, in relaunching, the
+changes applied to the initial channel values are deterministic,
+their magnitudes can never be increased or their signs flipped as a
+result of these changes, and different phases
+may use different
+values for the parameters
+and
+in the VN update function.
+The IDB decoder implemented in this work uses the decoding
+schedule shown in Table II. This schedule was developed empir-
+ically to balance decoding performance and maximum latency.
+TABLE II
+DECODING SCHEDULE FOR IDB WITH RELAUNCHING
+Fig. 11. Cumulative and marginal FER/BER performance of IDB with
+relaunching, at
+, using the schedule shown in Table II.
+The initial phase applies a uniform offset of 1 to the initial LLR
+data. The relaxation factor
+of 1 reduces error correction per-
+formance for this phase, but also reduces the average number
+of iterations, thus giving higher average throughput. The next
+phase uses the same uniform offsets with
+. In succes-
+sive phases, offset values from 1 to 5 are assigned sequentially
+to each
+. All phases have a degeneration factor of 1, and 45
+maximum iterations, giving the overall decoding process 315
+maximum iterations.
+The error correction performance of IDB is shown in Fig. 9,
+along with OMS (
+,
+) and MDD-BMP (
+,
+) as baselines. The parameters used for IDB with
+only the degeneration technique are
+,
+,
+,
+and
+, while IDB with both the relaunching and degener-
+ation techniques uses
+and the schedule from Table II
+(labelled in the legend as 7
+45 iter.) As these results show,
+degeneration is hugely successful in improving the error correc-
+tion performance over MDD-BMP. The error floor is reduced
+by at least 2 orders of magnitude, and BER performance within
+0.7 dB of OMS is achieved in the waterfall region. The im-
+provement from relaunching is less dramatic but still significant,
+about 0.4 dB around
+. Notably, this gives IDB
+error correction performance comparable to split-row min-sum
+[8], stochastic [27], and relaxed half-stochastic algorithms [28],
+but with much lower computational complexity.
+The cumulative and marginal error correction performance
+per relaunching phase at
+is plotted in Fig. 11.
+The marginal error rate of a phase
+is defined as the propor-
+tion of frames (or bits) that are not successfully decoded during
+phase , out of all frames (or bits) in which phase
+is reached.
+These results show the effectiveness of relaunching at correcting
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:20:18 UTC from IEEE Xplore.  Restrictions apply. 
+CUSHON et al.: HIGH-THROUGHPUT ENERGY-EFFICIENT LDPC DECODERS USING DIFFERENTIAL BINARY MESSAGE PASSING
+627
+Fig. 12. BER performance of IDB decoding with other LDPC codes, along
+with MDD-BMP and OMS for comparison. All decoders use 6 bits of quantiza-
+tion. IDB uses the decoding schedule from Table II, OMS and MDD-BMP use
+20 and 45 maximum iterations respectively.
+frames that could not be decoded successfully with a single
+phase of IDB. In addition, despite the high maximum number
+of iterations for the overall decoding process (315), we observe
+that the vast majority of frames decode successfully in the first
+phases, meaning that the average number of iterations is much
+lower (see Fig. 15).
+Fig. 12 shows the error correction performance of IDB de-
+coding with other LDPC codes with other construction methods:
+(648,324) and (648,540) irregular quasi-cyclic (QC)-LDPC
+codes from the Wi-Fi (IEEE 802.11n) specification [33], and a
+(660,484) regular progressive edge growth (PEG) based code,
+with
+. As expected, MDD-BMP and IDB
+perform quite poorly with the Wi-Fi codes, due to the presence
+of large numbers of degree-2 VNs in these codes. IDB fares
+slightly better with the (648,540) code, as it has fewer of these
+low degree nodes, but is still 0.6–1.0 dB worse than OMS.
+The performance of IDB with the (660,484) PEG-based code
+is considerably better, greatly improving over MDD-BMP
+and approaching within 0.4 dB of OMS at its closest point.
+However, IDB also exhibits a severe error floor with this code.
+These results again show that for best results, DB decoding
+algorithms should be used in conjunction with codes that lack
+low degree VNs.
+VIII. IMPLEMENTATION RESULTS FOR IDB
+As with DD-BMP and MDD-BMP, we have created an ASIC
+standard cell implementation of an IDB decoder, and used
+post-layout simulations to estimate the throughput, power con-
+sumption, and energy efficiency. This implementation is of the
+(2048,1723) RS-LDPC code used in the 10 Gbps Ethernet spec-
+ification, with 6 bits of quantization, and employs degeneration
+and relaunching according to the decoding schedule shown in
+Table II. This implementation employs the same process tech-
+nology (TSMC 65 nm 7LM single-
+CMOS), software tools,
+design flow, and operating conditions as specified in Section IV,
+and again post-layout simulations are used to obtain all circuit
+Fig. 13. Layout view of the IDB decoder implementation.
+TABLE III
+IDB DECODER CRITICAL PATH (TYPICAL OPERATING CONDITIONS)
+performance metrics. Fig. 13 shows a screenshot of the layout
+view of the IDB decoder within Cadence EDI.
+A top level block diagram of the implemented IDB decoder
+is shown in Fig. 14. Architecturally, the IDB decoder is highly
+similar to MDD-BMP, the algorithm from which it is based.
+As before, this decoder is not pipelined, and each iteration
+completes in a single clock cycle. The degeneration function
+is implemented internally by the accumulators. Relaunching
+requires a channel data buffer to retain the original values of
+throughout the decoding process, which is labelled “
+buffer”
+in the figure. The values for
+—that is,
+—are
+computed in parallel with arithmetic modules between the
+buffer and the accumulators. Thus each relaunch takes a single
+clock cycle and can be performed concurrently with the final
+iteration of the previous phase. The
+control signal causes
+the accumulators in each VN to load
+at the start
+of each decoding phase. The decoding phase
+is generated by
+the controller state machine and distributed to all VNs, where
+it is used to determine
+and
+(
+is constant for each
+given VN). As before, early termination is based on parity
+checks generated at the CNs. If all parity checks are satisfied,
+decoding stops and the next frame is loaded into the
+buffer.
+Otherwise, decoding continues according to the schedule in
+Table II.
+The critical path of the IDB decoder is traced in red in
+Fig. 14. It begins at the accumulator output of one VN, passes
+through a CN and on to a neighbouring VN, ending at the
+VN’s accumulator registers. Table III details the critical path
+and the delay accrued through each segment. Despite the lack
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:20:18 UTC from IEEE Xplore.  Restrictions apply. 
+628
+IEEE TRANSACTIONS ON SIGNAL PROCESSING, VOL. 62, NO. 3, FEBRUARY 1, 2014
+Fig. 14. Top level block diagram of the IDB decoder, showing a check node, 2 neighbouring variable nodes, and other top-level components. The critical path is
+traced in red.
+TABLE IV
+IMPLEMENTATION RESULTS FOR IDB AND COMPARISONS WITH OTHER WORKS
+Energy scaled to 1.0 V.
+Average throughput per unit area scaled to 65 nm at constant frequency.
+of pipelining, IDB achieves a much faster critical path than
+min-sum based decoders due to simpler node logic. In partic-
+ular, the IDB check node is simply a
+-input XOR gate, and
+does not need to find the smallest magnitude among the input
+messages. The VN adder tree is simpler, as it needs only to
+add
+inputs of 1 bit each. In addition, the smaller silicon area
+results in lower buffering and interconnect delay for the long
+inter-node connections along the critical path.
+The implementation results of the IDB decoder are summa-
+rized in Table IV, along with other state-of-the-art decoders
+using the (2048,1723) RS-LDPC code as comparison. IDB
+presents very large improvements in area, throughput, and
+energy efficiency. In terms of silicon area, IDB is 48% smaller
+than the next smallest decoder design, which is the partially-par-
+allel layered OMS decoder of [34]. It is 57% smaller than [27],
+which is the next smallest fully-parallel architecture.
+At
+, the average throughput of IDB is
+171.8 Gbps, which is 7% greater than the throughput reported for
+relaxed half-stochastic (RHS) [28], and approximately 3.5 times
+greater than [10]. The average throughput of the IDB decoder at
+is 126.3 Gbps, which is an improvement of
+36%oversplit-rowmin-sumatthesamesignal-to-noiseratio[8].
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:20:18 UTC from IEEE Xplore.  Restrictions apply. 
+CUSHON et al.: HIGH-THROUGHPUT ENERGY-EFFICIENT LDPC DECODERS USING DIFFERENTIAL BINARY MESSAGE PASSING
+629
+TABLE V
+WIRING COMPLEXITY OF THE IMPLEMENTED DECODERS
+Despite the much lower computational complexity of the IDB
+algorithm, IDB achieves error correction performance compa-
+rable to min-sum and stochastic-based decoders. At a BER of
+, correction performance is approximately 0.05 dB better
+than split-row min-sum, and 0.05 dB and 0.1 dB worse than
+MTFM-based stochastic and RHS, respectively. However, IDB
+requires an iteration limit of 315 to reach this level of perfor-
+mance, which is much higher than most other architectures. As
+a result, the worst-case latency and minimum throughput of IDB
+compare poorly. However, the MTFM-based stochastic decoder
+of [27], with an iteration limit of 400, is the highest out of all
+the surveyed decoders. Additionally, as noted in [35], a signifi-
+cantly higher minimum throughput can be guaranteed with input
+buffering.
+Table V shows a comparison of the wiring complexity of the
+IDB decoder with the DD-BMP and MDD-BMP decoders. The
+total wiring length of the IDB decoder is 10.957 m, which is
+64% lower than the 30.598 m reported for the same code in [10].
+The reduction can be attributed to the smaller die size of IDB,
+as well as the use of broadcasting for inter-node (interleaver)
+wires. These results also clearly demonstrate the wiring advan-
+tage of MDD-BMP and IDB over DD-BMP. The DD-BMP
+(273,191), MDD-BMP (1023,781), and IDB decoders have sim-
+ilar die sizes and utilization factors, but DD-BMP has a much
+higher average interleaver wire length, due to the need to send
+unique VN-to-CN messages.
+IDB also demonstrates major improvements in the iterative
+decoder performance metrics defined in [21]. IDB achieves
+energy per decoded bit of 2.78 pJ/bit at
+, and
+3.65 pJ/bit at
+. This is 13 times lower than the
+offset min-sum decoder of [10], and 58% lower than split-row
+min-sum at the same values of
+. Finally, in terms of
+throughput per unit area, IDB’s result of 119.3
+at
+5.5 dB is 3.3 times greater than RHS, and 87.7
+at
+4.55 dB is 4.6 times greater than split-row min-sum.
+Fig. 15 plots the average throughput and average number of
+decoding iterations for the implemented IDB decoder over a
+range of values for
+. Throughput is low at low values
+of
+, due to the high decoding iteration limit and a large
+proportion of frames failing to decode. However, throughput in-
+creases greatly over the waterfall region, as the average number
+of decoding iterations decreases. This result demonstrates the
+large difference between average and worst-case performance
+for IDB—despite a maximum iteration limit of 315, the average
+is under 7 for
+above 4.5 dB.
+The average power consumption and energy efficiency of the
+IDB decoder are plotted in Fig. 16. Power consumption is high
+Fig. 15. Average throughput and iteration count for the implemented IDB de-
+coder.
+Fig. 16. Average power consumption and energy per decoded bit for the im-
+plemented IDB decoder.
+at low
+, because degeneration in deadlocked VNs causes
+interleaver wires to toggle continuously between 0 and 1. Power
+is lower in the waterfall region, but afterwards increases mono-
+tonically due to the increasing frequency of loading new frames
+into the decoder, which consumes more power than ordinary
+decoding iterations. Energy per decoded bit decreases mono-
+tonically with
+, due to the decreasing average number of
+decoding iterations (and thus computational effort) needed to
+decode each frame.
+In addition, the low area and power consumption of IDB de-
+coders make designs with multiple parallel decoders a prac-
+tical possibility, which we refer to as a multi-core decoder. We
+note that an IDB decoder architecture with 2 or 3 cores would
+have a lower area than [8] or [10], assuming insignificant over-
+head circuitry. If each processing core is assigned a different
+frame to decode, an
+-core decoder would increase the average
+throughput by a factor of
+over a single-core decoder, while
+throughput per unit area and energy efficiency remain roughly
+constant. Furthermore, because the relaunching technique of
+IDB consists of several independent decoding attempts, each
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:20:18 UTC from IEEE Xplore.  Restrictions apply. 
+630
+IEEE TRANSACTIONS ON SIGNAL PROCESSING, VOL. 62, NO. 3, FEBRUARY 1, 2014
+core could also be assigned to work on different phases of the
+same frame, reducing the maximum decoding latency and in-
+creasing minimum throughput—an advantage that is not avail-
+able to most other decoding algorithms.
+IX. CONCLUSION
+This paper has introduced the IDB algorithm, and presented
+LDPC decoders using the DD-BMP, MDD-BMP, and IDB
+algorithms. We demonstrate fully parallel implementations of
+(273,191), (1023,781), and (4095,3367) FG-LDPC codes in
+65 nm CMOS, overcoming the implementation complexity of
+these powerful codes. These decoders achieve BER perfor-
+mance up to 0.5 dB better than MSA, as well as low complexity,
+high throughput, and excellent energy efficiency. Our imple-
+mentation of the (2048,1723) IEEE 802.3an LDPC code using
+IDB achieves BER performance within 0.25 dB of offset MSA,
+and has much lower area, higher throughput, and greater energy
+efficiency than other decoder architectures with similar error
+correction performance. Because these designs achieve very
+high throughputs, VFS can be applied to reduce their power
+consumption while still maintaining sufficient throughput
+for high-speed communications applications. Compared to
+other recent energy-efficient LDPC decoder implementations,
+DD-BMP, MDD-BMP, and especially IDB offer favorable
+trade-offs for area, throughput, error correction performance,
+and power consumption. Due to the low area of IDB relative
+to other designs, multi-core decoders are feasible, and would
+increase both the minimum and average decoding throughput.
+REFERENCES
+[1] R. Gallager, Low-Density Parity-Check Codes.
+Cambridge, MA,
+USA: MIT Press, 1963.
+[2] T. Richardson and R. Urbanke, “The capacity of low-density
+parity-check codes under message-passing decoding,” IEEE Trans.
+Inf. Theory, vol. 47, no. 2, pp. 599–618, Feb. 2001.
+[3] A. Blanksby and C. Howland, “A 690-mW 1-Gb/s 1024-b, rate-1/2
+low-density parity-check code decoder,” IEEE J. Solid-State Circuits,
+vol. 37, no. 3, pp. 404–412, Mar. 2002.
+[4] K. Zhang, X. Huang, and Z. Wang, “High-throughput layered decoder
+implementation for quasi-cyclic LDPC codes,” IEEE J. Sel. Areas
+Commun., vol. 27, no. 6, pp. 985–994, Aug. 2009.
+[5] A. Darabiha, A. C. Carusone, and F. Kschischang, “Power reduction
+techniques for LDPC decoders,” IEEE J. Solid-State Circuits, vol. 43,
+no. 8, pp. 1835–1845, Aug. 2008.
+[6] T. Brandon, R. Hang, and G. Block et al., “A scalable LDPC decoder
+ASIC architecture with bit-serial message exchange,” Integr. VLSI J.,
+vol. 41, no. 3, pp. 385–398, 2008.
+[7] K. Cushon, C. Leroux, S. Hemati, S. Mannor, and W. Gross, “A
+min-sum iterative decoder based on pulsewidth message encoding,”
+IEEE Trans. Circuits Syst. II, vol. 57, no. 11, pp. 893–897, Nov. 2010.
+[8] T. Mohsenin, D. Truong, and B. Baas, “A low-complexity message-
+passing algorithm for reduced routing congestion in LDPC decoders,”
+IEEE Trans. Circuits Syst. I, vol. 57, no. 5, pp. 1048–1061, May 2010.
+[9] A. Darabiha, A. Carusone, and F. Kschischang, “Block-interlaced
+LDPC decoders with reduced interconnect complexity,” IEEE Trans.
+Circuits Syst. II, vol. 55, no. 1, pp. 74–78, Jan. 2008.
+[10] Z. Zhang, V. Anantharam, M. J. Wainwright, and B. Nikolic, “An
+efficient 10GBASE-T ethernet LDPC decoder design with low error
+floors,” IEEE J. Solid-State Circuits, vol. 45, no. 4, pp. 843–855, Apr.
+2010.
+[11] N. Miladinovic and M. Fossorier, “Improved bit-flipping decoding of
+low-density parity-check codes,” IEEE Trans. Inf. Theory, vol. 51, no.
+4, pp. 1594–1606, Apr. 2005.
+[12] P. Zarrinkhat and A. Banihashemi, “Threshold values and convergence
+properties of majority-based algorithms for decoding regular low-den-
+sity parity-check codes,” IEEE Trans. Commun., vol. 52, no. 12, pp.
+2087–2097, Dec. 2004.
+[13] M. Jiang, C. Zhao, Z. Shi, and Y. Chen, “An improvement on the mod-
+ified weighted bit flipping decoding algorithm for LDPC codes,” IEEE
+Commun. Lett., vol. 9, no. 9, pp. 814–816, Sep. 2005.
+[14] N. Mobini, A. Banihashemi, and S. Hemati, “A differential binary mes-
+sage-passing LDPC decoder,” IEEE Trans. Commun., vol. 57, no. 9,
+pp. 2518–2523, Sep. 2009.
+[15] Y. Kou, S. Lin, and M. Fossorier, “Low-density parity-check codes
+based on finite geometries: A rediscovery and new results,” IEEE
+Trans. Inf. Theory, vol. 47, no. 7, pp. 2711–2736, Nov. 2001.
+[16] J. Cho, J. Kim, and W. Sung, “VLSI implementation of a high-
+throughput soft-bit-flipping decoder for geometric LDPC codes,”
+IEEE Trans. Circuits Syst. I, vol. 57, no. 5, pp. 1083–1094, May 2010.
+[17] T. J. Richardson, “Error-floors of LDPC codes,” in Proc. 41st Annu.
+Allerton Conf. Commun., Control, Comput., Oct. 2003, pp. 1426–1435.
+[18] 10
+Gigabit
+Ethernet:
+IEEE
+Standard
+for
+Information
+Tech-
+nology-Telecommunications
+and
+Information
+Exchange Between
+Systems-Local and Metropolitan Area Networks-Specific Require-
+ments Part 3: Carrier Sense Multiple Access With Collision Detection
+(CSMA/CD) Access Method and Physical Layer Specifications, IEEE
+Standard 802.3an-2006, Aug. 2006 [Online]. Available: http://stan-
+dards.ieee.org/getieee802/download/802.3an-2006.pdf
+[19] I. Djurdjevic, J. Xu, K. Abdel-Ghaffar, and S. Lin, “A class of low-
+density parity-check codes constructed based on Reed-Solomon codes
+with two information symbols,” IEEE Commun. Lett., vol. 7, no. 7, pp.
+317–319, Jul. 2003.
+[20] S. Hemati and A. Banihashemi, “Dynamics and performance analysis
+of analog iterative decoding for low-density parity-check (LDPC)
+codes,” IEEE Trans. Commun., vol. 54, no. 1, pp. 61–70, 2006.
+[21] F. Kienle, N. Wehn, and H. Meyr, “On complexity, energy-and imple-
+mentation-efficiency of channel decoders,” IEEE Trans. Commun., vol.
+59, no. 12, pp. 3301–3310, Dec. 2011.
+[22] D. MacKay and M. Postol, “Weaknesses of Margulis and Ra-
+manujan-Margulis low-density parity-check codes,” Electron. Notes
+Theor. Comp. Sci., vol. 74, pp. 97–104, Oct. 2003.
+[23] C. Di, D. Proietti, I. Telatar, T. Richardson, and R. Urbanke, “Finite-
+length analysis of low-density parity-check codes on the binary erasure
+channel,” IEEE Trans. Inf. Theory, vol. 48, no. 6, pp. 1570–1579, Jun.
+2002.
+[24] L. Dolecek, Z. Zhang, V. Anantharam, M. Wainwright, and B. Nikolic,
+“Analysis of absorbing sets and fully absorbing sets of array-based
+LDPC codes,” IEEE Trans. Inf. Theory, vol. 56, no. 1, pp. 181–201,
+Jan. 2010.
+[25] C. Schlegel and S. Zhang, “On the dynamics of the error floor behavior
+in (regular) LDPC codes,” IEEE Trans. Inf. Theory, vol. 56, no. 7, pp.
+3248–3264, Jul. 2010.
+[26] X. Chen, J. Kang, S. Lin, and V. Akella, “Hardware implementation
+of a backtracking-based reconfigurable decoder for lowering the error
+floor of Quasi-cyclic LDPC codes,” IEEE Trans. Circuits Syst. I, vol.
+58, no. 12, pp. 2931–2943, Dec. 2011.
+[27] S. S. Tehrani, A. Naderi, G.-A. Kamendje, S. Hemati, S. Mannor, and
+W. Gross, “Majority-based tracking forecast memories for Stochastic
+LDPC decoding,” IEEE Trans. Signal Process., vol. 58, no. 9, pp.
+4883–4896, Sep. 2010.
+[28] F. Leduc-Primeau, A. J. Raymond, P. Giard, K. Cushon, C. Thibeault,
+and W. J. Gross, “High-throughput LDPC decoding using the RHS
+algorithm,” in Proc. Design Architect. Signal Image Process. (DASIP)
+Conf., Oct. 2012, pp. 1–6.
+[29] F. Leduc-Primeau, S. Hemati, S. Mannor, and W. J. Gross, “Dithered
+belief propagation decoding,” IEEE Trans. Commun., vol. 60, no. 8,
+pp. 2042–2047, Aug. 2012.
+[30] Y. Han and W. Ryan, “Low-floor decoders for LDPC codes,” IEEE
+Trans. Commun., vol. 57, no. 6, pp. 1663–1673, Jun. 2009.
+[31] M. Ardakani and F. Kschischang, “Gear-shift decoding,” IEEE Trans.
+Commun., vol. 54, no. 7, pp. 1235–1242, Jul. 2006.
+[32] F. Leduc-Primeau, S. Hemati, S. Mannor, and W. J. Gross, “Relaxed
+half-stochastic belief propagation,” IEEE Trans. Commun., vol. 61, no.
+5, pp. 1648–1659, 2013.
+[33] IEEE Standard for Information Technology-Telecommunications and
+Information Exchange Between Systems Local and Metropolitan Area
+Networks-Specific requirements Part 11: Wireless LAN Medium Access
+Control (MAC) and Physical Layer (PHY) Specifications, IEEE Stan-
+dard 802.11-2012 (Revision of IEEE Standard 802.11-2007), 2012, pp.
+1–2793.
+[34] A. Cevrero, Y. Leblebici, P. Ienne, and A. Burg, “A 5.35 mm2
+10GBASE-T Ethernet LDPC decoder chip in 90 nm CMOS,” in IEEE
+Asian Solid State Circuits Conf. (A-SSCC), Nov. 2010, pp. 1–4.
+[35] S. Sweatlock, S. Dolinar, and K. Andrews, “Buffering requirements for
+variable-iterations LDPC decoders,” in Proc. Inf. Theory Appl. Work-
+shop, Feb. 2008, pp. 523–530.
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:20:18 UTC from IEEE Xplore.  Restrictions apply. 
+CUSHON et al.: HIGH-THROUGHPUT ENERGY-EFFICIENT LDPC DECODERS USING DIFFERENTIAL BINARY MESSAGE PASSING
+631
+Kevin Cushon (S’10) received the B.Sc. degree in
+Computer Engineering and the M.Sc. degree in Elec-
+trical Engineering from the University of Alberta,
+Edmonton, Canada, in 2005 and 2008 respectively.
+Since 2008, he has been with McGill University in
+Montréal, Canada, where he is currently working to-
+wards the degree of Ph.D. in Electrical Engineering.
+His research interests are in the design and imple-
+mentation of high-performance and energy-efficient
+VLSI systems, iterative error-correcting decoders,
+and application-specific computing architectures.
+Saied Hemati (S’01–M’06–SM’08) received the
+B.Sc. and the M.Sc. degrees in Electronics Engi-
+neering from Isfahan University of Technology,
+Isfahan, Iran, in 1993 and 1997, respectively, and
+the Ph.D. degree in Electrical Engineering from
+Carleton University, Ottawa, ON, Canada, in 2005.
+From 1997 to 1999, he worked at the Integrated
+Electronics Industry (IEI), Isfahan, Iran. From 1999
+to 2001, he was a researcher at the Research and Ed-
+ucation Center of Isfahan Telecommunication Com-
+pany, Isfahan, Iran. From 2005 to 2007, he was an
+NSERC postdoctoral fellow and a part-time professor at the School of Infor-
+mation Technology and Engineering at the University of Ottawa, Ottawa, ON,
+Canada. He was an assistant professor at the Department of Electrical Engi-
+neering at Sharif University of Technology, Tehran, Iran, in 2008. He was with
+the Department of Electrical and Computer Engineering at McGill University,
+Montreal, QC, Canada as a senior researcher and lecturer from 2008 to 2012.
+Then he was an Associate Professor with the Electrical Engineering Department
+at Linköping University, Linköping, Sweden and he joined the Department of
+Electrical and Computer Engineering at the University of Idaho, Moscow, ID,
+USA in August 2013. His research interests include the theory of operation and
+the design and implementation of iterative error-correcting decoders.
+Dr. Hemati is the recipient of several awards and scholarships, including
+the Senate Medal for outstanding academic achievement, a ReSMiQ (Le Re-
+groupement Stratégique en Microsystèmes du Québec) postdoctoral fellowship,
+an NSERC (Natural Sciences and Engineering Research Council of Canada)
+postdoctoral fellowship, a CSA (Canadian Space Agency) NSERC postdoctoral
+supplement award, a CITO (Communications and Information Technology On-
+tario) research excellence award, an Ontario Graduate Scholarship, an Ontario
+Graduate Scholarship in Science and Technology, and the best paper award in
+the CITO Knowledge Network Conference in 2002.
+Camille Leroux (S’06–M’08) received his M.Sc. de-
+gree in Electronics Engineering from the University
+of South Brittany, Lorient, France, in 2005. He re-
+ceived his Ph.D. degree in Electronics Engineering
+from TELECOM Bretagne, Brest, France, in 2008.
+From 2008 to 2011 he worked as a Post Doctoral
+Research Associate in the Electrical and Computer
+Engineering Department at McGill University, Mon-
+treal, QC, Canada. He is an Associate Professor at
+Institut Polytechnique de Bordeaux since 2011. His
+research interests are in the design and hardware im-
+plementation of signal processing systems and computer architecture. He was a
+visiting student in the Electrical and Computer Engineering Department at Aal-
+borg University, Denmark, in 2004 and at the University of Alberta, Canada, in
+2005.
+Shie Mannor (S’00–M’03–SM’09) received the
+B.Sc. degree in electrical engineering, the B.A.
+degree in mathematics, and the Ph.D. degree in
+electrical
+engineering
+from
+the
+Technion-Israel
+Institute of Technology, Haifa, Israel, in 1996, 1996,
+and 2002, respectively. From 2002 to 2004, he was
+a Fulbright scholar and a postdoctoral associate at
+M.I.T. He was with the Department of Electrical and
+Computer Engineering at McGill University from
+2004 to 2010 where he was the Canada Research
+chair in Machine Learning. He has been with the
+Faculty of Electrical Engineering at the Technion since 2008 where he is
+currently a professor.
+His research interests include machine learning and pattern recognition, plan-
+ning and control, multi-agent systems, and communications.
+Warren J. Gross (S’92–M’04–SM’10) received
+the B.A.Sc. degree in electrical engineering from the
+University of Waterloo, Waterloo, Ontario, Canada,
+in 1996, and the M.A.Sc. and Ph.D. degrees from
+the University of Toronto, Toronto, Ontario, Canada,
+in 1999 and 2003, respectively. Currently, he is an
+Associate Professor with the Department of Electrical
+and Computer Engineering, McGill University,
+Montréal, Québec, Canada. His research interests are
+in the design and implementation of signal processing
+systems and custom computer architectures.
+Dr. Gross is currently Chair of the IEEE Signal Processing Society Technical
+Committee on Design and Implementation of Signal Processing Systems. He
+has served as Technical Program Co-Chair of the IEEE Workshop on Signal
+Processing Systems (SiPS 2012) and as Chair of the IEEE ICC 2012 Workshop
+on Emerging Data Storage Technologies. Dr. Gross served as Associate Editor
+for the IEEE TRANSACTIONS ON SIGNAL PROCESSING. He has served on the
+Program Committees of the IEEE Workshop on Signal Processing Systems, the
+IEEE Symposium on Field-Programmable Custom Computing Machines, the
+International Conference on Field-Programmable Logic and Applications and
+as the General Chair of the 6th Annual Analog Decoding Workshop. Dr. Gross
+is a Senior Member of the IEEE and a licensed Professional Engineer in the
+Province of Ontario.
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:20:18 UTC from IEEE Xplore.  Restrictions apply. 

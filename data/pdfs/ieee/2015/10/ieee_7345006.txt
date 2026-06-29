@@ -1,0 +1,1265 @@
+A High-Throughput Multi-rate LDPC Decoder for Error Correction of Solid-State Drives
+
+Yishan Zhang*, Chun Zhang*, Zhiyuan Yan͋, Shuang ChenЪ, Hanjun Jiang*
+Tsinghua National Laboratory for Information Science and Technology*Ъ Institute of Microelectronics*, Department of Electronic EngineeringЪ Tsinghua University, Beijing, 100084, China*Ъ Department of ECE, Lehigh University, Bethlehem, PA 18015, USA͋
+
+Abstract—This paper presents a high-throughput multi-rate low density parity check (LDPC) decoder for error correction in solid-state drives (SSDs). In order to meet the high throughput requirement of SSDs, an adaptive normalized min-sum algorithm (NMSA) is implemented by using multiple look-up tables. With the proposed technique, a reduction in average iteration number of around 22.5%~30.3% is achieved when signal-to-noise ratio (SNR) is 6.14dB, and the area overhead is only 0.87%. The LDPC decoder is implemented in TSMC 65nm standard CMOS technology. For a rate-0.889 length-36864 quasi-cyclic (QC) LDPC code, the decoder achieves a throughput of 14.9 Gb/s with an area of 5.365 mm2, and compares favorably with previously proposed architectures.
+Keywords—low density parity check (LDPC) codes; solid-state drives (SSDs); adaptive normalization factor; decoder
+I. INTRODUCTION
+NAND Flash memory is widely used in consumer electronic products as it has the characteristics of fast access speed, high capacity and low power consumption. Especially, Solid-state-drives (SSDs) based on NAND Flash memory becomes more and more popular, which has the trend to replace Hard-disk-drives (HDDs) in some applications. Conventionally, Bose-Chaudhuri-Hocquenghem (BCH) codes are used to correct memory cell errors. However, as multi-level cell (MLC) NAND Flash becoming popular and the physical NAND flash memory cell feature size scaling-down, the BCH codes are no longer powerful enough for MLC. Low density parity check (LDPC) codes [1] are one of the promising replacers for the future NAND flash products.
+Especially, for SSDs, the challenges for error correcting codes (ECC) also come from other technology evolution. Peripheral Component Interconnect Express (PCIe) is a highspeed serial computer expansion bus standard, which is used as data interface in SSD, replacing the traditional Serial ATA Express (SATAe). In PCIe 3.0, the data transfer rate reaches up to 8 Gb/s per lane [2]. Meanwhile, the data rate of the communication with NAND Flash also increases a lot. Open NAND Flash Interface Working Group (ONFI) is a consortium of technology companies working to develop open standards. The maximum data rate is 800 MB/s per channel in ONFI 4.0 standard [3]. And SSD system usually has more than one PCIe lane or ONFI channel. In this situation, the LDPC decoder should have a high enough throughput, or it would become the
+This work is partly supported by the National High Technology Research and Development Program of China (No. 2011AA010405) and State Grid Program (SGRI-WD-71-13-008).
+
+bottleneck in the data flow of SSDs.
+For NAND Flash memory, in the early lifetime, the signalto-noise ratio (SNR) of read-data is higher, and hard-decision is mainly used [4], which needs weaker error correcting capability. As the Program/Erase (PE) times of NAND Flash increases, the SNR becomes lower and lower, and stronger correcting capability is needed, especially in the end of lifetime. The needs of correcting capability are changed in different stage of NAND Flash’s lifetime. For LDPC, this leads to different code rates at different stage of lifetime: higher code rate for early lifetime and lower code rate for later lifetime. In this way, more available data space can leave for users. Therefore, supporting multi-rate is necessary for LDPC decoder.
+In this paper, we present a high-throughput and areaefficient LDPC decoder for NAND Flash memories, supporting multi-rate quasi-cyclic (QC) LDPC codes [5]. This decoder realizes the normalized min-sum algorithm (NMSA) [6] and layered message passing [7]. To reach higher throughput, the technique of adaptive normalization factor is applied to NMSA. In conventional NMSA, the normalization factor is fixed, such as 0.75 in [14] and 0.25 in [15]. But in adaptive NMSA, the normalization factor is determined based on the number of ungratified parity-check formulas in Η matrix. The implementation results for a (36864, 32768) LDPC code show that, when SNR is 6.14 dB, this improvement can reduces the average iteration number by around 22.5%~30.3%, which means a higher throughput by around 29.2%~43.4%. Moreover, the error performance also is enhanced by 0.2 dB, at the expense of only 0.87% area overhead. To support multirate QC-LDPC codes, the decoder is designed with the idea of single instruction multiple data (SIMD) processor for reference. One instruction corresponds to a packet of data belongs to one sub-matrix of QC-LDPC codes. Thus, different QC-LDPC codes can be achieved by using different instructions, but with the same hardware.
+The rest of this paper is organized as follows. Section II reviews the QC-LDPC codes and layered NMSA, and presents the improvement about adaptive normalization factor. Section III describes the architecture of LDPC decoder and the realization of adaptive normalization factor. In Section IV, the implementation results are provided. Finally, Section V concludes this paper.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:28:44 UTC from IEEE Xplore. Restrictions apply.
+978-1-4673-9604-2/15/.00 ©2015 IEEE
+
+II. QC-LDPC CODES AND ADAPTIVE NMSA
+
+A. QC-LDPC Codes
+A binary LDPC code is usually defined by a sparse paritycheck matrix, denoted by Η . QC-LDPC code is a kind of LDPC code that is friendly to hardware implementation, whose parity-check matrix Η can be expressed as:
+
+§ Qa1,1 ¨ ¨ Qa2,1 H¨
+
+Q a1,2 Qa2,2
+
+¨
+
+¨© Q Q am,1
+
+am ,2
+
+Q · a1,n ¸
+Q ¸ a2,n ¸ ¸
+Qam,n ¹¸
+
+where Qai,j is a b u b sub-matrix, which is either a zero matrix or a circularly-shifted b u b identity matrix. And ai, j denotes the position where “1” appears in first row. But if ai, j 0 , it means this Qai,j is a zero matrix. For example, when b 4 , Q2 is expressed as:
+
+§0 1 0 0·
+
+Q2
+
+¨ ¨
+
+0
+
+0
+
+1
+
+0
+
+¸ ¸
+
+¨©¨
+
+0 1
+
+0 0
+
+0 0
+
+1 0
+
+¸¸¹
+
+The structure of QC-LDPC codes is hardware-friendly, especially for partially-parallel decoder, which can deal with one sub-matrix per clock cycle. A (36864, 32768) irregular QC-LDPC code is used in this paper, whose b 512 , and is generated with Progressive-Edge-Growth (PEG) method [18].
+
+B. NMSA and layered message passing
+
+LDPC codes are iteratively decoded by passing messages between variable nodes and check nodes [16]. The normalized min-sum algorithm (NMSA) [6] is used to compute these messages. In parity-check matrix Η , row i corresponds to
+check node i , and column j corresponds to variable node j .
+
+And there are some notations: I j denotes the reading log-
+
+likelihood ratio (LLR) that can be obtained from reading
+
+NAND
+
+Flash
+
+memory;
+
+S (k ) j
+
+denotes
+
+the
+
+LLR
+
+of
+
+variable
+
+node
+
+j produced
+
+in
+
+k th
+
+iteration;
+
+R(k) ij
+
+denotes
+
+the
+
+check-to-
+
+variable message from check node i to variable node j in kth
+
+iteration;
+
+L(k ) ji
+
+denotes
+
+the
+
+variable-to-check
+
+message
+
+from
+
+variable node j to check node i in kth iteration; N (i) denotes
+
+the set of variable node connected to check node i ; M ( j)
+
+denotes the set of check node connected to variable node j ;
+
+The NMSA is described as follows:
+
+1) Initialization
+
+L(0) ji
+
+Ij
+
+(1)
+
+2) Iteration
+
+ D R( k ) ij
+
+u
+
+n N
+
+(i
+
+)
+
+\
+
+j
+
+sgn(
+
+L(k ni
+
+1)
+
+)
+
+u
+
+min
+nN (i)\
+
+j
+
+L(k 1) ni
+
+(2)
+
+S (k ) j
+
+¦ R(k) mj
+
+
+
+Ij
+
+(3)
+
+mM ( j )
+
+L(k ) ji
+
+S(k) j
+
+
+
+R(k ) ji
+
+(4)
+
+3) Decision
+
+c(k) j
+
+­° 1,
+
+if
+
+S (k ) j
+
+
+
+0
+
+® ¯°0,
+
+if
+
+S (k ) j
+
+t
+
+0
+
+(5)
+
+H  c(k)T e(k)
+
+(6)
+
+If e(k) 0 or iteration is equal to maximum iteration, then finish decode; otherwise go to step 2).
+In (2), D is the normalization factor. It is fixed during whole iteratively decoding for conventional NMSA.
+
+For higher throughput, layered message passing is usually adopted, which can increase the convergence speed and, hence, the average iteration times would decrease by 20%~50% [8]. Using layered message passing would change the iteration step as follows:
+
+2) Iteration
+
+L S  R (k)
+
+(k 1)
+
+(k 1)
+
+ji
+
+j
+
+ji
+
+(7)
+
+ R( k ) ij
+
+D
+
+u
+
+n N
+
+(i
+
+)
+
+\
+
+j
+
+sgn(
+
+L(k ni
+
+)
+
+)
+
+u
+
+min
+nN (i)\
+
+j
+
+L(k ) ni
+
+(8)
+
+S (k ) j
+
+L(k ) ji
+
+
+
+R(k ) ji
+
+(9)
+
+C. Adaptive NMSA
+In conventional layered NMSA, the normalization factor D is fixed, which is chosen before decoding or even fixed in hardware [15]. However, the optimal D is actually highly related to the reliability of incoming LLR values [9] [10]. As the LLR values change per iteration, D should be changed adaptively as well. When the reliability of LLR increases with the iterations going, the normalization factor should increase and finally tending to 1 [11]. To quantize the reliability of LLR in hardware, the number E(k) of unsatisfied parity-checks in Η is counted after each iteration, which means counting the non-zero bits of e(k) in (6). This counted number E(k) can present the error situation of the LLR values, and is easy to implement in hardware. With this number, the suitable normalization factor can be chosen for next iteration. A lower normalization factor will be chosen when E(k) is larger, and vice versa. Some formulas should be added in step decision:
+
+¦ E ( k )
+
+e( k ) i
+
+(10)
+
+D (k) )(E(k) )
+
+(11)
+
+where the function )( ) is complex in algorithm with doubleprecision floating-point data [12].
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:28:44 UTC from IEEE Xplore. Restrictions apply.
+
+III. LDPC DECODER ARCHITECTURE
+
+A. Hardware Friendly Implementation of Adaptive NMSA
+The original function )( ) in (11) is hard to implement in
+hardware, so it is simplified into several look-up tables to realize different multiplications with different normalization factors. In hardware, the continuous normalization factor between 0 and 1 is hardly supported, but several discrete normalization factors can be supported easily. Each look-up table corresponds to one discrete normalization factor. By using different look-up tables, the normalization factors are adaptively chosen depending on error situation. When there are more errors, a smaller normalization factor is chosen, and vice versa. The number of the look-up tables is a trade-off: more look-up tables means more flexibility, better performance, but more area. From experiment experience, two look-up tables enhance the performance without excessively increasing the logic complexity. The proposed decoder is implemented with two look-up tables, as shown in Table I, where the values in the second (or third) row is the normalized values of the ones in the first row. The second row corresponds to a smaller normalization factor, while the third row a greater one. Based on our experiments, 256 is chosen as a threshold of E(k) : when E(k) is larger than 256, the second row is used, otherwise the third is used. This threshold number is chosen by experiment experience, and it needs more work to optimize it by theory.
+
+Fig. 1 shows the average iteration numbers of adaptive
+
+NMSA compared with conventional NMSA. In the simulation,
+
+the (36864, 32768) LDPC code is used, and the number of
+
+quantization
+
+bits
+
+of
+
+R(k ij
+
+)
+
+and
+
+S
+
+(k j
+
+)
+
+are
+
+4
+
+and
+
+6.
+
+It
+
+can
+
+be
+
+seen
+
+that
+
+adaptive NMSA result in decoding speed improvement. The
+
+average iteration number decrease by around 22.5%~30.3%,
+
+which means throughput increasing by around 29.2%~43.4%,
+
+when SNR is 6.14 dB.
+
+Fig. 2 shows the frame-error rate (FER) for the (36864, 32768) LDPC code, where both conventional NMSA and adaptive NMSA are considered. It is shown that the adaptive NMSA also achieves a better error performance than the conventional NMSA.
+
+Fig. 2. Comprasion of frame-error rate (FER)
+
+TABLE I.
+
+TWO LOOK-UP TABLES FOR ADAPTIVE NMSA
+
+In 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 Out1 0 1 1 2 3 3 4 5 5 6 7 7 8 9 9 10 Out2 0 1 2 3 3 4 5 6 7 8 9 9 10 11 12 13
+
+/4 9 8GS
+
+)UTZXURRKX
+
+Control 澙 Signals
+
+澙
+
+initial
+
+Monitor
+
+88GS
+
+98GS
+
+YZ)_IROI 9NOLZKX
+
+)4; 
+)4;  澙
+)4; 
+
+ 
+
+2,/,5
+
+<4; 
+<4;  澙
+<4; 
+
+TJ)_IROI 9NOLZKX
+
+)NKIQKX output
+Fig. 3. The LDPC decoder architecture
+
+Fig. 1. Comprasion of average iteration number
+
+B. Partially-Parallel Decoder Architecture
+Fully-parallel LDPC decoder can achieve the maximum throughput. But as the length of LDPC codes used in SSDs are large, the area cost of fully-parallel decoder is too large. As for serial decoder, its low throughput cannot satisfy SSD system.
+
+We proposed a partially-parallel decoder to achieve
+
+adaptive layered NMSA, as shown in Fig. 3. The initial LLR
+
+values from NAND Flash are store in S-Ram first. And CNU
+
+(Check-Node Unit) would execute (7) and (8), and the output
+
+R(k) ij
+
+and
+
+L(k ) ji
+
+will
+
+be
+
+stored
+
+in
+
+R-Ram
+
+and
+
+L-FIFO,
+
+especially,
+
+R (0) ij
+
+are
+
+set
+
+to
+
+zero
+
+in
+
+the
+
+computes
+
+of
+
+(7)
+
+for
+
+0th
+
+iteration.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:28:44 UTC from IEEE Xplore. Restrictions apply.
+
+Then VNU (Variable-Node Unit) would execute the (9), and
+
+output
+
+S
+
+(k j
+
+)
+
+will
+
+be
+
+stored
+
+in
+
+S-Ram,
+
+which
+
+finishes
+
+iteration.
+
+The module Checker would execute (6) and (10), and tell
+
+Controller whether the codes are totally corrected and decoding
+
+has done. Besides, the module Checker would also send E(k) to
+
+Controller, letting Controller to choose a suitable normalization factor for next iteration. The information of matrix Η is stored
+
+in INS-Ram, and Controller would use the information to
+
+produce the control flow signals. Since each instruction and
+
+control signal corresponds to a sub-matrix, the whole decoder is flexible with matrix Η , which means the proposed decoder
+
+support multi-rate different QC-LDPC codes. If you want to
+
+change different rate matrix H2, it just need to rewrite the instructions stored in INS-Ram.
+
+To achieve partially-parallel, the Cyclic-Shifter are
+
+introduced and multiple CNU and VNU are instanced. The
+
+decoder deals with a bhb sub-matrix per clock cycle, and b is
+
+equals to 512 in this decoder. In each clock cycle,
+
+512
+
+S (k 1) j
+
+belonged
+
+to
+
+a
+
+sub-matrix
+
+are
+
+read
+
+from
+
+S-Ram,
+
+and
+
+512
+
+R(k 1) ij
+
+belonged
+
+to
+
+the
+
+same
+
+sub-matrix
+
+are
+
+read
+
+from
+
+R-
+
+Ram.
+
+Then
+
+the
+
+512
+
+S
+
+( j
+
+k
+
+1)
+
+would
+
+be
+
+cyclic-shifted
+
+by (ai, j
+
+1)
+
+,
+
+where ai, j is defined in Qai,j . After cyclic-shifting, the
+
+512
+
+S (k 1) j
+
+is
+
+aligned
+
+with
+
+512
+
+R(k 1) ij
+
+,
+
+because
+
+the
+
+sub-matrix
+
+is
+
+a
+
+circularly-shifted identity matrix. These aligned data are sent to
+
+512 CNUs, and 512
+
+L(k ) ji
+
+would output immediately and written
+
+in
+
+L-FIFO.
+
+But
+
+the
+
+output
+
+512
+
+R(k) ij
+
+,
+
+which
+
+are
+
+obtained
+
+from
+
+(8), should wait after the all non-zero sub-matrices of the row
+
+being computed. Then 512 VNUs do the left operations. They
+
+read the data from L-FIFO and R-Ram, then compute and
+
+output
+
+512
+
+new
+
+S
+
+( j
+
+k
+
+)
+
+.
+
+But
+
+these
+
+512
+
+S
+
+(k j
+
+)
+
+are
+
+aligned
+
+with
+
+R(k) ij
+
+,
+
+so
+
+before
+
+written
+
+back
+
+to
+
+S-Ram,
+
+these
+
+S
+
+(k j
+
+)
+
+should
+
+be
+
+cyclic-
+
+shifted to the right order.
+
+C. Memory Optimization
+Memory area is a main part of the decoder area, so it is important to optimize the memory. The sizes of these memory blocks in decoder are decided by the matrix Η ’s width, height, and the quantization bits of data. Especially, the size R-Ram is proportional to the product of height and width, which is much larger than other memory blocks that depend on only height or width. However, the data of R-Ram have a lot of redundancy, and the size of R-Ram can decrease by storing (minˈsubminˈindexˈsign-all) for each row [13].
+
+Analyzing (8), it can be found that, for each row, the
+
+absolute
+
+value
+
+of
+
+all
+
+R(k ij
+
+)
+
+can
+
+only
+
+be
+
+two
+
+values:
+
+1)
+
+min:
+
+the
+
+smallest magnitude; 2) sub-min: the second smallest magnitude.
+
+Besides, the sub-min just appears once, and its position is
+
+stored in index. With this data structure, (8) would be changed
+
+as follows:
+
+Ri(jk )
+
+D
+
+
+
+sign-alli
+
+
+
+sign( L(jki )
+
+)
+
+
+
+­sub ¯®min,
+
+min,
+
+if j index otherwise
+
+(12)
+
+sign-alli
+
+n
+
+ N
+
+(i) sgn( L(nki ) )
+
+As R-Ram is changed to store only (min ˈ sub-min ˈ
+
+index ˈ sign-all), the data read from R-Ram need some
+
+computation to recover
+
+R(k) ij
+
+.
+
+Besides,
+
+the
+
+sign
+
+of
+
+L(k ) ji
+
+is
+
+needed when recovering, so Sign-Ram is added to decoder to
+
+store these signs. This optimization of R-Ram can decrease the
+
+size of R-Ram by 88.9%, when using a (36864, 32768) LDPC
+
+code and 4-bit quantization, changing from 576 Mb to 64 Mb.
+
+D. Reduction of Cyclic-Shifter and Insert of Pipeline
+
+In the proposed decoder, the first Cyclic-Shifter is used to
+
+align
+
+512
+
+S (k 1) j
+
+and
+
+512
+
+R(k 1) ij
+
+,
+
+and
+
+the
+
+second
+
+Cyclic-Shifter
+
+is
+
+used
+
+to
+
+align
+
+the
+
+512
+
+new
+
+S
+
+( j
+
+k
+
+)
+
+to
+
+its
+
+original
+
+order
+
+in
+
+S-Ram.
+
+However, the second align operation is actually not necessary
+
+for partially-parallel computing, as it just maintains the data
+
+structure in S-Ram. In fact, the reading and writing of S-Ram is
+
+done with sub-matrix block, whose addresses correspond to
+
+sub-matrix blocks. Assume the second Cyclic-Shifter should
+
+have shifted a block data by offset2 , but the data are written
+
+without second shifted. When these data are used for next
+
+computation, if the first Cyclic-Shifter should originally shift
+
+them by offset1 , then these data should actually shifted
+
+by (offset1  offset2 ) , because these data are stored without
+
+second shifted. In this way, the data for partially-parallel
+
+computing can be aligned correctly with only one Cyclic-
+
+Shifter.
+
+The pipeline technique is applied to increase the frequency of the decoder. During the initial syntheses, the critical path is from S-Ram to R-Ram through Cyclic-Shifter and CNUs, and the delay of Cyclic-Shifter is almost equal to that of CNUs. Therefore, the pipeline technique is applied to split the long path, and the pipeline registers are placed between CyclicShifter and CNUs. After these two optimizations, the decoder architecture is changed, as shown in Fig. 4.
+
+/4 9 8GS
+
+Control )UTZXURRKX 澙 Signals
+
+澙
+
+initial
+
+Monitor
+
+88GS
+
+98GS
+
+YZ)_IROI
+
+9NOLZKX
+
+ 
+
+)4; 
+)4;  澙
+)4; 
+
+2,/,5
+
+<4; 
+<4;  澙
+<4; 
+
+Pipeline registers
+
+2,/,5
+
+)NKIQKX output Fig. 4. The LDPC decoder architecture after optimization
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:28:44 UTC from IEEE Xplore. Restrictions apply.
+
+L ji j
+index
+sub-min min
+sign-all
+
+# YOMT
+
+Fig. 5. The structure of VNU
+
+3;>
+
+Sj  <4;
+
+Sj
+
+j index
+
+#
+
+sub-min min
+sign-all sign(L ji)
+
+ctrl_choose
+
+ŗ
+
+)4;
+
+3;>
+
+
+
+L ji
+
+GHY 9UXZ
+
+sign(L ji)
+min sub-min index sign-all
+
+Fig. 6. The structure of CNU that supports adaptive NMSA
+
+E. VNU and CNU
+
+VNU is a combinational logic module, as shown in Fig. 5.
+
+It supports two operations. 1) transformation: reads the data (minˈsub-minˈindexˈsign-all) from R-Ram and signs of
+
+L(k ji
+
+)
+
+from
+
+Sign-Ram,
+
+then
+
+transform
+
+them
+
+into
+
+R(k ij
+
+)
+
+;
+
+2)
+
+executes
+
+(9).
+
+The structure of CNU is shown in Fig. 6, which support the
+
+adaptive normalization factor. It has four functions. i)
+
+transformation: just as VNU; ii) executes (7), then the results
+
+L(k ) ji
+
+are
+
+written
+
+in
+
+L-FIFO
+
+and
+
+sign
+
+of
+
+L(k ) ji
+
+will
+
+be
+
+stored
+
+in
+
+Sign-Ram; iii) implementation of adaptive normalization factor:
+
+computes
+
+the
+
+absolute
+
+value
+
+of
+
+L(k ) ji
+
+,
+
+then
+
+multiplies
+
+the
+
+absolute value by the chosen normalization factor, which is
+
+chosen by Controller and the multiplications are realized by
+
+look-up tables as shown in Table I; iv) sort: sorts the
+
+normalized absolute value of a row, and finds the (minˈsub-
+
+minˈindexˈsign-all), which executes during the whole row
+
+scan and gives the results in the end.
+
+IV. IMPLEMENTAION RESULTS
+The area overhead of adaptive NMSA is shown in Table II. The decoder with conventional NMSA ( D = 0.75) is synthesized first, and its area result is shown in the first column.
+
+TABLE II.
+
+SYNTHESIS RESULTS OF NMSA AND ADAPTIVE NMSA
+
+Synthesis with TSMC 65nm and clock rate of 1GHz
+
+Conventional NMSA (¢=0.75)
+
+Adaptive NMSA
+
+Area
+
+5318398 um2
+
+5364906 um2
+
+Overhead
+
+-
+
+0.87%
+
+TABLE III. COMPARISON OF VARIOUS LDPC DECODER ARCHITECTURES
+
+[14]
+
+[15]
+
+Synthesis Synthesis
+
+[16] Synthesis
+
+This Work Synthesis
+
+Technology
+
+65 nm
+
+0.13 um
+
+90 nm
+
+65 nm
+
+Code Rate
+
+0.75
+
+0.96
+
+0.896
+
+0.889
+
+Algorithm
+Scheduling Number of Quantization Bits Frequency
+
+NMSA Layered 6 Bits 600 MHz
+
+NMSA Layered 7 Bits 172 MHz
+
+NMSA Layered 5 Bits 166 MHz
+
+Adaptive NMSA Layered
+4 Bits
+1 GHz
+
+Iterations
+
+8
+
+8
+
+8
+
+8
+
+Total Gate Count Normalized Area
+
+2.44 M
+
+8.15 M
+
+620 K
+
+3.35 M
+
+3.9 mm2 13.04 mm2 0.992 mm2 5.365 mm2
+
+Throughput
+
+2.06 Gb/s 6.24 Gb/s 765 Mb/s 14.9 Gb/s
+
+Normalized Throughput a
+Area Efficiency (Normalized Throughput/
+Normalized Area)
+
+2.44 Gb/s 640.65
+
+11.56 Gb/s 907.78
+
+1051 Mb/s 1059.48
+
+14.9 Gb/s 2843.91
+
+a. Throughput normalizing factors are (feature sizeѿ0.889 /65nmѿcode rate)
+
+And then the decoder that supports adaptive NMSA is
+
+synthesized, and its area result is shown in the second column.
+
+To support adaptive NMSA, one more look-up table and some
+
+multiplexers are added in each CNU, and some extra logic is
+
+added in Controller. However, compared to the conventional
+
+NMSA, the proposed adaptive NMSA achieves a greater
+
+throughput with area overhead of only 0.87%.
+
+Table III provides a comparison of the proposed decoder with the other decoders presented in [14]-[16]. In the comparison, we normalized the area and throughput of these decoders to a common 65nm technology based on the technology scaling rule [17]. The throughput is proportional to the frequency and the code rate. And frequency is influenced by feature size, which can be normalized by (feature size/65 nm) [17]. Combined with code rate, the throughputs of [14]-[16] are normalized by (feature sizeѿ0.889/65 nmѿcode
+rate). The results show that the proposed decoder achieves much higher area efficiency (Normalized Throughput/ Normalized Area) compared to other decoders. As for the high throughput requirement imposed by SSDs, the proposed decoder can achieve the highest throughput of 14.9 Gb/s.
+
+V. CONCLUSIONS
+In this paper, we proposed a high-throughput efficient LDPC decoder to meet the requirement imposed by the technology evolution of SSDs system. With the proposed techniques of adaptive normalization factor, the decoding speed increase by around 22.5%~30.3% when SNR is 6.14 dB, and the area overhead is only 0.87%. Besides, the error performance is also enhanced by 0.2 dB. The implementation results in TSMC 65 nm process show that, using (36864, 32768)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:28:44 UTC from IEEE Xplore. Restrictions apply.
+
+QC-LDPC code, the decoder can achieve a throughput of 14.9 Gb/s with area of 5.365 mm2.
+REFERENCES
+[1] R. G. Gallager, “Low-density parity-check codes,” IRE Trans. Inf. Theory, vol. IT-8, pp. 21-28, Jan. 1962.
+[2] J. Zhuang, B. Doyle, and E. Fang, “Linear equalization and PVTIndependent DC wander compensation for AC-coupled PCIe 3.0 receiver front end,” IEEE Trans. Circuits Syst. II, Exp. Briefs, vol. 58, no. 5, pp. 289–293, May 2011.
+[3] Open NAND Flash Interface Working Group, “Open NAND Flash Interface Specification Revision 4.0”, http://www.onfi.org/specifications, Apr. 2014.
+[4] D. Kim, B. Chung, and R. E. Kim, “Improved hard-decision decoding ldpc codec ip design,” IEEE International Symposium on Circuits & Systems, vol. 57, no. 1, pp. 416 – 419, May 2012
+[5] Marc P. C. Fossorier, “Quasi-Cyclic Low-Density Parity-Check Codes From Circulant Permutation Matrices”, IEEE Transactions on Information Theory, vol. 50, 2004, pp. 1788-1793..
+[6] J. Chen and M. P. C. Fossorier, “Density evolution for two improved BP-based decoding algorithms of LDPC codes,” IEEE Commum. Lett., vol. 6, pp.208-210, May 2002.
+[7] D. Hocevar, “A reduced complexity decoder architecture via layered decoding of LDPC codes,” IEEE Workshop on Signal Processing Systems, 2004, SIPS 2004, pp. 107-112, Oct. 2004.
+[8] M. M. Mansour and N. R. Shanbhag, “High-throughput LDPC decoders,” IEEE Trans. Very Large Scale Integration (VLSI) Syst., vol. 11, pp. 976-996, Dec. 2003.
+[9] G. Lechner and J. Sayir, “Improved sum-min decoding of LDPC codes,” in Proc. Int. Symp. Inf. Theory Appl., Parma, Italy, pp. 997–1000, Oct. 2004.
+
+[10] G. Lechner and J. Sayir, “Improved sum-min decoding for irregular LDPC codes,” in Proc. 6th Int. Symp. ITG-Conf. Source Channel Coding, Munich, Germany, pp. 1–6, Apr. 2006.
+[11] Y. Xu, L. Szczecinski, B. Rong, F. Labeau, D. He, Y. Wu et al. “Variable LLR Scaling in Min-Sum Decoding for Irregular LDPC Codes,” Broadcasting, IEEE Transactions on, vol. 60, issue 4, pp.606 – 613, Dec. 2014.
+[12] L. Fan, C. Pan, K. Peng, and J. Huang, “Adaptive normalized min-sum algorithm for ldpc decoding,” International Wireless Communications & Mobile Computing Conference, vol. 14, no. 3, pp.1081 – 1084, July, 2013
+[13] T. Bhatt, V. Sundaramurthy, V. Stolpman, and D. McCain, “Pipelined block-serial decoder architecture for structured LDPC codes,” in Proc. IEEE International Conference on Acoustics, Speech and Signal Processing, pp. IV-225-228, May 2006
+[14] Y. Sun and J. R. Cavallaro, “VLSI architecture for layered decoding of QC-LDPC codes with high circulant weight,” IEEE Trans. VLSI Syst., vol. 21, no. 10, pp. 1960–1964, Oct. 2013.
+[15] J. Kim, J. Cho, and W. Sung, “A high-speed layered min-sum LDPC decoder for error correction of NAND Flash memories,” in Proc. IEEE Int. Midwest Symp. Circuits Syst., Aug. 2011.
+[16] M. Li, , H. Chou, Y. Ueng, and Y. Chen, “A low-complexity LDPC decoder for NAND flash applications”, IEEE International Symposium on Circuits & Systems, pp.213 – 216, June 2014.
+[17] J. R. Hauser, “MOSFET device scaling,” in Handbook of Semiconductor Manufacturing Technology, R. Doering and Y. Nishi, Eds. Boca Raton, FL: CRC Press, 2008, ch. 1.3, pp. 8–21.
+[18] X.Y. Hu, E. Eleftheriou, and D.M. Arnold, "Regular and irregular progressive edge-growth Tanner graphs", IEEE Transactions on Information Theory, vol. 51, no. 1, pp. 386-398, 2005.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:28:44 UTC from IEEE Xplore. Restrictions apply.
+
+

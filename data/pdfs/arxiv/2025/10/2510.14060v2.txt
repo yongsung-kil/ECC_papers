@@ -1,0 +1,802 @@
+Decoding Correlated Errors in Quantum LDPC Codes
+Arshpreet Singh Maan,1 Francisco Miguel Garcia Herrero,2 Alexandru Paler,1 and Valentin Savin3, 4
+1Aalto University, Espoo, Finland, {arshpreet.maan, alexandru.paler}@aalto.fi 2Universidad Complutense de Madrid, Madrid, Spain, francg18@ucm.es 3Universit´e Grenoble Alpes, CEA-L´eti, Grenoble, France 4Quobly, Grenoble, France, valentin.savin@quobly.io
+We introduce a decoding framework for correlated errors in quantum LDPC codes under circuitlevel noise. The core of our approach is a graph augmentation and rewiring for inference (GARI) method, which modifies the correlated detector error model by eliminating 4-cycles involving Y type errors, while preserving the equivalence of the decoding problem. We test our approach on the bivariate bicycle codes of distances 6, 10 and 12. A normalized min-sum decoder with a hybrid serial-layered schedule is applied on the transformed graph, achieving high accuracy with low latency. Performance is further enhanced through ensemble decoding, where 24 randomized normalized minsum decoders run in parallel on the transformed graph, yielding the highest reported accuracy (on par with XYZ-Relay-BP) with unprecedented speed for the tested codes under uniform depolarizing circuit-level noise. For the distance 12 (gross) code, our approach yields a logical error rate of (6.70 ± 1.93) × 10−9 at a practical physical error rate of 10−3. Furthermore, preliminary FPGA implementation results show that such high accuracy can be achieved in real time, with a per-round average decoding latency of 273 ns and sub-microsecond latency in 99.99% of the decoding instances.
+
+arXiv:2510.14060v2 [quant-ph] 6 Mar 2026
+
+I. INTRODUCTION
+Quantum low-density parity-check (QLDPC) codes have recently emerged at the forefront of quantum error correction (QEC) research. Early interest was driven by the demonstration of constant-overhead fault tolerance using QLDPC codes [1], which spurred the search for code families that surpass the limitations of previous constructions defined by geometrically local stabilizers [2]. These efforts have progressively advanced QLDPC code constructions [3–9], resulting in asymptotically good families [10– 12] (i.e., with non-vanishing rate and linear minimum distance), as well as practically implementable codes tailored to the constraints of specific quantum technologies [13, 14].
+However, beyond code parameters and compatibility with quantum technology constraints, the merit of a QEC code also hinges on its practical decodability. At first glance, this may seem like good news for QLDPC codes, since decoding is what drove the remarkable success of their classical counterparts [15]. Unfortunately, messagepassing (MP) decoding algorithms – a class of lightweight iterative algorithms with linear time complexity per iteration – that are effective for classical codes fail in the quantum setting. Indeed, for classical LDPC codes, both the theoretical and the practical significance of MP algorithms stems from their ability to perform optimal inference on cycle-free factor graphs (bipartite graphs representing the factorization of a joint probability distribution), where marginal probabilities and max-marginals can be computed via belief-propagation (BP) and minsum (MS) algorithms, respectively [16, 17] (note that BP is also known as sum-product). In decoding terms, maximum a posteriori (MAP) decoding is realized via BP, while maximum likelihood (ML) decoding is realized via MS [18]. And even though practical LDPC codes are defined by graphs with cycles, they locally resemble cycle-
+
+free graphs: their girth (the length of the shortest cycle) grows at the optimal rate Θ(log n), where n is the code length. For QLDPC codes, the situation is markedly different: their low-weight stabilizers – the very property that makes them suitable for fault-tolerance – typically lead to graphs with girth of Θ(1), causing MP decoders to fail at producing sufficiently accurate inference [19].
+Short cycles (the shortest and most harmful being the 4-cycle) can lead to early error floors, where the decoder becomes trapped on certain error patterns [20, 21], causing a shallower – potentially nearly flat – decline in the logical error rate as the physical error rate decreases. This has motivated various approaches to enhance MP decoding performance, including heuristics to improve convergence and accuracy, post-processing techniques, and diversity or ensemble-based decoding methods (see related works, below). In contrast, our approach focuses on modifying the decoding graph rather than the MP decoding algorithm itself, while enabling “vanilla” MP decoders to perform their intended inference task more accurately.
+Besides accuracy, the challenge of QLDPC decoding is further compounded by (1) circuit-level errors, captured by the detector error model, (2) the presence of correlations between X, Y , and Z errors [21], and (3) the requirement for real-time decoding, as timely error correction is essential to prevent backlog issues and maintain fault tolerance in quantum computation [22–24]. Our approach tackles these challenges and sets new benchmarks in decoding performance, achieving the highest accuracy with unprecedented speed for the bivariate bicycle (BB) codes of distance 6 to 12 from [13].
+A. Related Works
+Previous works have explored various strategies to improve MP decoding performance, particularly through combinations with post-processing techniques such as
+
+2
+
+ordered-statistics decoding (OSD) [6]. This approach is usually referred to in the literature as BPOSD rather than MPOSD, even though BP decoding is rarely used and the best performance is typically achieved with normalized MS decoding [6, 25, 26]. Several subsequent works have continued to use the BP terminology in the more general sense of “propagating belief messages” – that is, message passing – regardless of whether the underlying inference would, in the cycle-free case, correspond to marginal probabilities or max-marginals. In deference to the original works and to avoid any possible confusion, we adopt the same terminology as that used in the original papers whenever referring to previous literature.
+BPOSD quickly established itself as an almost universal solution [26], capable of decoding both code-capacity and circuit-level noise models, with an accuracy that remained the benchmark for some time. However, it relies on Gaussian elimination to produce the error estimate, which limits both parallelization and scalability for realtime applications, even on dedicated hardware [27, 28]. This has prompted the development of alternative approaches, which can be broadly classified into the following three categories: (1) Simplified post-processing methods, building upon or refining inversion-based or clustering approaches: e.g., localized statistics decoding [29], ordered Tanner forest decoding [30], closed branch decoding [31], ambiguity clustering [32]; (2) Heuristic methods for improving the MP decoding performance by modifying the decoding rules: e.g., guided decimation guessing [33], collaborative check removal [34], symmetrybreaking techniques [35], refined or memory BP [36, 37], MP decoders with past influence [38]; (3) Diversity or ensemble-decoding techniques, which combine multiple decoders to improve overall performance and mitigate individual decoder failures: e.g., automorphism ensemble decoding [39] or Relay-BP [40]. Some approaches span multiple categories, e.g., stabilizer inactivation [25], check-agnosia [27], or speculative decoding [41], which are simplified post-processing methods, where the postprocessing is based on ensemble MP-decoding.
+These methods still face major limitations, including high resource demands and reduced performance when decoding correlated errors (i.e., correlations between X, Y , and Z errors). For instance, Ref. [21] shows that BPOSD is limited by its inability to decode correlated errors, as BP struggles with short cycles in the correlated detector error model, providing misleading information to the OSD post-processor. The XYZ-Relay-BP decoder [40] efficiently handles correlated errors, significantly outperforming BPOSD, by employing an ensemble decoding approach that uses a large number of BP decoders sequentially. Nevertheless, while the approach can be regarded as a lightweight MP decoder, its sequential nature may result in increased latency.
+Graph-search-based decoders such as Tesseract [21] and decision-tree decoders [42] have emerged as promising solutions, providing the most accurate decoding of
+
+10 5
+
+Logical Error Rate Per Round
+
+10 6
+
+10 7
+
+10 8
+
+BPOSD
+
+XYZ-Relay-BP-5
+
+GARI-NMS-ensemble
+
+10 9 6.00
+
+8.89
+
+12.00
+
+BPT Code Efficiency (kd2/n)
+
+Fig. 1: Logical error rate performance of our method (GARINMS-ensemble), compared with BPOSD and XYZ-Relay-BP5 [40]. We consider BB codes with [[n, k, d]] parameters equal to [[72, 12, 6]], [[90, 8, 10]] and [[144, 12, 12]], under uniform depolarizing circuit level noise with a physical error rate of 0.001. We plot logical error rates against the BPT efficiency of the code, defined as kd2/n, which accounts for the nonuniform variation of the n, k, d parameters, and is inspired by the Bravyi-Poulin-Terhal bound [2]. Error bars indicate 99% confidence intervals. For BPOSD, we report the best achievable performance obtained by fine-tuning both the MP decoder and its underlying message schedule. The XYZ-RelayBP-5 decoder uses 301 DMem-BP decoders in series with up to 300 × 60 + 80 = 18080 decoding iterations, and memory strength parameters taken from [40]. It searches for five different solutions and returns the one with the lowest weight. The GARI-NMS-ensemble decoder employs 24 NMS decoders in parallel for BB codes with distances 10 and 12, with each decoder performing up to 400 iterations. We adopt a minimumlatency approach, in which decoding stops as soon as one decoder in the ensemble converges, and the corresponding solution is then returned. For distance 6, only a single GARINMS decoder is used, as employing multiple decoders does not further improve performance.
+
+correlated errors reported so far. However, this comes at the cost of increased complexity, which may preclude their use in large-scale applications.
+B. Contributions
+In this work, we focus on MP decoding of correlated errors under the circuit-level noise model. The starting observation is that the inefficiency of MP decoding in performing the intended inference stems from the structural properties of the underlying decoding graph. Accordingly, our contributions center on modifying the decoding graph to improve its suitability for MP decoding, and on exploiting the new structure via an expert selection of MP decoding parameters.
+Considering the correlated detector error model, the decoding graph is a bipartite graph involving error nodes
+
+3
+
+and check nodes. Error nodes correspond to X, Y , or Z errors propagating from different locations in the syndrome measurement circuit (possibly merging multiple locations if they produce the same syndrome), while check nodes correspond to either X or Z detectors (we assume CSS codes). The core of our approach is a graph augmentation and rewiring technique that transforms the original detector error model graph into a new graph representing an equivalent decoding problem, while eliminating 4-cycles passing through Y -type error nodes. Eliminating 4-cycles is intended to facilitate MP inference; thus, we refer to the proposed graph transformation as graph augmentation and rewiring for inference (abrv. GARI).
+We then perform MP decoding on the new graph obtained after applying GARI. Our MP decoding consists of a normalized MS (NMS) algorithm with a hybrid seriallayered message schedule, chosen to optimize the decoding accuracy while also reducing the overall latency. For the tested BB codes, this results in a logical error rate matching that of the best-performing BPOSD, with OSD of order-zero.
+To further improve the decoding performance, we employ an ensemble decoding approach, running multiple MP decoders in parallel on our augmented and rewired decoding graph. To this end, we leverage the randomization in the serial part of the hybrid seriallayered schedule, using a modest-sized ensemble of MP decoders with different randomization seeds. This approach achieves the highest decoding accuracy reported to date, on par with XYZ-Relay-BP-5 (see Fig. 1). Moreover, preliminary hardware implementation results for the [[144,12,12]] BB code show that each decoder of the ensemble can run in real-time on a single VU19P FPGA device. For instance, at a physical error rate of 10−3, the average decoding latency is 273 ns, and in 99.99% of instances the decoding completes within 1 µs per round.
+II. METHODS
+A. Graph Augmentation and Rewiring for Inference
+A decoding problem can typically be formulated as a linear system, where the decoder’s task is to identify the most likely solution given the prior probability distributions of the errors (variables of the system). The linear system is defined by a matrix, which we call the decoding matrix. For MP decoders, the decoding matrix can be conveniently represented as a decoding graph: a bipartite graph whose adjacency matrix is the decoding matrix, with vertices referred to as error nodes and check nodes, corresponding to the columns and rows of the matrix, respectively (we use the term error node instead of the variable node or data node terminology commonly used in the literature, to explicitly indicate that these nodes represent Pauli errors). We describe the GARI method in terms of both the decoding matrix (Section II A 1 and the decoding graph (Section II A 2). The first description,
+
+based on the decoding matrix, focuses on the correlated detector error model and provides a simple linear-algebra procedure to construct the GARI matrix. The second description, based on the decoding graph, applies to more general graph models, and can be used for further optimization and refinement of our approach.
+1. The Decoding Matrix Perspective
+We assume Calderbank–Shor–Steane (CSS) codes. Thus, in the correlated detector error model [43, 44], the decoding matrix is a binary matrix that takes the following form:
+
+eZ eX eY
+
+DXY Z =
+
+DX 0
+
+0 DZ
+
+DX′ DZ′
+
+sX sZ
+
+(1)
+
+The matrix is partitioned into three block columns: the left block corresponds to Z errors, the middle block to X errors, and the right block to Y errors. The corresponding errors are denoted by eZ , eX , and eY . Similarly, the rows are divided into two blocks: the top block corresponds to X-type detectors, and the bottom block to Z-type detectors. The corresponding syndromes are denoted by sX and sZ .
+For given syndromes sX and sZ , the role of the decoder is to estimate the most likely error vector (eZ , eX , eY ), such that (we always treat vectors as column vectors in equations; however, error vectors eZ , eX and eY should be interpreted as row vectors when used to label the columns of the decoding matrix):
+
+DXY Z (eZ , eX , eY ) = (sX , sZ ).
+
+(2)
+
+Note that matrices DX and DZ are those obtained when considering only one type of detectors, that is, either
+X or Z detectors, which detect Z or X errors, respec-
+tively. The notation DXY Z for the correlated detector error model is somewhat abusive, since there are no Y -
+type detectors. Since our focus is on correlated errors, we
+will assume that any circuit location where a Y error may
+occur can also experience X and Z errors. Therefore, matrices DX and DX′ satisfy the following properties, and analogous properties hold for DZ and DZ′ as well:
+• DX has no repeating columns,
+• every column of DX′ is equal to a column of DX ; however, DX′ may contain repeated columns, meaning the same column of DX may appear multiple times in DX′ .
+The fact that DX has no repeating columns follows directly from the definition of the detector error model: Z
+errors occurring at different locations but producing the
+same syndrome are merged into a single column. For
+the second property, we observe that a Y -error and a Z-
+error occurring at the same location produce the same X-syndrome. This explains why every column of DX′ is equal to a column of DX . However, DX′ may contain repeated columns, corresponding to Y -errors at different lo-
+cations that produce the same X-syndrome but different
+
+i
+
+j1
+
+j2
+
+4
+
+i
+
+j1
+
+j2
+
+i
+
+(a) 4-cycle
+
+(b) Biclique
+
+i
+(c) GARI transform
+
+Fig. 2: Example of GARI transformation. (a) A 4-cycle in a decoding graph: error and check nodes are depicted as circles and squares, respectively; edges forming the 4-cycle are shown in bold, other incident edges are shown as dashed. (b) A biclique in the decoding graph; only edges participating in the biclique are shown. The MP inference is not exact, due to the presence of the 4-cycles. (c) The GARI transform eliminates all 4-cycles forming the biclique, by performing a variable change that introduces a new error node and a new check node in the graph (depicted in blue), as explained in the main text. If the eliminated 4-cycles were the only cycles in the bipartite graph, the new graph would be cycle-free, and the MP inference would be exact. The error and check node labels in (b) and (c) are included to illustrate the connection with the decoding-matrix perspective in Section II A 1 and should be disregarded unless specifically referenced in the main text.
+
+Z-syndromes. In this case, the corresponding columns are not merged in [DX′ ; DZ′ ], resulting in column repetitions in DX′ (where we use the semicolon to denote vertical stacking of matrices). These properties imply the existence of matrices U and V , such that DX′ = DX U and DZ′ = DZ V , which can be explicitly determined as follows:
+• each column of U has exactly one 1, and
+• the ith row of U has 1’s in columns j1, . . . , jk if and only if the ith column of DX equals the columns j1, . . . , jk in DX′ .
+• Similar statements hold for V . We use matrices U and V to perform a change of variables in Eq. (2). Precisely, we define
+e¯Z = eZ + U eY and e¯X = eX + V eY , (3)
+so that Eq. (2) rewrites as
+
+DX e¯Z = sX and DZ e¯X = sZ .
+
+(4)
+
+Independent decoders operating on DX and DZ would provide independent estimations of e¯X and e¯Z satisfying Eq. (4). To account for correlations between X, Y , and Z errors, a decoder must jointly estimate e¯X and e¯Z satisfying Eq. (4) along with the variable change in Eq. (3). Precisely, this corresponds to defining a new decoding matrix
+
+eZ eX eY e¯Z e¯X
+
+
+
+
+
+0 0 0 DX 0
+
+sX
+
+ 
+
+0
+
+0
+
+0
+
+0
+
+ DZ  sZ
+
+(5)
+
+DXY Z
+
+=
+
+ 
+
+
+
+I
+
+0
+
+U
+
+I
+
+
+
+0
+
+ 
+
+0
+
+
+
+
+
+0IV 0 I
+
+0
+
+so that Eq. (4) and Eq. (3) can be rewritten as
+DXY Z (eZ , eX , eY , e¯Z , e¯X ) = (sX , sZ , 0, 0). (6)
+Note that Eq. (6) depends on an augmented variable set, consisting of (eZ , eX , eY , e¯Z , e¯X ). We refer to DXY Z ,
+
+which defines an equivalent decoding problem, as the GARI matrix. Importantly, a GARI decoder – i.e., one using the decoding matrix DXY Z – produces an estimate of the error vector (eZ , eX , eY , e¯Z , e¯X ). In practice, however, we are typically interested in only one type of error, depending on the type of the logical observables protected by the decoder. Assuming we protect logical-Z observables, we are only interested in decoding X errors, including contributions from Y errors, that is e¯X . This is precisely the error that would be estimated using the Z-type detector error model alone; however, in that case, the decoder cannot exploit correlations between the Pauli errors.
+2. The Decoding Graph Perspective
+Let us first consider an arbitrary decoding graph that contains 4-cycles (the connection with the previous section will be made later), which we aim to eliminate to enable more effective MP inference. This necessarily involves modifying the decoding graph, while ensuring that the resulting graph corresponds to a decoding problem equivalent to the original one. Moreover, since 4-cycles can combine to form bicliques – i.e., complete bipartite subgraphs of the decoding graph – these are precisely the types of structures we aim to eliminate. A 4-cycle is illustrated in Fig. 2a, and a biclique is shown in Fig. 2b. Any two error nodes and any two check nodes participating in the biclique determine a 4-cycle. Note that a biclique is necessarily an induced subgraph, formed from one subset of error nodes and one subset of check nodes, along with all edges from the decoding graph connecting pairs of nodes in these subsets. In terms of the decoding matrix, a biclique corresponds to a submatrix with all entries equal to 1.
+The GARI procedure is illustrated in Fig. 2c, and it is applied to maximal bicliques in the decoding graph – i.e., bicliques that cannot be extended by adding any additional error or check nodes. We modify the decoding graph by adding a new error node (in blue), representing the sum of all error nodes in the biclique. We enforce this last condition by also introducing a new check node
+
+5
+
+TABLE I: Size, average row weight (w¯r, a.k.a. average check degree), and number of 4-cycles in DX , DZ , DXY Z and DXY Z for BB codes with [[n, k, d]] parameters indicated in the left column. Detector error model matrices are generated using the Stim circuits from [33], where, for a code of distance d, the syndrome measurement is repeated d times, followed by a final measurement of the data qubits in the Z basis. The number of 4-cycles removed by GARI corresponds to the difference between the number of 4-cycles in DXY Z and the combined total in DX and DZ (e.g., 11584296 − (47232 + 53280) = 11483784 for the distance 12 code). For DXY Z we report the size and average row weight of its bottom part, since the only remaining 4-cycles are confined to DX and DZ .
+
+Code
+
+DX
+
+Size
+
+w¯r 4-cycles
+
+DZ
+
+Size
+
+w¯r 4-cycles
+
+DXY Z
+
+Size
+
+w¯r 4-cycles
+
+Bottom part of DXY Z
+
+Size
+
+w¯r 4-cycles
+
+[[72, 12, 6]] 180 × 1800 33.2 10440 252 × 2232 30.86 13248 432 × 16164 210.92 2628756 4032 × 20196 8.02 0
+
+[[90, 8, 10]] 405 × 4050 34.0 24030 495 × 4590 32.36 27720 900 × 34965 223.35 5967945 8640 × 43605 8.09 0
+
+[[144, 12, 12]] 792 × 7920 34.18 47232 936 × 8784 32.77 53280 1728 × 67752 226.46 11584296 16704 × 84456 8.11 0
+
+(in blue) connected to the error nodes in the biclique and the newly added one, with its syndrome value set to zero. Finally, for each check node in the biclique, we replace its corresponding incident edges with a single edge connecting it to the newly added error node. We note that the above procedure was previously developed, but applied only to 4-cycles, in [45, 46] for decoding some families of classical linear block codes under belief propagation.
+Clearly, the above procedure eliminates all 4-cycles forming the biclique. While new 4-cycles may appear involving the nodes introduced by GARI, it can be easily seen that their number is reduced. Thus, recursively applying the procedure will eventually eliminate all 4-cycles in the graph.
+We also note that, although the above procedure augments the decoding graph with additional error and check nodes, it increases the number of edges by only one when applied to a 4-cycle, preserves the number of edges when applied to a 5-node biclique, and strictly reduces the number of edges in all other cases. This can be easily seen by comparing the number of edges in Fig. 2b and Fig. 2c. Consequently, the augmented graph may contain fewer edges than the original graph, implying that an MP decoder operating on the augmented graph may incur a reduced computational load (i.e., performs fewer message updates per iteration) compared to the same decoder operating on the original graph. This is typically the case for correlated detector error model matrices DXY Z , due to the generally large size of the maximal bicliques (see also the BB code examples below).
+We now claim that, for the correlated detector error model discussed in the previous section, the GARI matrix DXY Z is the adjacency matrix of the graph produced by one possible application of the GARI transform to the decoding graph with adjacency matrix DXY Z . To see this, we first note that any column of DX or DZ that is repeated one or more times in DX′ or DZ′ , respectively, determines a biclique in DXY Z . For instance, assuming that the ith column of DX equals the columns j1 and j2 in DX′ , we obtain a biclique with three error nodes as in Fig. 2b: the three error nodes correspond to these columns, while the check nodes (left unlabeled in the figure) correspond to the rows containing 1 entries in them. Upon application of GARI, the newly introduced
+
+error and check nodes (depicted in blue in Fig. 2c) correspond, respectively, to the ith column within the e¯Z column block and the ith row within the third row block of DXY Z . The edges connecting the newly added check to the error nodes j1 and j2 correspond to 1 entries in the U matrix, while the edges connecting it to the white and blue error nodes labeled i correspond to the 1 entries in the two identity matrices on the left and right sides of U . The edges connecting the newly added error node to the four check nodes from the original graph reproduce the corresponding DX column.
+Summarizing, upon applying GARI, the added error nodes correspond to columns e¯Z and e¯X in (5), while the added check nodes correspond to the bottom part of DXY Z , containing the I’s, U and V submatrices. DX and DZ submatrices in the top part of DXY Z are reproduced by the new edges added between the original check nodes and the newly introduced error nodes, and they contain the only remaining 4-cycles in the new graph. See Table I for a quantitative summary of the size, average row weight, and number of 4-cycles in DX , DZ , DXY Z , and DXY Z for various BB codes. The number of non-zero entries in each matrix can be computed as the product of the number of rows and the average row weight. For instance, for the [[144, 12, 12]] code, the DXY Z matrix has 1728 × 226.46 = 391323 non-zero entries, while the DXY Z matrix (including DX , DZ , and the bottom part) has 792 × 34.18 + 936 × 32.77 + 16704 × 8.11 = 193213 non-zero entries, which is less than half the number of non-zero entries in DXY Z .
+As discussed above, the GARI transform can be applied recursively to further eliminate the remaining 4cycles. However, for the tested BB codes (see Section III A), the achieved performance was on par with or exceeded that of significantly more complex state-ofthe-art decoders, and at the time of writing this paper, we did not pursue further optimization.
+We also note that removing only the cycles through Y -type error nodes enables a more accurate treatment of correlations, without optimizing the decoding of a single error type. Indeed, a closer examination of the GARI decoding matrix in (5), reveals that a GARI MP decoder can be interpreted as two decoders operating on the single-detector-type matrices DX and DZ , which ex-
+
+6
+
+change information through the bottom part of DXY Z . This information exchange allows the decoder to account for correlations between X, Y , and Z errors. Such a decoder architecture is further discussed and illustrated in Section II C.
+B. Randomized Scheduling based Ensemble Decoding
+Now that we have a graph enabling improved MP inference, we can apply MP decoding on it. It is to be expected that any MP decoder will perform better on the GARI graph than on the original one. However, optimizing accuracy and speed requires a judicious choice of the MP decoder, encompassing both the message update rules and the message update schedule. We refer to the Appendix for a discussion on different messageupdate schedules (flooding, serial, layered) and, in the following, discuss the choice of MP decoding for GARI and the ensemble decoding approach.
+1. MP Decoding on GARI
+We consider the normalized variant of the MS decoder (NMS), in which a scaling (normalization) factor is applied to check node messages to improve the accuracy of inference on loopy graphs [47]. It is also the preferred choice for hardware implementations, owing to its simple arithmetic and robustness when messages are quantized with a small number of bits. Lowering the bit-width of the exchanged messages is important both for reducing footprint and for increasing speed [48].
+We also employ a horizontal hybrid serial-layered schedule, as explained in the next paragraph. Horizontal schedules are often the de facto choice in hardware implementations due to their efficiency in resource allocation and straightforward integration into processing pipelines [49]. We note, however, that we also experimented with various vertical schedules, which proved less effective than horizontal ones in terms of decoding accuracy and speed. In the following, all schedules are horizontal.
+Hybrid schedule: We consider the GARI decoding matrix DXY Z given in Eq. (5). For the top part of DXY Z , consisting of the rows corresponding to the DX and DZ blocks, we use a randomized serial schedule. For the bottom part, consisting of the remaining rows, we use a layered schedule with two layers: the first layer contains the rows corresponding to the U matrix, and the second contains those corresponding to the V matrix.
+For the top part, since the only non-zero entries lie within the DX and DZ matrices, which do not share any rows or columns, we can equivalently use two MP decoders running in parallel – one for DX and one for DZ – each employing a randomized serial schedule. At each iteration, these decoders exchange information via the processing performed in the bottom part of the DXY Z .
+For the bottom part, the fact that the layers are well defined (i.e., rows within each layer do not intersect) follows from the fact that U and V have column weight 1, as discussed in Section II A. Since there are only two
+
+layers and processing the same layer twice in succession (without processing the other layer in between) would not change the outgoing messages, randomization is not possible. Thus, we simply process the layers in their natural order. Note that a serial schedule processing the rows of the bottom matrix in their natural order would perform exactly the same computations (i.e., produce the same messages). Thus, layered scheduling is used in the bottom matrix not to improve accuracy, but merely to reduce latency.
+Prior probabilities: The MP decoder is initialized with a prior probability value for each column of DXY Z (i.e., each error node, in graph terminology). For the ez, ex, and eY columns in (5), we use the prior probabilities obtained from the detector error model (as done for DXY Z in (1)). For columns e¯Z and e¯X , corresponding to new error nodes added by GARI, no prior knowledge is available, so their prior probabilities are set to 0.5 (corresponding to a log-likelihood ratio of 0). One might object that prior probabilities could be obtained from Eq. (3). However, this is precisely what the MP decoder does after the first decoding iteration. Manually setting prior probabilities is not only unnecessary but may be detrimental, as it duplicates the information obtained through MP inference. Finally, since e¯Z and e¯X columns have no prior knowledge, we start the decoder by processing the bottom part of DXY Z first, followed by the top part (starting with the top would simply waste the first iteration on that part).
+Early stopping: Let us consider a memory experiment, in which we protect logical-Z observables (i.e., the protected logical state is a tensor product of eigenstates of the logical-Z operators). In the detector error model, the physical qubits are measured in the Z basis at the end, which allows us to detect logical-X errors, manifested as changes in the protected logical observables. Although our decoder exploits correlations and effectively estimates the error vector (eZ , eX , eY , e¯Z , e¯X ), we can actually only assess the accuracy of the X error estimation, including contributions from Y errors – that is e¯X . Thus, for early stopping of our MP decoder, we only check whether the Z-type syndrome is satisfied, that is, DZ e¯X = sZ . This is checked after each decoding iteration, and the MP decoder stops when the Z-type syndrome is satisfied or when a maximum number of iterations is reached. Similarly, for the X-memory experiment, one would implement the early stopping on DX instead.
+As an aside, we note that we also experimented with a different early stopping criterion, checking both Z and X syndromes, that is DZ e¯X = sZ and DX e¯Z = sX (while, of course, we could estimate only the logical-X error rate, based on the decoded e¯X ). This yielded a similar logicalX error rate but increased the average number of decoding iterations by approximately a factor of two, since the decoder needs to converge on both DZ and DX before it stops. Also, convergence on DZ generally occurs faster, aided by the final measurements of physical qubits in Z basis. Importantly, such a stopping criterion could be
+
+7
+
+used in experiments in which both X and Z logical operators must be preserved. However, our focus is on memory experiments involving the preservation of a single type of logical operator (in line with current practice in the literature), and we aim to show how its preservation can be enhanced by effectively exploiting correlations among X, Y , and Z errors.
+2. Ensemble Decoding Approach
+The benefits of randomization in scheduling can be further leveraged through an ensemble decoding approach. This method involves running multiple MP decoder instances in parallel, each decoding the GARI matrix but using a distinct randomization seed for the serial part of the hybrid serial-layered schedule.
+Early ensemble stopping: Since our decoders run in parallel and may converge after different numbers of iterations, we also need a global strategy to stop the entire ensemble. We adopt a latency-minimizing strategy, in which all MP decoder instances stop as soon as one of them converges. If several MP decoders converge simultaneously (i.e., after the same number of decoding iterations), we select the most likely error among those estimated by these decoders, where the likelihood of an error is determined according to the prior probabilities. However, recall that the MP decoder stops when the Ztype syndrome is satisfied, DZ e¯X = sZ , and that no prior probabilities for e¯X has been provided to the decoder. Fortunately, as mentioned earlier, we can use Eq. (3) to compute prior probabilities for e¯X (which are identical to those obtained from the Z-type only detector error model). While these probabilities are not needed by the decoder (see earlier discussion), we use them to compute the likelihood of each estimated error and then select the most likely one.
+C. Hardware Architecture
+The GARI MP decoder features a hardware-efficient architecture, which we discuss in this section. The architecture is illustrated in Fig. 3, and consists of three distinct processing units. The DX and DZ units implement MP decoding on the DX and DZ submatrices, respectively, and they exchange information through a third processing unit that implements MP decoding on the bottom part of DXY Z . We note that this high-level architecture is generic and can accommodate different MP decoders, including different message update rules and scheduling strategies. Below, we examine in detail the benefits of the hybrid serial–layered schedule discussed in the previous section.
+Resource efficiency : Serial schedules are implemented in hardware using a single check node processor, which is reused to sequentially process all the checks (rows) of the decoding matrix. Thus, implementing DX and DZ units requires a single check-node processor for each. Considering an ensemble decoding approach, the number of checknode processors per DX or DZ unit equals the size of the ensemble. Even in this case, the number of check-node
+
+prior probabilities for (eZ , eX , eY )
+
+sX
+
+sZ
+
+DX Unit (serial sched.)
+
+DZ Unit (serial sched.)
+
+DZ e¯X = sZ or max-iter
+
+extrinsic messages
+for e¯Z
+
+extrinsic messages
+for e¯X
+
+e¯X estimated
+error
+
+Bottom Part Unit (2-layers schedule)
+
+Fig. 3: High-level architecture of the GARI MP decoder. MP processing moves upward, completing one iteration after first updating the bottom-part unit, followed by the DX and DZ units, which are updated in parallel. The input consists of prior probabilities for (eZ , eX , eY ), and the output of the estimated e¯X error.
+processors remains significantly lower than that required for the parallel implementation of a single MP decoder on either DX or DZ , which equals the number of rows of the corresponding matrix. This is particularly important as the code distance and thus the size of the decoding matrix increase (see, for instance, Table I). While such an increase does not affect the resource usage of DX and DZ units in our architecture, it can hinder the implementation of a fully parallel schedule due to the limited resources available on FPGAs.
+The most resource-intensive part of our architecture is the implementation of the bottom-part unit, which requires a number of check-node processors equal to the maximum layer size (i.e., the maximum number of rows between the first and second layers). However, the weights of the rows in the bottom part of DXY Z are considerably smaller than those of the DX and DZ rows (see Table I). Thus, check node processors in the bottompart unit require fewer resources than in the DX and DZ units, so increasing their number is less of a concern.
+Low latency: The serial architecture of DX and DZ units reduces routing complexity, since a single check node processor is connected to a single bank of registers and memory. Such an architecture can operate at high clock frequencies, thereby compensating for the inherent latency induced by the sequential nature of the serial schedule. Moreover, the horizontal serial schedule considered in our architecture provides a significant speedup compared to the vertical schedule, due to the ratio between the number of rows and columns in the DX and DZ matrices (at least ninefold speedup for the BB codes, see Table I). By way of comparison, it is worth noting that a parallel implementation would require mul-
+
+8
+
+tiple wiring connections (proportional to the edges of the graph), which could cause routing congestion and contribute significantly to the critical path delay in FPGAs that have fixed routing lines.
+The layered schedule in the bottom part unit may reduce the operating clock frequency, due to the increased footprint and routing complexity. However, this effect is mitigated by the reduced logic depth of the check-node processors, while the inherent parallelism of the schedule enables a significant latency reduction.
+Finally, we note that processing units can employ pipelining to reduce the critical path and increase the maximum achievable clock frequency, as discussed in Section III B. The pipelined implementation also supports hardware sharing, allowing resources to be reused across different decoding runs, thereby further improving resource efficiency. Resource sharing across decoding runs was not implemented in the present work, but could be explored in future research.
+
+III. RESULTS
+
+We consider memory experiments, in which all logical qubits are initialized in an eigenstate of their corresponding logical-Z operators. To benchmark our method, we consider the BB codes with parameters [[72,12,6]], [[90,8,10]] and [[144,12,12]] from [13]. For a code of distance d, we consider the circuit obtained by repeating the syndrome measurement d times, followed by a final measurement of the data qubits in Z basis. The corresponding detector error model is constructed and simulated for a given noise model using Stim [50]. Note that detector circuits may not be distance preserving (i.e., the circuit level distance may be less than d), but we will systematically refer to them using the [[n, k, d]] notation of the corresponding code.
+
+A. Decoding Accuracy
+
+We consider various decoders operating on different de-
+
+coding matrices, namely DZ , DXY Z , and DXY Z (i.e., the GARI matrix). The goal is to provide a comparison of
+
+our method with BPOSD decoder, as well as with more
+
+recent, higher-accuracy decoders such as Relay-BP and
+
+Tesseract. We discuss below the hyperparameters used in
+
+our simulations, where decoder names are prefixed with
+
+the decoding matrix they operate on (using GARI for
+
+DXY Z ).
+
+GARI-NMS: NMS decoder with hybrid serial-layered
+
+schedule, operating on the DXY Z matrix, as detailed in
+
+Section II B 1. The serial schedule is randomized and the
+
+maximum number of iterations is set to 400. The NMS
+
+normalization factor is set to either
+
+5 i=1
+
+1/2i
+
+=
+
+0.96875
+
+or
+
+7 i=1
+
+1/2i
+
+=
+
+0.9921875,
+
+chosen
+
+to
+
+optimize
+
+accu-
+
+racy while facilitating hardware implementation using bit
+
+shifts and adders. The GARI-NMS-ensemble decoders
+
+employ either 24 or 48 GARI-NMS decoders in paral-
+
+lel for the uniform depolarizing noise and SI1000 noise
+
+models, respectively (discussed below). We denote these
+
+decoders as GARI-NMS-×s, where s is the size of the ensemble. Ensemble decoding is only used for BB codes with distances 10 and 12.
+(DZ /DXY Z )-NMS: For comparison purposes, we also consider an NMS decoder with a randomized serial schedule, using a maximum number of 400 decoding iterations and normalization factor of 0.96875, but operating on either DZ or DXY Z matrix.
+(DZ /DXY Z )-BPOSD: We use the open-source library [26, 51] to simulate the order-zero BPOSD decoder. We fine-tune BPOSD decoders on both DZ and DXY Z using different NMS normalization factors, schedules and number of iterations, and then use the best resulting decoder for comparison with our method (see Appendix 3 for details). We obtain the best performance when combining OSD post-processing with an NMS decoder operating on DXY Z for distance d = 6, but on DZ for distances d = 10 and d = 12, using a normalization factor of 0.625, randomized serial scheduling, and a maximum number of 30 iterations (a larger number of iterations degrades performance at low physical error rates due to erratic behavior of the MP decoder). We note that the NMS decoder in BPOSD library [51] uses a vertical serial schedule (in contrast to horizontal schedules used in our implementation of the NMS).
+DXY Z -Relay-BP: We use the open-source library [52], associated with the paper [40], to simulate Relay-BP, using the hyperparameters specified in the library. We compare our results with the XYZ-Relay-BP-5 (operating on DXY Z ) decoder, which handles correlated errors and has been shown to outperform BPOSD. It uses 301 DMem-BP decoders in series with up to 18080 decoding iterations. The decoder searches for five different solutions (thus the suffix 5 in the notation) and returns the one with the lowest weight. We note that the simulation results in [40] use 601 DMem-BP decoders in series, instead of 301, which is the default value in the library. We noticed this rather late and ran several simulations with 601 DMem-BP decoders, but they were too slow to produce meaningful results, especially at low physical error rates.
+Logical error rates: We determine the logical error rate as the ratio of decoding failures (i.e., either the decoder did not converge, or at least one logical observable is flipped by the decoded error) to the total number of decoded runs, i.e., LER = decoding failures/number of samples. The logical error rate per syndrome measurement round (in short, per-round) is obtained by [21],
+
+LERround = (1 − (1 − 2 × LER)1/r)/2.
+
+(7)
+
+Unless otherwise stated, all reported logical error rates are per-round. Error bars in all plots indicate 99% confidence intervals, calculated from at least 100 decoding failures, except for the Relay-BP and Tesseract (discussed later) decoders, for which the number of decoding failures is about 40 at low physical error rates.
+
+Uniform depolarizing noise: Fig. 4 presents the perround logical error rate results under the circuit-level
+
+9
+
+10 1
+
+10 1
+
+Logical Error Rate Per Round
+
+10 2
+
+10 3
+
+10 4
+
+10 5 10 6 10 3
+
+DDDDXXZXYYY-ZZZN---MRBNPeSMOlaSSyD-BP-5 GARI-NMS
+
+2 × 10 3 3 × 10 3 4 × 10 3
+Physical Error Rate
+
+6 × 10 3
+
+(a) [[72,12,6]] code, Stim circuit from [33]
+
+Logical Error Rate Per Round
+
+10 2
+
+10 3
+
+10 4
+
+10 5 10 6 10 7 10 3
+
+DDDZZXY--ZBN-PMNOSMSSD DXYZ -Relay-BP-5 GARI-NMS GARI-NMS-×24
+
+2 × 10 3 3 × 10 3 4 × 10 3
+Physical Error Rate
+
+6 × 10 3
+
+(b) [[90,8,10]] code, Stim circuit from [33]
+
+Logical Error Rate Per Round
+
+10 1
+
+10 2
+
+10 3
+
+10 4
+
+10 5
+
+10 6 10 7 10 8 10 9 10 3
+
+DDDDZZXXYY--ZZBN--PMRNOeSMSlaSDy-BP-5 GARI-NMS GARI-NMS-×24
+
+2 × 10 3 3 × 10 3 4 × 10 3
+Physical Error Rate
+
+6 × 10 3
+
+(c) [[144,12,12]] code, Stim circuit from [33]
+
+Logical Error Rate Per Round
+
+10 1
+
+10 2
+
+10 3
+
+10 4
+
+10 5
+
+10 6
+
+10 7 10 8 10 9 10 3
+
+DZ -Relay-BP-5 GDXAYRZI--NReMlSa-y×-B2P4-5
+
+2 × 10 3 3 × 10 3 4 × 10 3
+Physical Error Rate
+
+6 × 10 3
+
+(d) [[144,12,12]] code, Stim circuit from [52]
+
+Fig. 4: Logical error rate per-round vs. physical error rate for various BB codes under uniform depolarising circuit-level noise, using Stim circuits from either [33] or [52]. We prefix decoder names with the decoding matrix they operate on, using GARI for DXY Z . The hyperparameters of the decoders are discussed in the main text and error bars indicate 99% confidence intervals. Note that we consider the best performing BPOSD decoder, operating on either DXY Z or DZ , depending on the code, as explained in the main text. For GARI-NMS decoders, the normalization factor is set to 0.96875 in subfigures (a)-(c), and 0.9921875 in (d). For codes with distances 10 and 12, the GARI-NMS-ensemble decoder uses 24 GARI-NMS decoders in parallel.
+
+uniform depolarizing noise model. The detector error model is instantiated using the Stim circuits from [33] for Figs. 4a–4c, and the Stim circuit from the Relay-BP library [52] for Fig. 4d.
+First, we observe that the DXY Z -NMS decoder performs significantly worse than DZ-NMS. This degradation is due to the large number of 4-cycles in DXY Z introduced by Y -type errors, which hinder the NMS decoder’s ability to handle correlations between Pauli errors. Table I lists the number of 4-cycles in these matrices, as well as the average check degree, for all the codes considered. It is worth noticing that the bottom part of the
+
+GARI matrix contains no 4-cycles and has a smaller average check degree compared to DXY Z , making it more suitable for MP decoding. As a result, the GARI-NMS decoder not only outperforms DZ-NMS, but it is already on par with BPOSD for BB codes of distance d = 10 and d = 12, while being significantly more lightweight and faster. Moreover, for the smaller distance d = 6 code, GARI-NMS outperforms BPOSD, achieving performance similar to that of the DXY Z -Relay-BP-5 decoder.
+We now consider the GARI-NMS-×24 ensemble decoder, and report its decoding performance for the BB codes of distance d = 10 and d = 12. Let us note that for
+
+10
+
+the BB code of distance d = 6, the ensemble decoder does not further improve performance. For distances d = 10 and d = 12, we can observe that GARI-NMS-×24 and DXY Z -Relay-BP-5 decoders achieve similar performance, with the former performing slightly better at high physical error rates or when using the Stim circuit from the Relay-BP library, as shown in Fig. 4(d).
+While we prioritized minimizing latency, the GARINMS-ensemble performance could potentially be improved by waiting for multiple decoders to converge, and then selecting the most likely (e.g., lowest weight) solution. This echoes the idea of Relay-BP-5, which stops after five decoders have converged. However, while both approaches rely on ensemble decoding, it is worth noting that they differ in a key aspect. Our method runs all decoders in the ensemble in parallel, with each operating independently. In contrast, Relay-BP executes the decoders sequentially, relaying information from one decoder to the next. This serial operation increases decoding latency and limits the ability to exploit the parallel processing capabilities of CPUs and FPGAs.
+Finally, for completeness of the comparison, we also discuss the case of the DZ-NMS-ensemble decoder (not shown in Fig. 4 to maintain clarity), where the randomized-scheduled ensemble decoding approach is applied to DZ-NMS rather than the GARI-NMS decoder. For distance d = 12 and physical error rate 10−3, the DZ-NMS-×24 decoder achieves a logical error rate of 1.6 × 10−7, on par with BPOSD. This highlights that it is the combination of GARI and randomized-scheduled ensemble decoding that achieves the best accuracy.
+SI1000 noise model and Tesseract: For comparison with Tesseract, we use the data provided by the authors of [21]. The simulations in that work employ the SI1000 noise model and a different gate set (CZ-H-MZ) for BB code circuits. Accordingly, we simulate our decoder under the same noise conditions and on the same circuits, which are available in the open-source library [53] associated with [21].
+In this setting, the GARI-NMS-ensemble decoder achieves an accuracy within an order of magnitude of Tesseract, as shown in Fig. 5. However, Tesseract is a graph search–based decoder that searches through a graph of all error subsets to find the lowest-cost subset consistent with the input syndrome. Although the search can be made more efficient using the A* algorithm and pruning heuristics (since the search graph is exponentially large), its complexity remains considerably higher than that of MP decoders. To the best of our knowledge, no other MP-based decoding solution has been reported to achieve a comparable level of decoding performance in this setting.
+B. Real-Time Decoding
+We report implementation results obtained for the Virtex UltraScale+ VU19P (16 nm), currently the highestcapacity FPGA in production by AMD.The code under test is the [[144,12,12]] BB code. The cores for the DX ,
+
+Logical Error Rate Per Round
+
+10 3 10 4 10 5 10 6 10 7 10 8 6.00
+
+GDZAR-BI-PNOMSSD GARI-NMS-×48 Tesseract
+
+8.89
+
+12.00
+
+BPT Code Efficiency (kd2/n)
+
+Fig. 5: Logical error rate performance of the proposed method compared with the Tesseract decoder introduced in [21], for the SI1000 noise model with a physical error rate of 0.001. We plot the logical error rate versus the BPT code efficiency kd2/n, for BB codes with parameters [[72, 12, 6]], [[90, 8, 10]], and [[144, 12, 12]], corresponding to efficiencies of 6, 8.89, and 12, respectively (see also Fig. 1). Error bars indicate 99% confidence intervals. The data for the BPOSD and Tesseract decoders are taken from [21]. GARI-NMS uses a normalization factor of 0.9921875, and ensemble decoders for distances 10 and 12 use 48 GARI-MP decoders in parallel.
+
+DZ, and bottom-part units were implemented independently using Vivado 2021.2.
+The serial DX and DZ processing units employ 10 pipeline stages and operate at a maximum clock frequency of 357 MHz. This corresponds to a clock period of 2.8 ns, with 60% of the delay due to routing and 40% to logic gates. Consequently, the per-iteration delay is 2.22 µs for DX and 2.62 µs for DZ . For the bottom part processing unit, the maximum clock frequency is over 20 times lower than that of the serial units, due to the high degree of parallelism and the absence of pipelining. The total delay for processing both layers is 272 ns, with 80% of the delay due to the routing. The total delay per iteration for the GARI MP architecture is the sum of the maximum delay of DX and DZ units (which run concurrently), and the delay of the layered bottom part unit. This results in a total per-iteration delay of 2.9 µs. We note that, in practice, a fully integrated design with proper clock-domain crossing is expected to achieve similar decoding latency, with only negligible overhead due to synchronization. In addition, if multi-FPGA is required, high-speed transceivers such as GTY included in V19P, with 4.5 Tb/s of bandwidth and tens of nanoseconds of latency in raw mode can be used to preserve the timing behaviour of the independently implemented modules.
+Assuming a time budget of 1 µs per syndrome measurement round [23], and given that decoding is performed across a number of rounds equal to the code distance, the resulting time budget for decoding the BB code under test is 12 µs. Hence, on average, slightly more than four decoding iterations can be accommodated within the
+
+11
+
+TABLE II: Average number of decoding iterations performed by GARI-NMS (s = 1) and GARI-NMS-ensemble (ensemble size s = 24) decoders.
+
+PER
+
+[[72,12,6]] s=1
+
+[[90,8,10]] s = 1 s = 24
+
+[[144,12,12]] s = 1 s = 24
+
+0.001 1.36 1.75 1.04 2.28 1.13
+
+0.002 2.26 3.32 1.56 4.13 2.2
+
+0.003 3.72 5.93 2.71 6.51 3.53
+
+0.004 6.64 11.5 4.61 11.97 5.31
+
+0.005 13.89 25.33 8.94 25.25 9.18
+
+0.006 29.31 55.37 22.49 57.38 20.79
+
+given time budget. According to the average number of decoding iterations reported in Table II, the GARI MP ensemble decoder operates in real-time (i.e., within the specified time budget) for physical error rates below 0.003.
+We also define the per-round decoding latency as the decoding latency (i.e., number of iterations multiplied by the per-iteration latency) divided by the number of syndrome measurement rounds. For a physical error rate of 0.001, considering the average number of decoding iterations reported in Table II, the resulting per-round average decoding latency is 1.13 × 2900/12 = 273 ns. Moreover, Fig. 6 shows that, at the same physical error rate, more than 99.99% of decoding runs complete within the 1 µs per-round time budget.
+We also note that our decoder has a worst-case latency corresponding to the situation in which it reaches the maximum of 400 decoding iterations, which occurs with a probability approximately equal to the logical error rate (it is also possible for the decoder to converge on the very last iteration, but this is rare, as suggested by Fig. 6). However, we did not attempt to optimize the maximum number of iterations, and similar accuracy could likely be achieved with a much lower maximum number of decoding iterations (Fig. 6 again provides some supporting evidence for this). Moreover, for decoders with variable latency, it has been shown in Ref. [54] (see also the analysis in Ref. [55]) that even when the worstcase latency exceeds the available time budget, the backlog problem [22, 23] can be avoided, provided that the decoding latency tail is not too long and occurs with sufficiently low probability.
+If even lower latency is desired in an FPGA implementation, different optimizations can be explored. Firstly, the latency in our architecture is primarily limited by the DX and DZ units, due to the sequential updates imposed by the serial schedule. One possible approach to reduce this latency is to divide the DX and DZ submatrices into layers, allowing more checks to be updated in parallel without compromising accuracy. This approach requires a careful balance between the FPGA’s logic and memory resources, the desired speedup, and scalability with the code distance. In addition, quantization improvements could be explored to reduce the number of bits used to represent the exchanged messages in serial
+
+Normalized Bincount
+
+100
+
+iter=4, CDF=0.99992
+
+10 1
+
+10 2
+
+10 3
+
+CDF@4 = 0.99992
+
+10 4
+
+10 5
+
+10 6
+1 2 3 4 It5eratio6n 7 8 9 10
+
+Fig. 6: Percentage of decoding runs (y-axis) converging at a given iteration number (x-axis) for the BB code [[144,12,12]] at a physical error rate of 10−3. On the x-axis, only the first 10 iterations out of 400 are shown for clarity. The vertical dashed line shows the cut-off iteration number (4 iterations) to stay within the per-round time budget of 1 µs. The figure shows that in 99.992% of decoding runs complete within the considered time budget. See also Appendix 2 for the tail distribution of the number of decoding iterations.
+
+and layered decoders, which is currently set to 12 bits to achieve accuracy close to that of a floating-point implementation. Also, compression techniques applied to the exchanged messages [56] or simplifications on the check node [57, 58] can be explored to reduce the delay derived from routing or logic, respectively.
+Finally, we note that, using the same 16nm technology for ASIC, it is reasonable to expect, with the same design and without any further optimization, at least a three times speedup [59].
+IV. DISCUSSION
+We presented a method to effectively account for correlations between Pauli errors in the detector error model, via graph augmentation and rewiring for inference. The proposed method, GARI, eliminates the 4-cycles introduced by Y errors in the correlated detector error model matrix DXY Z , thereby shifting decoding to an augmented matrix DXY Z designed to support MP decoding more effectively. We then identified and explored the MP decoder design choices to better leverage GARI, proposing the use of an NMS decoder with a hybrid serial-layered schedule that supports a hardware-efficient architecture. Coupling GARI-NMS decoding with a randomized ensemble approach improved accuracy by approximately 20× over BPOSD, achieving a logical error rate per round of (6.70 ± 1.93) × 10−9 at a physical error rate of 10−3 for the BB code [[144, 12, 12]] under uniform depolarizing circuit-level noise.
+Finally, we investigated the FPGA implementation of our decoder and showed that, for the above BB code and
+
+12
+
+physical error rate, our method achieves an average perround decoding latency of 273 ns and sub-microsecond latency in 99.99% of the decoding instances. Thus, it sets a new benchmark for high-accuracy, real-time decoders and opens the way to their practical realization in faulttolerant quantum computing systems.
+It might seem that belief (message-passing) is all we need, but this would be a hasty conclusion. MP decoders are not guaranteed to work at arbitrarily large distances and may exhibit error floors at low physical/logical error rates. However, our results provide strong evidence that they can perform effectively at practically relevant distances. Moreover, a positive outcome from our simulations is that most decoding failures are due to nonconvergence of the NMS decoder (i.e., the decoder failing to find an error that satisfies the syndrome), rather than incorrect error predictions. This may help eliminate error floors at lower error rates (if any) through postprocessing. Indeed, in cases of non-convergence, postprocessing could improve accuracy without significantly increasing the average decoding latency, since it would only be required once in a million or billion decoding samples.
+We also believe that the proposed GARI approach can serve as a framework accommodating further optimizations and trade-offs, some of which have been discussed throughout the paper, and which we summarize and discuss further below.
+Decoding graph optimizations: As discussed in Section II A 2, the GARI transform can be further applied to eliminate 4-cycles from DX and DZ matrices. This optimization, not pursued in this work, could further improve the convergence and accuracy of MP decoders and may become important when decoding larger distances, as the number of 4-cycles in DX and DZ increases with the code distance.
+MP decoding optimizations: We may also consider more sophisticated MP-based decoders operating on the GARI matrix DXY Z , such as memory-BP [37, 60], RelayBP [40], machine-learned MP [61]. Decoders that use an MP decoder as a first stage, such as [62–65], could also benefit from the GARI framework.
+Ensemble decoding optimizations: Our ensemble decoding approach is based on the randomization of the serial schedule. Alternatively, ensemble decoding approaches based on multiple message-update rules can also be considered, e.g., through the use of randomized normalization factors or NS-FAID decoders [48].
+Hardware and architectural optimizations: To further reduce latency, layered decoding can also be applied to DX and DZ matrices, which first requires a careful search for a suitable layer decomposition (see Section III B). The layered decoding can then be combined with random scheduling of layers [66], instead of one row at a time. This may also help balance the decoding latency between the top (DX , DZ ) and the bottom parts of DXY Z , which could be further exploited through pipelining and resource sharing as discussed in Section II C.
+
+Finally, we note recent advances in quantum computing with neutral atoms [67, 68] – particularly the implementation of transversal gates enabling low-overhead fault tolerance [69] and the development of fast correlated decoding protocols [70–72] – which have shown considerable promise. However, the application of efficient MP decoders to address correlated errors in this context remains largely unexplored. We believe that the GARI framework can be adapted to effectively address such correlated errors in logical quantum computations.
+APPENDIX
+1. Message Update Schedules
+Besides the update rules used to compute the exchanged messages, a key component of the MP decoder is the message update schedule, which specifies the order in which exchanged messages are updated and passed to their neighbors. While the time complexity of a single MP decoding iteration is linear in the size of the decoding graph, regardless of the message update schedule, the choice of the schedule can affect the parallelization of message updates and the convergence speed, thus playing an important role in the achievable latency.
+In the flooding (or parallel) schedule, all nodes of the same type update their outgoing messages in parallel, alternating between error nodes and check nodes at each demi-iteration. The flooding schedule matches fully parallel implementations, enabling high speed but requiring substantial hardware resources and potentially facing routing and interconnect congestion issues [49].
+In the serial schedule, message updates are performed sequentially over a given type of nodes. The serial schedule can be vertical, when updates are sequentialized over error nodes (i.e., column-wise), or horizontal, when updates are sequentialized over check nodes (i.e., row-wise). The serial schedule corresponds to a fully serial implementation, minimizing hardware resources but increasing decoding latency.
+The layered schedule updates messages layer by layer (see below), combining parallelism within each layer with sequential updates across layers. Depending on the vertical or horizontal variant, a layer consists of a set of error nodes (columns) or check nodes (rows) that do not share common neighbors (i.e., are non-intersecting), enabling efficient parallelization of message updates within the layer. By combining parallelism and sequential updates, the layered schedule is the natural choice for a partly parallel implementation, offering a balance between speed and hardware complexity [49].
+For classical LDPC codes, the flooding schedule generally achieves the same accuracy as the serial and layered schedules but requires roughly twice as many iterations to converge [73]. For QLDPC codes, however, the flooding schedule may fall well short of the decoding accuracy of the serial or layered schedules, even with significantly more iterations [25, 66]. Additionally, serial and layered schedules may be randomized, further improving
+
+13
+
+the decoding performance [66, 74]. In a randomized serial (or layered) schedule, message updates are performed sequentially over the nodes (or layers) in an order randomly chosen at each decoding iteration. The asymmetry introduced by such randomization may help the decoder break the symmetry or cyclic dependencies that trap it in persistent or repetitive error patterns, thus improving convergence and overall decoding performance.
+2. Tail Distribution of the Number of Decoding Iterations
+Fig. 7 shows the tail distribution function (i.e., the complementary cumulative distribution function, 1 − CDF, ) of the number of decoding iterations for the BB code [[144,12,12]] at a physical error rate of 10−3. We illustrate the tail distribution up to 20 decoding iterations.
+3. BPOSD Tuning
+Here, we discuss simulation results for the order-zero BPOSD operating on the DZ and DXY Z matrices.
+For the distance-6 BB code, when the parallel (flooded) scheduling is used for the underlying MP decoder, it was observed in [21, Appendix A] that uncorrelated BPOSD is significantly more accurate than correlated BPOSD, that is BPOSD performs better when operating on DZ than DXY Z . We reproduce these results in Fig. 8(a), and provide similar results for BB codes with distances 10 and 12 in Fig. 8(b)-(c) – see orange curves, corresponding to parallel scheduling.
+Additionally, we perform simulations using a randomized serial scheduling (blue curves), and observe a significant improvement in the BPOSD performance, for both DZ and DXY Z matrices.
+Interestingly, for the distance-6 BB code, BPOSD with randomized serial scheduling performs significantly better on DXY Z than on DZ . Thus, accuracy results included in the main text for comparison purposes correspond to the dashed blue curve in Fig. 8(a).
+For BB codes with distances 10 and 12, BPOSD with serial scheduling outperforms parallel scheduling at higher physical error rates. However, the performance gap diminishes, and may even reverse, at lower physical error rates, as shown in Fig. 8(b) and (c). As BPOSD with randomized serial scheduling on DZ achieves the best performance and exhibits a steeper slope in the lowerror-rate regime, we adopt this variant of the decoder as a baseline for comparison with our method in Section III A, for BB codes with distances 10 and 12.
+Finally, we note that all simulation results in Fig. 8 use an NMS decoder, with the normalization factor optimized for the best performance under the considered scheduling. Specifically, we use a normalization factor of 1.0 for parallel scheduling and 0.625 for serial scheduling. The maximum number of decoding iterations is set to 30, as we observed that a larger number of iterations degrades performance at low physical error rates due to the erratic behavior of the NMS decoder in case of nonconvergence.
+
+1 - CDF
+
+10 1
+
+1 - CDF
+
+fit: y = C+exp(-(x/ )^ ), C=1.23e-06, =0.0224, =0.432
+
+10 2
+
+iter=4, CDF=0.99992
+
+10 3
+
+10 4
+
+10 5
+
+10 6
+1 2 3 4 5 6 7 8 9Ite1r0at1i1on12 13 14 15 16 17 18 19 20
+
+Fig. 7: Tail distribution (1 − CDF) of the number of decoding iterations for the BB code [[144,12,12]] at a physical error rate of 10−3. On the x-axis, only the first 20 iterations out of 400 are shown for clarity. The vertical dashed line shows the cut-off iteration number (4 iterations) to stay within the per-round time budget of 1 µs. The figure shows that the tail distribution decays exponentially, plateaus at around iteration 10 and has a long tail, thus showing that running more iterations does not improve the convergence further. Moreover, already at iteration 4, 99.992% of decoding runs are completed to stay within the considered time budget.
+
+DATA AVAILABILITY
+The simulation data generated in this study has been deposited in the Zenodo database and is available at [75].
+CODE AVAILABILITY
+The code used to generate the GARI matrices and perform the numerical simulations in this paper is available at [76]
+ACKNOWLEDGMENTS
+We thank Tristan Mu¨ller for helpful discussion regarding simulations of the Relay-BP decoder. We also thank Laleh Aghababaie Beni, Noah Shutty and Oscar Higgott for helpful discussions and sharing Tesseract decoder data with us. We thank Timo Hillmann for the discussion on the challenges of decoding correlated errors using BPOSD.
+A. S. Maan and A. Paler acknowledge funding from the Defense Advanced Research Projects Agency [under the Quantum Benchmarking (QB) program, contracts no. HR00112230006 and HR001121S0026], and the QuantERA grant EQUIP through the Academy of Finland, decision number 352188. The views, opinions and/or findings expressed are those of the author(s) and should not be interpreted as representing the official views or policies of the Department of Defense or the U.S. Government.
+
+14
+
+10 1
+
+10 1
+
+10 2
+
+10 2
+
+Logical Error Rate Per Round Logical Error Rate Per Round
+Logical Error Rate Per Round
+
+10 3 10 4 10 5
+10 3
+
+DXYZ -BPOSD (parallel) DZ -BPOSD (parallel) DDXZY-ZB-PBOPSODSD(s(esreiarli)al)
+
+2 × 10 3 3 × 10 3 4 × 10 3
+Physical Error Rate
+
+6 × 10 3
+
+(a) [[72,12,6]] code
+
+10 3 10 4 10 5 10 6
+10 3
+
+DXYZ -BPOSD (parallel) DZ -BPOSD (parallel) DDXZY-ZB-PBOPSODSD(s(esreiarli)al)
+
+2 × 10 3 3 × 10 3 4 × 10 3
+Physical Error Rate
+
+6 × 10 3
+
+(b) [[90,8,10]] code
+
+10 1
+
+10 2
+
+10 3
+
+10 4
+
+10 5
+
+10 6 10 7
+10 3
+
+DXYZ -BPOSD (parallel) DZ -BPOSD (parallel) DDXZY-ZB-PBOPSODSD(s(esreiarli)al)
+
+2 × 10 3 3 × 10 3 4 × 10 3
+Physical Error Rate
+
+6 × 10 3
+
+(c) [[144,12,12]] code
+
+Fig. 8: Logical error rate performance of BPOSD decoder running on DZ and DXY Z matrices, with either parallel or serial schedule, for BB codes under uniform depolarizing circuit level noise. Error bars indicate 99% confidence intervals. See discussion in the text.
+
+F. Garcia-Herrero acknowledges support from the project PID2023-147059OB-I00 funded by MCIU/ AEI/ 10.13039/501100011033/ FEDER. UE. His work was also partially funded by a grant from Google Quantum AI.
+V. Savin acknowledges support from the Plan France 2030, project no. ANR-22-PETQ-0006 (NISQ2LSQ) and Programme d’investissement d’avenir, IRT Nanoelec, project no. ANR-10-AIRT-05 (Q-Loop).
+The calculations presented above were performed using computer resources within the Aalto University School of Science “Science-IT” project. We acknowledge the EuroHPC Joint Undertaking for awarding this project access to the EuroHPC supercomputer LUMI, hosted by CSC (Finland) and the LUMI consortium through a EuroHPC Regular Access call.
+
+AUTHOR CONTRIBUTIONS
+ASM and AP observed that serial scheduling improves BPOSD performance for the correlated detector error model. VS, ASM and FMGH collaborated on the development of GARI decoding during an EQUIP meeting in Madrid, where ASM highlighted the regular structure of the decoding matrices, VS contributed the GARI decoding formulation, and FMGH noted the FPGA compatibility of the approach. FMGH introduced the ensemble decoding and the layered decoding methods, while ASM, VS and AP refined the ensemble method. The software implementation of the decoder was developed by ASM and FMGH, and the hardware implementation by FMGH. ASM tuned the decoder and ran the numerical simulations. VS was responsible for the writing of the
+
+15
+manuscript, and all other authors provided input and revisions. AP and VS verified the results.
+COMPETING INTERESTS The authors declare no competing interests.
+
+[1] D. Gottesman, Fault-tolerant quantum computation with constant overhead, Quantum Info. Comput. 14, 1338–1372 (2014).
+[2] S. Bravyi, D. Poulin, and B. Terhal, Tradeoffs for reliable quantum information storage in 2D systems, Physical review letters 104, 050503 (2010).
+[3] A. A. Kovalev and L. P. Pryadko, Quantum kronecker sum-product low-density parity-check codes with finite rate, Phys. Rev. A 88, 012311 (2013).
+[4] J.-P. Tillich and G. Zemor, Quantum LDPC codes with positive rate and minimum distance proportional to n1/2, IEEE Trans. Inform. Theory 60, 1193 (2014), 0903.0566 [quant-ph].
+[5] N. P. Breuckmann and J. N. Eberhardt, Balanced product quantum codes, IEEE Trans. Inform. Theory 67, 6653–6674 (2021).
+[6] P. Panteleev and G. Kalachev, Degenerate quantum LDPC codes with good finite length performance, Quantum 5, 585 (2021).
+[7] P. Panteleev and G. Kalachev, Quantum LDPC codes with almost linear minimum distance, IEEE Trans. Inform. Theory 68, 213 (2022).
+[8] H.-K. Lin and L. P. Pryadko, Quantum two-block group algebra codes, Phys. Rev. A 109, 022407 (2024).
+[9] M. Pacenti, D. Chytas, and B. Vasi´c, Construction and decoding of quantum margulis codes, arXiv preprint arXiv:2503.03936 (2025).
+[10] P. Panteleev and G. Kalachev, Asymptotically good quantum and locally testable classical LDPC codes, in in Proc. 54th Ann. ACM SIGACT Symp. Theory of Computing (2022) p. 375–388.
+[11] A. Leverrier and G. Z´emor, Quantum Tanner codes, in IEEE 63rd Ann. Symp. on Foundations of Comp. Science (IEEE, 2022) pp. 872–883.
+[12] I. Dinur, M.-H. Hsieh, T.-C. Lin, and T. Vidick, Good quantum LDPC codes with linear time decoders, in Proceedings of the 55th annual ACM symposium on theory of computing (2023) pp. 905–918.
+[13] S. Bravyi, A. W. Cross, J. M. Gambetta, D. Maslov, P. Rall, and T. J. Yoder, High-threshold and lowoverhead fault-tolerant quantum memory, Nature 627, 778 (2024).
+[14] V. Steffan, S. H. Choe, N. P. Breuckmann, F. R. F. Pereira, and J. N. Eberhardt, Tile codes: High-efficiency quantum codes on a lattice with boundary, arXiv preprint arXiv:2504.09171 (2025).
+[15] V. Savin, LDPC decoders, in Channel coding: Theory, algorithms, and applications, edited by D. Declercq, M. Fossorier, and E. Biglieri (Elsevier, 2014) pp. 211–260.
+[16] F. R. Kschischang, B. J. Frey, and H.-A. Loeliger, Factor graphs and the sum-product algorithm, IEEE Transactions on Information Theory 47, 498 (2001).
+
+[17] M. Mezard and A. Montanari, Information, physics, and computation (Oxford University Press, 2009).
+[18] N. Wiberg, Codes and decoding on general graphs, Ph.D. thesis, Link¨oping University Electronic Press (1996).
+[19] B. Vasic, V. Savin, M. Pacenti, S. Borah, and N. Raveendran, Quantum low-density parity-check codes, arXiv preprint arXiv:2510.14090 (2025).
+[20] N. Raveendran and B. Vasi´c, Trapping sets of quantum LDPC codes, Quantum 5, 562 (2021).
+[21] L. A. Beni, O. Higgott, and N. Shutty, Tesseract: A search-based decoder for quantum error correction, arXiv preprint arXiv:2503.10988 (2025).
+[22] B. M. Terhal, Quantum error correction for quantum memories, Rev. Mod. Phys. 87, 307 (2015).
+[23] F. Battistel, C. Chamberland, K. Johar, R. W. J. Overwater, F. Sebastiano, L. Skoric, Y. Ueno, and M. Usman, Real-time decoding for fault-tolerant quantum computing: progress, challenges and outlook, Nano Futures 7, 032003 (2023).
+[24] Y. Wang, Y. Wang, Y.-A. Chen, W. Zhang, T. Zhang, J. Hu, W. Chen, Y. Gu, and Z.-W. Liu, Efficient faulttolerant implementations of non-Clifford gates with reconfigurable atom arrays, npj Quantum Information 10, 136 (2024).
+[25] J. Du Crest, M. Mhalla, and V. Savin, Stabilizer inactivation for message-passing decoding of quantum LDPC codes, in 2022 IEEE Information Theory Workshop (ITW) (IEEE, 2022) pp. 488–493.
+[26] J. Roffe, D. R. White, S. Burton, and E. Campbell, Decoding across the quantum low-density parity-check code landscape, Physical Review Research 2, 043423 (2020).
+[27] J. du Crest, F. Garcia-Herrero, M. Mhalla, V. Savin, and J. Valls, Check-agnosia based post-processor for messagepassing decoding of quantum LDPC codes, Quantum 8, 1334 (2024).
+[28] J. V. Coquillat, F. G. Herrero, N. Raveendran, and B. Vasi´c, Syndrome-based min-sum vs OSD-0 decoders: FPGA implementation and analysis for quantum LDPC codes, IEEE Access 9, 138734 (2021).
+[29] T. Hillmann, L. Berent, A. O. Quintavalle, J. Eisert, R. Wille, and J. Roffe, Localized statistics decoding for quantum low-density parity-check codes, Nature Communications 16, 8214 (2025).
+[30] A. deMarti iOlius, I. Etxezarreta Martinez, J. Roffe, and J. Etxezarreta Martinez, An almost-linear time decoding algorithm for quantum ldpc codes under circuit-level noise, arXiv preprint arXiv:2409.01440 (2024).
+[31] A. deMarti iOlius and J. Etxezarreta Martinez, The closed-branch decoder for quantum LDPC codes, arXiv preprint arXiv:2402.01532 (2024).
+[32] S. Wolanski and B. Barber, Ambiguity clustering: an accurate and efficient decoder for qLDPC codes, arXiv preprint arXiv:2406.14527 (2024).
+
+16
+
+[33] A. Gong, S. Cammerer, and J. M. Renes, Toward lowlatency iterative decoding of QLDPC codes under circuitlevel noise, arXiv preprint arXiv:2403.18901 (2024).
+[34] M. Bhattacharyya and A. Raina, Decoding quantum LDPC codes using collaborative check node removal, arXiv preprint arXiv:2501.08036 (2025).
+[35] K. Yin, X. Fang, J. Ruan, H. Zhang, D. Tullsen, A. Sornborger, C. Liu, A. Li, T. Humble, and Y. Ding, Symbreak: Mitigating quantum degeneracy issues in QLDPC code decoders by breaking symmetry, arXiv preprint arXiv:2412.02885 (2024).
+[36] K.-Y. Kuo and C.-Y. Lai, Refined belief propagation decoding of sparse-graph quantum codes, IEEE J. on Sel. Areas in Inform. Theory 1, 487–498 (2020).
+[37] K.-Y. Kuo and C.-Y. Lai, Exploiting degeneracy in belief propagation decoding of quantum codes, npj Quantum Information 8, 111 (2022).
+[38] D. Chytas, N. Raveendran, and B. Vasic, Enhanced minsum decoding of quantum codes using previous iteration dynamics, arXiv:2501.05021 (2025).
+[39] S. Koutsioumpas, H. Sayginel, M. Webster, and D. E. Browne, Automorphism ensemble decoding of quantum ldpc codes, arXiv preprint arXiv:2503.01738 (2025).
+[40] T. Mu¨ller, T. Alexander, M. E. Beverland, M. Bu¨hler, B. R. Johnson, T. Maurer, and D. Vandeth, Improved belief propagation is sufficient for real-time decoding of quantum memory, arXiv preprint arXiv:2506.01779 (2025).
+[41] M. Wang, A. Li, and F. Mueller, Fully parallelized bp decoding for quantum ldpc codes can outperform bp-osd, arXiv preprint arXiv:2507.00254 (2025).
+[42] K. R. Ott, B. Het´enyi, and M. E. Beverland, Decisiontree decoders for general quantum ldpc codes, arXiv preprint arXiv:2502.16408 (2025).
+[43] P.-J. H. Derks, A. Townsend-Teague, A. G. Burchards, and J. Eisert, Designing fault-tolerant circuits using detector error models, arXiv preprint arXiv:2407.13826 (2024).
+[44] O. Higgott, Practical and Efficient Quantum Error Correction, Ph.D. thesis, UCL (University College London) (2024).
+[45] J. S. Yedidia, J. Chen, and M. P. Fossorier, Generating code representations suitable for belief propagation decoding, in Proceedings of the annual Allerton Conference on Communication Control and Computing, Vol. 40 (2002) pp. 447–456.
+[46] M. Fossorier, Polar codes: Graph representation and duality, IEEE Communications Letters 19, 1484 (2015).
+[47] J. Chen and H. Wasserman, Reduced-complexity decoding of LDPC codes, IEEE Transactions on Communications 53, 1288 (2005).
+[48] T. T. Nguyen-Ly, V. Savin, K. Le, D. Declercq, F. Ghaffari, and O. Boncalo, Analysis and design of costeffective, high-throughput ldpc decoders, IEEE Transactions on Very Large Scale Integration (VLSI) Systems 26, 508 (2017).
+[49] E. Boutillon and G. Masera, Hardware design and realization for iteratively decodable codes, in Channel coding: Theory, algorithms, and applications, edited by D. Declercq, M. Fossorier, and E. Biglieri (Elsevier, 2014) pp. 583–642.
+[50] C. Gidney, Stim: a fast stabilizer circuit simulator, Quantum 5, 497 (2021).
+
+[51] J. Roffe, LDPC: Python tools for low density parity check codes (2022).
+[52] T. Mu¨ller, T. Alexander, M. E. Beverland, M. Bu¨hler, B. R. Johnson, T. Maurer, and D. Vandeth, Relay-BP repository, https://github.com/trmue/relay (2025).
+[53] L. A. Beni, O. Higgott, and N. Shutty, Tesseract decoder repository, https://github.com/quantumlib/ tesseract-decoder (2025).
+[54] Google Quantum AI and Collaborators, Quantum error correction below the surface code threshold, Nature 638, 920 (2025).
+[55] S. Maurya, T. Maurer, M. Bu¨hler, D. Vandeth, and M. E. Beverland, FPGA-tailored algorithms for realtime decoding of quantum LDPC codes, arXiv preprint arXiv:2511.21660 (2025).
+[56] E. Mostafapour, C. Ghobadi, and J. Nourinia, Effect of coarsely quantization on next generation systems with low-density parity check codes, Results in Engineering 27, 105743 (2025).
+[57] D. Declercq, Second minimum approximation for minsum decoders suitable for high-rate LDPC codes, Circuits, Systems, and Signal Processing 38, 5068 (2019).
+[58] V. L. Petrovi´c and D. M. El Mezeni, ReducedComplexity Offset Min-Sum Based Layered Decoding for 5G LDPC Codes, in 2020 28th Telecommunications Forum (TELFOR) (2020) pp. 1–4.
+[59] I. Kuon and J. Rose, Measuring the Gap Between FPGAs and ASICs, IEEE Transactions on Computer-Aided Design of Integrated Circuits and Systems 26, 203 (2007).
+[60] J. Chen, Z. Yi, Z. Liang, and X. Wang, Improved belief propagation decoding algorithms for surface codes, IEEE Transactions on Quantum Engineering (2025).
+[61] A. S. Maan and A. Paler, Machine learning messagepassing for the scalable decoding of qldpc codes, npj Quantum Information 11, 78 (2025).
+[62] B. Criger and I. Ashraf, Multi-path summation for decoding 2d topological codes, Quantum 2, 102 (2018).
+[63] O. Higgott, T. C. Bohdanowicz, A. Kubica, S. T. Flammia, and E. T. Campbell, Improved decoding of circuit noise and fragile boundaries of tailored surface codes, Physical Review X 13, 031007 (2023).
+[64] Y. Wu, B. Li, K. Chang, S. Puri, and L. Zhong, Minimum-weight parity factor decoder for quantum error correction, arXiv preprint arXiv:2508.04969 (2025).
+[65] L. Caune, B. Reid, J. Camps, and E. Campbell, Belief propagation as a partial decoder, arXiv preprint arXiv:2306.17142 (2023).
+[66] J. Du Crest, F. Garcia-Herrero, M. Mhalla, V. Savin, and J. Valls, Layered decoding of quantum LDPC codes, in 2023 12th International Symposium on Topics in Coding (ISTC) (IEEE, 2023) pp. 1–5.
+[67] D. Bluvstein, S. J. Evered, A. A. Geim, S. H. Li, H. Zhou, T. Manovitz, S. Ebadi, M. Cain, M. Kalinowski, D. Hangleiter, et al., Logical quantum processor based on reconfigurable atom arrays, Nature 626, 58 (2024).
+[68] H. J. Manetsch, G. Nomura, E. Bataille, X. Lv, K. H. Leung, and M. Endres, A tweezer array with 6100 highly coherent atomic qubits, Nature , 1 (2025).
+[69] H. Zhou, C. Zhao, M. Cain, D. Bluvstein, C. Duckering, H.-Y. Hu, S.-T. Wang, A. Kubica, and M. D. Lukin, Algorithmic fault tolerance for fast quantum computing, arXiv preprint arXiv:2406.17653 (2024).
+[70] M. Cain, C. Zhao, H. Zhou, N. Meister, J. P. B. Ataides, A. Jaffe, D. Bluvstein, and M. D. Lukin, Correlated de-
+
+17
+
+coding of logical algorithms with transversal gates, Physical Review Letters 133, 240602 (2024). [71] M. Cain, D. Bluvstein, C. Zhao, S. Gu, N. Maskara, M. Kalinowski, A. A. Geim, A. Kubica, M. D. Lukin, and H. Zhou, Fast correlated decoding of transversal logical algorithms, arXiv preprint arXiv:2505.13587 (2025). [72] M. Serra-Peralta, M. H. Shaw, and B. M. Terhal, Decoding across transversal clifford gates in the surface code, arXiv preprint arXiv:2505.13599 (2025). [73] J. Zhang, Y. Wang, M. P. Fossorier, and J. S. Yedidia, Iterative decoding with replicas, IEEE Transactions on Information Theory 53, 1644 (2007).
+
+[74] S. Koutsioumpas, T. Noszko, H. Sayginel, M. Webster, and J. Roffe, Colour codes reach surface code performance using vibe decoding, arXiv preprint arXiv:2508.15743 (2025).
+[75] A. S. Maan, F. Garcia-Herrero, A. Paler, and V. Savin, Decoding correlated errors in quantum ldpc codes, 10.5281/zenodo.17991975 (2025).
+[76] A. S. Maan, F. Garcia-Herrero, A. Paler, and V. Savin, Github Repository, https://github.com/ astra-decoders/gari-nms (2025).
+
+

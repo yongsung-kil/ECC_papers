@@ -1,0 +1,702 @@
+2025 14th International ITG Conference on Systems, Communications and Coding (SCC) | 979-8-3315-2289-6/25/$31.00 ©2025 IEEE | DOI: 10.1109/IEEECONF62907.2025.10949115
+
+2025 14th International ITG Conference on Systems, Communications and Coding (SCC)
+
+Spiking Neural Belief Propagation Decoder for LDPC Codes with Small Variable Node Degrees
+Alexander von Bank, Eike-Manuel Edelmann, Jonathan Mandelbaum, and Laurent Schmalen Communications Engineering Lab, Karlsruhe Institute of Technology, 76187 Karlsruhe, Germany
+(email: {alexander.bank, edelmann, jonathan.mandelbaum, laurent.schmalen}@kit.edu)
+
+Abstract—Spiking neural networks (SNNs) promise energyefficient data processing by imitating the event-based behavior of biological neurons. In previous work, we introduced the enlarge-likelihood-each-notable-amplitude spikingneural-network (ELENA-SNN) decoder, a novel decoding algorithm for low-density parity-check (LDPC) codes. The decoder integrates SNNs into belief propagation (BP) decoding by approximating the check node (CN) update equation using SNNs. However, when decoding LDPC codes with a small variable node (VN) degree, the approximation gets too rough, and the ELENASNN decoder does not yield good results. This paper introduces the multi-level ELENA-SNN (ML-ELENA-SNN) decoder, which is an extension of the ELENA-SNN decoder. Instead of a single SNN approximating the CN update, multiple SNNs are applied in parallel, resulting in a higher resolution and higher dynamic range of the exchanged messages. We show that the ML-ELENASNN decoder performs similarly to the ubiquitous normalized min-sum decoder for the (38400, 30720) regular LDPC code with a VN degree of dv = 3 and a CN degree of dc = 15.
+Index Terms—BP Decoding, LDPC codes, regular LDPC codes, spiking neural networks
+I. INTRODUCTION
+Low-density parity-check (LDPC) codes are forward errorcorrecting codes that have been integrated into various modern communication standards, such as 5G and WLAN, due to their excellent error-correction capabilities when using iterative message-passing decoding, often known as belief propagation (BP) decoding. In particular, the sum-product algorithm (SPA) together with LDPC codes can achieve performance close to the channel capacity [1]. However, the SPA involves computationally demanding check node (CN) updates [2]. To reduce this complexity, simplified methods like the min-sum (MS) algorithm [3], the normalized MS (NMS) algorithm [4], and differential decoding with binary message passing (DDBMP) [5] have been proposed. In [6], it was shown that suppressing small values during MS decoding can boost performance. By integrating memory into the decoding procedure, the decoding performance of the SPA and MS decoder can be further enhanced [7].
+One of the most powerful and efficient processing units is the human brain, solving challenging real-world problems while only consuming roughly 25 W of power. Neuromorphic
+This work has received funding from the European Research Council (ERC) under the European Union’s Horizon 2020 research and innovation program (grant agreement No. 101001899). Parts of this work were carried out in the framework of the CELTIC-NEXT project AI-NET-ANTILLAS (C2019/33) (grant agreement 16KIS1316) and within the project Open6GHub (grant agreement 16KISK010) funded by the German Federal Ministry of Education and Research (BMBF).
+
+engineering tries to build scalable, low-power systems by implementing the essential features of the brain, allowing an efficient emulation of brain-inspired neural networks [8]. Most recent neuromorphic hardware emulates spiking neural networks (SNNs) [9], [10], which mimic the event-based behavior of biological neurons [11, pp. 12,13].
+In [12], we introduced the enlarge-likelihood-each-notableamplitude spiking-neural-network (ELENA-SNN) decoder, which approximates computational heavy parts of the SPA decoder by SNNs. While a threshold operation suppresses messages with small amplitudes in an all-or-nothing manner, spiking neurons introduce memory to the decoder; both can enhance the decoding performance. In [12], two binary (N, k) LDPC codes, which encode k data bits into N code bits, were used: the (273, 191) and (1023, 781) finite-geometry (FG) LDPC codes. For both codes, we showed that the ELENASNN decoder achieves approximately the performance of the NMS decoder with successive relaxation (SR), outperforming other complexity-reduced versions of the SPA decoder and even outperforming the SPA decoder in high SNR regimes [12]. To the best of our knowledge, the ELENA-SNN decoder is the first SNN-based decoder.
+However, we observed that the ELENA-SNN decoder yields poor results when decoding LDPC codes with low variable node (VN) degrees. The combination of the threshold operation and the low VN degrees leads to a low dynamic range and low resolution of the messages.
+This paper expands the ELENA-SNN decoder to the multilevel ELENA-SNN (ML-ELENA-SNN) decoder. Multiple thresholds are used instead of a single threshold, introducing a finer granularity of the message levels and a wider dynamic range of the messages. For an LDPC code with low VN degree dv = 3, we show that the ML-ELENA-SNN decoder performs close to the NMS decoder, while the ELENA-SNN decoder does not show competitive performance. The code for reproducing the results is available at [13].
+II. SPIKING NEURAL NETWORKS
+SNNs are networks of interconnected, spiking neurons with a state which try to mimic the event-based signal processing of the mammalian brain. The exchange of information between the neurons consists of short, uniform pulses, so-called spikes. A sequence of spikes s(t) ∈ {0, 1} is called a spike train, where t ∈ R is the time. Like the biological neuron, a spiking neuron receives inputs, i.e., spike trains, from upstream
+
+979-8-3315-2289-6/25/$31.00 ©2025 IEEE Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:07:23 UTC from IEEE Xplore. Restrictions apply.
+
+2025 14th International ITG Conference on Systems, Communications and Coding (SCC)
+
+sout(t) threshold vth
+
+v(t)
+
+i(t)
+
+sin(t)
+
+t
+
+Fig. 1: Example of the dynamics of an LIF neuron. The input spikes sin(t), denoted by purple dots, induce the synaptic current i(t), which charges the
+membrane potential v(t). If v(t) exceeds the threshold vth, an output spike sout(t) is fired, and v(t) is reset.
+
+connected neurons, processes those, and generates an output spike train sout(t) [11, p. 13]. The connection between two neurons is called a synapse and possesses a weight, which
+
+defines the strength of the connection [11, p. 14]. Hence, each incoming spike train sj(t) is scaled by a weight wj ∈ R, where sj(t) denotes the spike train received by the j-th upstream connected neuron and wj models the connecting synapse. The incoming spike trains induce the synaptic current i(t), which then charges the internal state of the neuron, the membrane potential v(t). In parallel, the neuron leaks towards its initial state vrest. Hence, the neuron can be described as a leaky integrator of its input signals [14]. If v(t) exceeds a fixed threshold vth, the neuron emits an output spike, and the membrane potential v(t) is reset to vrest. A widely used spiking neuron model is the leaky integrate-and-fire (LIF)
+
+neuron model since it captures the fundamental concepts of the
+
+biological neuron while being computationally attractive. At discrete time instants t = κ∆t, κ ∈ N, the discrete dynamics of the LIF neuron are [14]
+
+v[κ
+
++
+
+1]
+
+=
+
+v[κ]
+
+·
+
+e−
+
+∆t τm
+
++
+
+i[κ]
+
+·
+
+e−
+
+∆t τm
+
+,
+
+i[κ
+
++
+
+1]
+
+=
+
+i[κ]
+
+·
+
+e−
+
+∆t τs
+
++
+
+sj[κ]wj ,
+
+j
+
+where ∆t is the sampling time of the system, τm denotes the time constant describing the leakage of the membrane potential, and τs describes the temporal dynamics of the processes of the synapse. Output spikes are generated according to
+
+sout[κ] = Θ (v[κ] − vth) =
+
+1, 0,
+
+if v[κ] > vth , otherwise ,
+
+where Θ(·) denotes the Heaviside step function. If an output spike is generated, the state of the neuron is reset, i.e., v[κ] ← vrest. Fig. 1 shows an exemplary realization of the LIF neuron dynamics. Another common spiking neuron model is the leaky integrate (LI) neuron model. It exhibits the same temporal dynamics as the LIF neuron; however, the spiking functionality is deactivated. Hence, it does not generate an output spike, and the LI neuron acts as a temporary memory. In this paper, we use the PyTorch-based framework Norse [15] for the simulation of SNNs.
+
+III. BELIEF PROPAGATION DECODING
+We focus on the decoding of binary (N, k) LDPC codes. These LDPC codes are defined by the null space of a sparse
+
+parity-check matrix (PCM) H ∈ FM 2 ×N . The SPA operates on the Tanner graph, which is a bipartite graph associated
+with the PCM [16, pp. 51-59]. A Tanner graph contains two types of nodes: CNs cj, j ∈ {1, 2, . . . , M }, each representing a single parity check or a row of the PCM, and VNs vi, i ∈ {1, 2, . . . , N }, each associated with a code bit, corresponding to a column of the PCM. An edge between CN cj and VN vi exists if and only if Hj,i = 1. A regular (dv, dc) LDPC code is characterized by having dc non-zero entries in each row of the PCM and dv non-zero entries in each column of its PCM, where dc and dv denote the CN and VN degrees, respectively.
+Consider a codeword x = (x1, . . . , xN ) modulated using binary phase shift keying (BPSK) and transmitted over a
+binary-input additive white Gaussian noise (AWGN) channel, described as yi = (−1)xi + ni, with ni ∼ N (0, σ2).
+The bit-wise log-likelihood ratio (LLR) Li at the channel output, related to the i-th code bit, is defined as
+
+Li = log
+
+P (Yi = yi|Xi = 0) . P (Yi = yi|Xi = 1)
+
+(1)
+
+Next, we employ the SPA, in which messages are rep-
+
+resented as LLRs, iteratively updated in the nodes, and
+
+propagated along the edges of the Tanner graph. An SPA
+
+iteration using a flooding schedule involves the parallel update
+
+of all CN messages, followed by updating all VN mes-
+
+sages. The messages from VNs to CNs are initialized as Li[v→] j = Li, ∀j ∈ N (i), where L[iv→] j denotes the message sent from VN vi to CN cj and N (i) = {j : Hj,i = 1} is the set
+of indices of CNs connected to VN vi. First, the check-to-variable-node messages Li[c←] j
+are computed. The update equation [16, Eq. (2.17)] can be simplified, by splitting L[ic←] j into its absolute value αi[c←] j = |L[ic←] j | and its sign βi[c←] j = sign(L[ic←] j ), such that L[ic←] j = αi[c←] j βi[c←] j , ∀i ∈ M(j), with
+
+ αi[c←] j = 2 · tanh−1 
+
+tanh
+
+L[iv→ ] j 2
+
+ ,
+
+(2)
+
+i ∈M(j)\{i}
+
+βi[c←] j =
+
+sign L[iv→ ] j ,
+
+(3)
+
+i ∈M(j)\{i}
+
+where M(j) = {i : Hj,i = 1} is the set of indices of VNs connected to CN j.
+Next, the VN update involves calculating the message from vi to cj using
+
+Li[v→] j = Li +
+
+L[ic←] j , ∀j ∈ N (i) .
+
+(4)
+
+j ∈N (i)\{j}
+
+Both the CN and VN updates adhere to the extrinsic
+
+principle, meaning that when updating the message to VN vi (or CN cj), the message originating from VN vi (or CN cj) is excluded from the update equation, hence, i ∈ M(j) \ {i}.
+
+After reaching a predefined maximum number of iterations, the bit-wise output LLRs L˜i are computed as
+
+L˜i = Li +
+
+Li[c←] j .
+
+(5)
+
+j∈N (i)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:07:23 UTC from IEEE Xplore. Restrictions apply.
+
+2025 14th International ITG Conference on Systems, Communications and Coding (SCC)
+
+Finally, the decoded bits ˆbi are obtained by applying a hard
+decision ˆbi = 1{L˜i≤0}. For a more detailed discussion of
+message-passing algorithms, we refer the reader to [16, Ch. 2].
+
+IV. ELENA-SNN DECODER
+A significant part of the computational complexity of the SPA lies in the CN update (2) [2]. In [12], we introduced the ELENA-SNN decoder, which approximates the CN update using SNNs. ELENA-SNN employs an SNN-based CN update (SCNU) to incorporate SNNs into the CN update (2)-(3). Fig. 2 illustrates the setup of an SCNU that computes the message Li[c←] j based on the messages L[iv→ ] j, i ∈ M(j) \ {i}. The incoming messages L[iv→ ] j are decomposed into their sign and absolute value, which are then processed separately, combined, and integrated over time by an LI neuron, which acts as memory. Thus, the parameters τm and τs of the LI neuron control the memory behavior of the SCNU. The top branch performs the operation in (3), which can be executed using XOR operations, while the bottom branch implements (2) with the SNN shown in Fig. 3.
+The offset MS algorithm [6]1 , which replaces (2) by αi[c←] j ≈ max mini ∈M(j)\{i} Li[v→ ] j − θ1 , 0 , inspired us to further simplify the computation via
+
+αi[c←] j ≈ θ2, if mini ∈M(j)\{i} Li[v→ ] j > θ1 ,
+
+(6)
+
+0, otherwise ,
+
+with θ1 being a threshold. Similar to the offset MS algo-
+rithm, (6) outputs zero if the input values are below the threshold θ1 ∈ R+. Unlike the offset MS algorithm, which outputs the biased minimum, (6) returns a fixed value θ2 ∈ R+ once the threshold θ1 is exceeded. Fig. 3 illustrates how LIF neurons implement (6). Initially, the signs of all inputs |L[iv→ ] j| are reversed, and after adding the bias θ1, the signal is amplified by 10 and integrated by LIF neurons. If (θ1 − |L[iv→ ] j|) > 0, the corresponding LIF neuron is charged, causing an output
+spike that is passed to the combining LIF neuron. If at least
+one spike reaches the combining neuron, it generates a spike, yielding an overall output of zero. If (θ1 − |L[iv→ ] j|) < 0, the corresponding LIF neuron remains inactive, and no output
+spike is generated. Consequently, if no LIF neuron fires, the
+combining neuron remains silent, resulting in θ2 as output.
+Fig. 4 shows the overall decoder architecture incorporating
+the SCNUs. All SCNUs share the same parameter set. Initially, all Li[c←] j are set to zero, and the VNs are updated using (4). Then, the iterative decoding begins. Each CN update involves passing the variable-to-check-node messages Li[v→] j to the corresponding SCNU. For regular LDPC codes, there are
+
+1There exist two perspectives on the MS algorithm. On the one hand, it can be viewed as an approximation of SPA, which is the belief propagation algorithm (BPA) on the sum-product semiring. On the other hand, the MS algorithm can be derived as the BPA on a different semiring, namely the maxproduct semiring, yielding the message-passing algorithm that maximizes the block-wise maximum a-posteriori probability (MAP) [16, p. 63]. Due to cycles, both algorithms are suboptimal. Even though SPA typically yields better decoding performance depending on the graph structure, refined versions of the MS algorithm, e.g., NMS, can outperform SPA.
+
+sgn(·)
+
+Li[v1]→j
+
+L[iv2]→j L[v]
+idc −1 →j
+
+...
+
+abs(·) ... SNN
+
+×
+
+LI Li[c←] j
+
+Fig. 2: ELENA-SNN SCNU that computes the message L[ic←] j based on the incoming messages Li[v→ ] j , i ∈ M(j) \ {i} =: {i1, . . . , idc−1}. The top and bottom branches approximate (2) and (3), respectively. The LI neuron
+serves as the memory element.
+
+|Li[v1]→j |
+
+LIF
+
+|L[iv2]→j | ...
+
+× ...
+
++
+
+...
+
+× ...
+
+LIF
+
+|Li[vd]c∗ →j |
+
+LIF
+
+LIF × + × ∈ {0, θ2}
+
+−1 θ1 10
+
+−1 1 θ2
+
+Fig. 3: Structure of the SNN block from Fig. 2, implementing (6) using dc LIF neurons. If an input falls below θ1, the connected neuron is charged to trigger a spike. The upstream neuron aggregates all incoming spikes and forwards one, resulting in a zero output. If all inputs exceed θ1, no neurons are charged, producing θ2 as the output.
+
+VN update Message allocation
+Hard decision
+
+L1 L2 ... LN
+
+L1[v→] j11 L[1v→] j21
+...
+
+SCNU SCNU
+
+L[ic11]←1 L[ic12]←1
+
+L˜1
+
+ˆb1
+
+L˜2
+
+ˆb2
+
+...
+
+...
+
+Σ ...
+
+...
+
+L[v]
+N →jdNv −1
+
+L[c]
+idMc −1 ←M
+SCNU
+
+L˜N
+
+ˆbN
+
+LN[v]→jdNv
+
+SCNU
+
+L[c]
+idMc
+
+←M
+
+Fig. 4: Architecture of the proposed decoder. The SCNU contains
+the SNN. For i ∈ {1, . . . , N } and j ∈ {1, . . . , M }, the notation N (i) := {j1i , . . . , jdiv } and M(j) := {ij1, . . . , idj v } is used.
+
+M · dc SCNUs, each responsible for performing an extrinsic CN update. During message allocation, all variable-to-checknode messages Li[v→ ] j, with i ∈ M(j) \ {i}, are routed to the respective SCNU. Following this, the VNs are updated, and the process is repeated iteratively until the hard decision maps the output LLRs to binary values. Afterward, the membrane potentials and synaptic currents of all neurons are reset to zero, effectively clearing the memory. Note that the decoder operates using a flooding schedule, meaning that all node updates are executed in parallel. Each SCNU within the ELENA-SNN decoder consists of dc LIF spiking neurons and one LI neuron.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:07:23 UTC from IEEE Xplore. Restrictions apply.
+
+2025 14th International ITG Conference on Systems, Communications and Coding (SCC)
+
+V. MULTILEVEL-ELENA
+
+Due to the ternary output of the SCNU of ELENASNN, i.e., Li[c←] j ∈ {−θ2, 0, θ2}, the VN update value can be described by Li[v→] j = Li ± n · θ2 with n ∈ {−(dv − 1), −(dv − 2), . . . , (dv − 2), (dv − 1)}. Thus, the resolution of L[iv→] j is limited by θ2, and its maximum value highly depends on the initial value Li and the VN
+degree dv. Hence, for codes with small VN degree dv, e.g., a
+regular (3, 6) LDPC code, both the range and the resolution of Li[v→] j are limited, resulting in performance limitations of the ELENA-SNN decoder.
+
+To overcome this problem, we propose the ML-ELENA-
+
+SNN decoder, which better approximates the NMS decoder.
+
+The ML-ELENA-SNN decoder is derived from the ELENA-
+
+SNN decoder by modifying its SCNU to allow for a higher
+
+range and resolution of the output of an SCNU. Fig. 5
+
+shows the modified SCNU: ML-ELENA-SNN uses L par-
+
+allel SNNs per SCNU, each SNN having its own threshold θ1( ), ∈ {1, 2, . . . , L} and amplitude θ2( ), ∈ {1, 2, . . . , L}.
+The outputs of the SNNs are combined by a summation:
+
+L
+
+αi[c←] j ≈
+
+θ2( )Θ
+
+min
+i ∈M(j)\{i}
+
+L[iv→ ] j
+
+− θ1( )
+
+.
+
+(7)
+
+=1
+
+Thus, an SNN contributes to the summation and therefore to the output of the SCNU by θ2( ), if the smallest input message |L[iv→ ] j| exceeds the threshold θ1( ) of the respective SNN. Hence, if the smallest input message to the SCNU has a small
+amplitude, a smaller number of SNNs is triggered, and thus, an output message |L[ic← ] j| with a small amplitude is created. If the smallest input message has a large amplitude, more SNNs
+contributes to the sum, creating an output message with a larger amplitude. Depending on the chosen values of θ1( ), the smallest input message mini ∈M(j)\{i} |Li[v→ ] j| and therefore the uncertainty carried by this message can be resolved with
+finer granularity and in a larger range. Depending on the chosen values of θ2( ), the CN update messages L[ic←] j of the ML-ELENA-SNN decoder have a higher resolution and larger
+dynamic range, too, increasing their accuracy. Consequently,
+the resolution and dynamic range of the following VN update Li[v→ ] j is also increased. Hence, by avoiding the all-or-nothing behavior of the SCNU of the ELENA-SNN decoder, the
+ML-ELENA-SNN decoder introduces a higher resolution and
+larger dynamic range for all LLRs.
+Inside an SCNU of the ML-ELENA-SNN decoder, the threshold θ1( ) of the -th SNN is chosen as θ1( ) = · θ1, ∈ {1, 2, . . . , L}, where θ1 denotes the spacing between neighbouring thresholds. The output amplitude θ2( ) of each SNN is shared among all SNNs inside the SCNU, θ2( ) = θ2, ∈ {1, 2, . . . , L}. Hence, the sum of the outputs of all SNNs is a multiple of θ2, resulting in L + 1 discrete values αi[c←] j can have and 2L + 1 discrete values for Li[c←] j. Fig. 6 shows the characteristics of an SCNU for different numbers L
+of parallel SNNs with fixed θ1 and θ2. If L is increased, the
+range which avoids clipping of the smallest input amplitude
+
+sgn(·)
+
+SNN θ1(1), θ2(1)
+
+L[iv1]→j L[iv2]→j
+
+L[v]
+id∗c
+
+→j
+
+...
+
+abs(·)
+
+SNN θ1(2), θ2(2) ...
+SNN θ1(L), θ2(L)
+
++×
+
+LI Li[c←] j
+
+Fig. 5: SCNU of the proposed ML-ELENA-SNN decoder.
+
+Li[c←] j
+
+NMS
+
+L=1
+
+5θ2
+
+L=2 L=4
+
+L=8
+
+5θ1
+
+min
+i ∈M(j)\{i}
+
+L[iv→ ] j
+
+Fig. 6: Characteristic of an SCNU of the proposed ML-ELENA-SNN decoder
+with L parallel SNNs and θ1( ) = · θ1, ∈ {1, 2, . . . , L}, and θ2( ) = θ2. For comparison, the characteristic of the NMS decoder is given.
+
+is increased by the factor L. Furthermore, the range of the output message is increased by a factor of L, too.
+To further reduce the dimensionality of the search space, we couple θ2 = γ · θ1, γ ∈ R, and apply a line search over θ1 w.r.t. the BER.
+
+VI. RESULTS AND DISCUSSION
+
+We implemented and evaluated the performance of the
+
+proposed ML-ELENA-SNN decoder for two different LDPC
+
+codes: an (38400, 30720) regular LDPC code and an FG
+
+(273, 191) regular LDPC code. The latter was already used
+
+in [12]. The (38400, 30720) code has dv = 3 and dc = 15. It was constructed by adding columns with ‘1‘s at random
+
+positions, where the number of ‘1‘s in a row is below dc. To prevent 4-cycles, only columns that do not create 4-cycles were
+
+added [1]. If no column matches the constraints, the process is
+
+reset to a random previous column. The (273, 191) code has
+
+dv = 17 and dc = 17, and the parity-check matrix is highly rank deficient.
+
+After transmission over an AWGN channel, yi represents the received value corresponding to the i-th code bit of a
+
+codeword. The initial bit-wise LLRs are given by Li = yi · Lc,
+
+where Lc is the channel reliability parameter. Typically, for
+
+an
+
+AWGN channel,
+
+Lc
+
+=
+
+4
+
+Es N0
+
+=
+
+2 σ2
+
+.
+
+Hence,
+
+Lc
+
+needs to
+
+be adjusted according to the SNR. However, depending on
+
+the code, the ML-ELENA-SNN decoder is optimized at a
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:07:23 UTC from IEEE Xplore. Restrictions apply.
+
+2025 14th International ITG Conference on Systems, Communications and Coding (SCC)
+
+fixed
+
+Es N0
+
+;
+
+this
+
+value
+
+is
+
+used
+
+during
+
+evaluation
+
+regardless
+
+of
+
+the actual SNR.
+
+We compare the performance of the ML-ELENA-SNN
+
+decoder against the ELENA-SNN decoder, as well as the SPA
+
+decoder, the MS decoder, and the NMS decoder. All decoders
+
+use 20 decoding iterations, which offers a reasonable trade-off
+
+between decoding convergence and computation time. Like
+
+the ML-ELENA-SNN decoder, the ELENA-SNN decoder is
+
+optimized and evaluated at a fixed Lc. In contrast, for all other benchmark decoders Lc is adjusted to match the actual Es/N0.
+
+A. Parameters
+As in [12], for both the ML-ELENA-SNN and ELENASNN decoder, the parameters of all spiking LIF neurons are chosen to τs = 1 ms, τm = 1 ms and vth = 1. In [12, Fig. 6a], the parameters τs = 1 ms and τm = 1 ms for the LI neuron of the (273, 191) code and ELENA-SNN decoder yield the best decoder performance. Since a parameter search did not yield better parameters for both decoders and codes, the parameters of the LI neuron are fixed to τs = 1 ms and τm = 1 ms.
+For the (38400, 30720) code, the ML-ELENA-SNN decoder was implemented with L = 4, L = 8, and L = 16 parallel SNNs per SCNU. The resulting decoders were optimized for Lc = 1.0 dB, Lc = 2.8 dB, and Lc = 3.0 dB. For the (273, 191) code, only L = 16 with Lc = 3.0 dB was chosen. Tab. I shows an overview of the decoders displayed in this paper, where the term “L-MLE-Lc” denotes the MLE decoder with L parallel SNNs per SCNU, optimized at a fixed channel SNR and channel reliability parameter of Lc. Hence, the 8-MLE-2.8 is the decoder with L = 8 SNNs optimized at Lc = 2.8 dB. To show the effect of adapting Lc, for the (38400, 30720) code and L = 16, we supply a decoder that matches its Lc according to the channel SNR (16LMLE-Lc). Since the novel decoder only slightly improves the performance for the (273, 191) code, only the ELENA-SNN decoder (1-MLE-3.5) and the 16-MLE-3.0 are implemented.
+The coupling factor γ of Sec. V is chosen experimentally. For the (38400, 30720) code and both the ELENA-SNN and ML-ELENA-SNN decoder, we choose γ = 1, hence θ2 = θ1. For the (273, 191) code and the MLE decoder with L = 16, we choose γ = 0.5, while the parameters of the ELENA-SNN decoder are obtained from [12, Fig. 6]. Fig. 7 shows the BER over θ1 for varying numbers of levels L. With increasing L, the performance improves. The parameters θ1 and θ2, depending on the code and architecture of the decoder, are summarized in Tab. I. Furthermore, Fig. 7 shows the BER over θ1 for different Eb/N0. Three sweeps are conducted at Eb/N0 values of 1.0 dB (8-MLE-1.0), 2.8 dB (8-MLE-2.8), and 3.0 dB (8MLE-3.0) for the ML-ELENA-SNN decoder with L = 8 steps. Changing the operation point affects the position of the minimum BER and broadens the region of suitable θ1.
+
+B. Results
+Fig. 8(a) shows the BER results for the (38400, 30720) regular LDPC code. Due to its small VN degree dv = 3, the previously proposed ELENA-SNN decoder is not competitive.
+
+Code (38400, 30720)
+(273, 191)
+
+Decoder
+
+θ1 θ2
+
+1-MLE-2.8 1.50 1.5 4-MLE-2.8 0.9 0.9 8-MLE-1.0 0.7 0.7 8-MLE-2.8 0.7 0.7 8-MLE-3.0 0.8 0.8 16-MLE-2.8 0.7 0.7 16-MLE Lc 0.7 0.7
+
+1-MLE-3.5 2.0 1.4 16-MLE-3.0 0.95 0.475
+
+TABLE I: θ1 and θ2 of the SNN-based decoders for the (38400, 30720) regular LDPC code and the FG (273, 191) regular LDPC code.
+10−1
+
+10−2
+
+BER
+
+10−3
+
+10−4 10−5
+
+1-MLE-2.8 4-MLE-2.8 8-MLE-1.0 8-MLE-2.8 8-MLE-3.0 16-MLE-2.8
+
+1.0
+
+2.0
+
+3.0
+
+4.0
+
+θ1
+
+Fig. 7: BER curve for the (38400, 30720) regular LDPC code as a function
+
+of θ1, where θ2 is chosen to be equal to θ1, i.e., θ2 = θ1.
+
+However, with an increasing number of levels L, the performance of the ML-ELENA-SNN decoder improves, nearly reaching the performance of the NMS decoder. With four levels, the ML-ELENA-SNN decoder performs close to the NMS decoder up to an Eb/N0 of 2.7 dB. We attribute the error floor above 2.7 dB dB to an insufficient number of threshold levels and, hence, a low dynamic range.
+Fig. 8(a) also shows how the operation point alters the performance in terms of BER over Eb/N0. The 8-MLE-2.8 decoder performs slightly better than the 8-MLE-3.0 decoder in the Eb/N0 region of 2.5 dB to 3.0 dB, but has an higher error floor at an BER of 2 · 10−7 compared to at an BER of 8 · 10−8. Fig. 8a shows that the decoder with fixed channel reliability, 16-MLE-3.1, performs as the decoder with adapting channel reliability, 16-MLE-Lc.
+Fig. 8(b) shows the BER results for the FG (273, 191) regular LDPC code. The 16-MLE-3.5 decoder and the ELENASNN (1-MLE-3.5) decoder achieve similar performance, with the 16-MLE-3.5 decoder slightly outperforming the ELENASNN decoder. Both decoders outperform the MS and SPA decoders.
+
+C. Discussion
+For the (38400, 30720) code, we have shown that the ELENA-SNN decoder is not competitive, which is due to the small VN degree dv and, thus, low dynamic range in the ELENA-SNN decoder. By introducing multiple parallel SNNs with distinct threshold levels θ1( ) into the decoding process, the extended decoder succeeds for codes with small dv. With
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:07:23 UTC from IEEE Xplore. Restrictions apply.
+
+2025 14th International ITG Conference on Systems, Communications and Coding (SCC)
+
+10−1
+
+decoder, the ML-ELENA-SNN decoder enhances the resolu-
+
+tion and dynamic range of the variable-to-check-node mes-
+
+10−2
+
+sages, enabling successful decoding of regular LDPC codes
+
+10−3
+
+SPA
+
+with a small VN degree dv. The proposed decoder consists of multiple parallel SNNs inside an SCNU, each SNN having
+
+BER
+
+10−4 10−5 10−6 10−7 10−8
+
+MS NMS 1-MLE-2.8 4-MLE-2.8 8-MLE-1.0 8-MLE-2.8 8-MLE-3.0 16-MLE-2.8 16-MLE-Lc
+
+its own threshold and output amplitude. For each SNN inside the SCNU, the threshold is increased by θ1, where the output amplitude θ2 is shared among all SNNs.
+While the ELENA-SNN decoder performs poorly for a (38400, 30720) regular LDPC code, the proposed MLELENA-SNN decoder achieves performance close to the NMS decoder. For the FG (273, 191) LDPC code, the proposed decoder also achieves similar performance as the NMS decoder. Furthermore, similar to the ELENA-SNN decoder, the ML-
+
+2.5
+
+3.0
+
+3.5 ELENA-SNN decoder is optimized at a single Eb/N0 and
+
+Eb/N0 (dB)
+
+generalizes well over the whole Eb/N0 range. We conclude
+
+(a) BER curve for the (38400, 30720) regular LDPC code.
+100
+
+that the ML-ELENA-SNN decoder enables successful decoding of regular LDPC codes with small dv.
+
+REFERENCES
+
+.5
+
+10−1
+
+10−2
+
+3.0 10−3
+
+[1] T. J. Richardson, M. A. Shokrollahi and R. L. Urbanke, “Design of capacity-approaching irregular low-density parity-check codes,” in IEEE Trans. Inf. Theory, vol. 47, no. 2, pp. 619-637, Feb 2001.
+[2] Y. Kou, S. Lin and M. P. C. Fossorier, “Low-density parity-check codes based on finite geometries: a rediscovery and new results,” in IEEE Trans. Inf. Theory, vol. 47, no. 7, pp. 2711-2736, Nov. 2001.
+
+BER
+
+2.0
+
+10−4
+2.510−5
+
+3.0 SPA
+MS
+
+3.5
+
+4.0
+
+[3] M. P. C. Fossorier, M. Mihaljevic and H. Imai, “Reduced complexity iterative decoding of low-density parity check codes based on belief
+4.5 5.0 propagation,” in IEEE Trans. Commun., vol. 47, no. 5, pp. 673-680, May 1999. [4] F. Angarita, J. Valls, V. Almenar and V. Torres, “Reduced-complexity
+
+NMS
+
+E /N (dB) 10−6
+
+1-MLE-3.5
+
+b
+
+0 16-MLE-3.0
+
+10−7
+
+0.5 1.0 1.5 2.0 2.5 3.0 3.5 4.0 4.5 5.0
+
+Eb/N0 (dB)
+
+min-sum algorithm for decoding LDPC codes with low error-floor,” in IEEE Trans. Circuits Syst. I: Regul. Pap., vol. 61, no. 7, pp. 2150-2158, July 2014. [5] N. Mobini, A. H. Banihashemi and S. Hemati, “A differential binary message-passing LDPC decoder,” in IEEE Trans. Commun., vol. 57, no. 9, pp. 2518-2523, Sep. 2009. [6] J. Chen, A. Dholakia, E. Eleftheriou, M. P. C. Fossorier and X.-Y.
+
+(b) BER curve for the FG (273,191) LDPC code. Fig. 8: BER curve of the ML-ELENA-SNN decoder and reference decoders.
+
+Hu, “Reduced-complexity decoding of LDPC codes,” in IEEE Trans. Commun., vol. 53, no. 8, pp. 1288-1299, Aug. 2005. [7] H. Xiao, S. Tolouei and A. H. Banihashemi, “Successive relaxation for
+
+decoding of LDPC codes,” Proc. Biennial Symposium on Communica-
+
+an increasing number of SNNs, the dynamic range of the variable-to-check-node-messages is increased, improving the decoding performance. If the VN degree dv of the code is
+
+tions, Kingston, ON, CA, 2008. [8] F. Zenke and E. O. Neftci, “Brain-inspired learning on neuromorphic
+subtrates,” in Proc. IEEE, vol. 109, no. 5, pp. 935-950, May 2021. [9] Intel, “Taking neuromorphic computing to the next level with Loihi 2,”
+
+sufficiently large, e.g., for the (273, 191) code, the ELENASNN decoder already achieves a performance similar to the NMS decoder. Hence, introducing multiple threshold levels
+
+2021. [Online]. Available: https://download.intel.com/newsroom/2021/ new-technologies/neuromorphic-computing-loihi-2-brief.pdf, (accessed on: 22.05.24). [10] C. Pehle et al., “The BrainScaleS-2 accelerated neuromorphic system
+
+does not increase performance significantly. The ML-ELENA-SNN provides a trade-off between perfor-
+mance and complexity. With an increasing number of threshold
+
+with hybrid plasticity,” Front. Neurosci., vol. 16, Feb. 2022. [11] W. Gerstner and W. M. Kistler, Spiking Neuron Models: Single Neurons,
+Populations, Plasticity, Cambridge Univerity Press, 2002. [12] A. Von Bank, E. -M. Edelmann, S. Miao, J. Mandelbaum and L.
+
+levels L, the performance of the decoder improves at the cost
+of increasing complexity. Thus, the ML-ELENA-SNN decoder enables the decoding of LDPC codes with small VN degree dv. Future work will investigate the parameter space θ1( ), θ2( ), τs and τm more thoroughly.
+
+Schmalen, “Spiking Neural Belief Propagation Decoder for Short Block Length LDPC Codes,” in IEEE Commun. Lett., 2024, doi: 10.1109/LCOMM.2024.3492711. [13] A. von Bank, “Enlarge-likelihood-each-notable-amplitude spikingneural-network (ELENA-SNN) decoder,” 2024. [Online]. Available: https://github.com/kit-cel/ELENA [14] E. O. Neftci, H. Mostafa and F. Zenke, “Surrogate gradient learning in
+
+VII. CONCLUSION
+
+spiking neural networks: bringing the power of gradient-based optimization to spiking neural networks,” in IEEE Signal Process. Mag., vol. 36,
+
+In this work, we introduced the ML-ELENA-SNN decoder,
+
+no. 6, pp. 51-63, Nov. 2019. [15] C. Pehle and J. E. Pedersen, “Norse - A deep learning library for spiking
+
+an extension of the ELENA-SNN decoder. The ML-ELENA-
+
+neural networks,” Jan. 2021, documentation: https://norse.ai/docs/.
+
+SNN decoder approximates the CN update equation using [16] T. Richardson and R. Urbanke, Modern Coding Theory, Cambridge
+
+SNNs in a SCNU. However, compared to the ELENA-SNN
+
+University Press, 2008.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:07:23 UTC from IEEE Xplore. Restrictions apply.
+
+

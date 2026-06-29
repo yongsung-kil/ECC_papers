@@ -1,0 +1,605 @@
+Probabilistic Gradient Descent Bit-Flipping Decoders
+
+for Flash Memory Channels
+Fakhreddine Ghaffari∗, Bane Vasic† ∗ETIS, UMR-8051, Universite´ Paris Seine, Universite´ de Cergy-Pontoise, ENSEA, CNRS, France,
+fakhreddine.ghaffari@ensea.fr †Dep. of Electrical and Computer Engineering, Uni. of Arizona, Tucson, AZ, 85719 USA, vasic@email.arizona.edu
+
+Abstract—Low-density parity check (LDPC) codes are an attractive error correction scheme for ensuring data integrity in new generation of NAND flash memories. A quick assessment of the iterative decoders for LDPC codes reveals a wide range of varying complexities. The simple Bit-Flipping (BF) and binarymessage-passing algorithms such as the Gallager A/B algorithms occupy one end of the spectrum, while Belief Propagation (BP) and A Posteriori Probability (APP) decoders lie at the other end. The gamut of existing decoders filling the intermediate space can simply be understood as the implementation of BP (and its variants, such as the min-sum algorithm) at different levels of message precision. Decoders with low-precision messages are desirable because of their low complexity and power efficiency, but in such decoders it is highly nontrivial to prevent performance degradation known to as error floor and to guarantee fast convergence to a codeword. In this paper we present our results on a new class of low-complexity iterative decoders for flash memory channels. They involve two main innovations: global computation and randomness. Our decoding algorithm, Probabilistic Gradient Descent Bit-Flipping (PGDBF) is motivated by the analogy between Tanner graphs and the graphical models used in statistical mechanics, and prescribe a rule for flipping a bit based on the so-called energy function and a binary random sequence associated to that bit. Energy function is computationally simple, but involves all the bits. We present the PGDBF algorithm analysis, explain how it benefits from global computation and randomness, and present the hardware synthesis results as well as comparisons with the state-of-the-art decoders.
+Keywords—Low-Density Parity-Check, Probabilistic Gradient Descent Bit Flipping, NAND Flash Memory, high decoding throughput, low-complexity FPGA implementation.
+I. INTRODUCTION NAND FLASH memories are used for storing information. Nearly all external storage memories (MultiMedia Card (MMC), Secure Digital (SD) card and Memory Stick (MS) card) use this technology. However manufacturers of NAND FLASH memories, generally, do not guarantee at 100% the integrity of data stored in it but usually they propose a lower error rate under a given limit. This limited reliability requires the implementation of an error management system (ECC - Error Correction Code, Bad Block Management, etc.) at the application level. This is the case for example, for hard disks SSDs (Solid State Drives). The LDPC based ECC are an interesting error correction approach for increasing data reliability in new generation of NAND flash memories. QCLDPC (Quasi-Cyclic-LDPC) are a particular code constructing method of LDPC codes that are well-suited for the practical implementations. QC-LDPC can be effectively decoded by either soft-information message passing decoders, i.e. Min Sum (MS), Sum Product (SP) [1], or hard-decision decoders, i.e. Bit Flipping (BF), Gallager-A, B [2]. This paper focuses on the BF decoder due to its low-complexity as well as its high possible
+
+throughput. Additionally, recent BF optimizations proposed in [3][4] demonstrated good error correction capability, approaching the soft-decision decoders.
+The PGDBF, proposed by Rasheed et al. in[3], is one of the best BF decoders in term of error correction on Binary Symmetric Channel (BSC) channel. PGDBF continually passes 1-bit messages between two groups of computing units: Variable Nodes (VNs) and Check Nodes (CNs). The CN computes the parity check function while the VN computes a so-called energy value. The difference between PGDBF and its deterministic version (the GDBF [5]) is that, all the VNs having the maximum energy will be flipped in GDBF while in PGDBF only a randomly selected subset is flipped. This process is controlled by a value p0 (p0 < 1).
+The outstanding decoding performance of PGDBF comes at the price of the additional complexity needed to implement the probabilistic signal generator, compared to GDBF. Indeed, FPGA implementation results reported in [6] have shown a × 8 and a × 1.64 increase in registers and Look-Up Tables (LUTs) respectively, compared to the non-probabilistic GDBF decoder. ASIC results from [7] have shown a 5% − 14% cost increase of PGDBF with respect to GDBF. Note that these results have been obtained for the same QC-LDPC code. This high cost in complexity is also accompanied with loss in decoding throughput due to lower maximum frequency of the PGDBF decoder compared with GDBF. Moreover the main constraint for designing an LDPC code to be used for the error correction in Nand Flash memory is to keep the highest possible code rate. This constraint is intrinsic to this application in order to optimize the memory space for storing useful bits (data) in external embedded memories.
+In this paper, we introduce a new LDPC decoder algorithm called FM-PGDBF for Flash Memory adapted PGDBF decoder. It consists to adapt the well known PGDBF decoder to be efficiently used for applications using NAND Flash memory. To increase the throughput of our decoder we propose to remove the most critical computation part consisting to compute the maximum of energy among N computing units (N is the size of the codeword). We replace this maximum finder unit by an off-line prediction of the a energy maximum for each decoding iteration. Our simulation results show that this imprecision induced by errors in the offline prediction of the maximum energy improves the decoding performances of the PGDBF decoder by shaking it to escape most of trapping sets. This new version of PGDBF implementations are shown to not only reduce the decoder complexity but also improve decoding performance with respect to the state-of-theart implementations.
+The paper is organized as following. In Section II, the PGDBF algorithm and the optimized implementation in the literature are reviewed. Section III introduces the principle
+
+978-1-5386-4881-0/18/$31.00 ©2018 IEEE Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:00:56 UTC from IEEE Xplore. Restrictions apply.
+
+of our Flash memory adapted PGDBF (FM-PGDBF) and its hardware implementation. In Section IV, we show for several test codes that, our FM-PGDBF provides a decoding performance as good as the optimized PGDBF implementation in literature while reducing 60% the hardware cost comparing with GDBF. The adapted PGDBF for NAND Flash memory provides a significant gain in error correction, around 2dB gain over the traditional GDBF. Section V concludes the paper.
+II. PGDBF DECODING AND ITS IMPLEMENTATION A. Notations
+An LDPC code is defined by a sparse parity-check matrix H with size (M, N ), where N > M . A codeword is a vector x = (x1, x2, . . . , xN ) ∈ {0, 1}N which satisfies HxT = 0. We denote by y = {y1, y2, . . . , yN } ∈ {0, 1}N the output of a Flash Memory channel. We simplify the Flash Memory channel is as a BSC model in which the bits of the stored codeword x have been flipped with crossover probability α and leave the other complex characterizations such as the unbalance flip i.e. the flip probability from 1 to 0 is different from the flip probability from 0 to 1 as the future works. The graphical representation of an LDPC code is a bipartite graph called Tanner graph composed of two types of nodes, the Variable Node Unit (VNUs) vn, n = 1, . . . , N and the Check Node Unit (CNUs) cm, m = 1, . . . , M . In the Tanner graph, a VNU vn is connected to a CNU cm if H(m, n) = 1. Let us also denote N (vn) the set of CNUs connected to the VNU vn, with a connection degree dvn = |N (vn)|, and denote N (cm) the set of VNUs connected to the CNU cm, with a connection degree dcm = |N (cm)|. We will study in this paper only regular dv = 3 and dv = 4 LDPC codes for Nand Flash memory.
+B. Gradient Descent Bit Flipping Concept
+The GDBF algorithm has been introduced by Wadayama et al. in [5]. This algorithm is derived from a gradient descent formulation and it consists of finding the most suitable bits to be flipped in order to maximize a pre-defined objective function. The GDBF algorithm shows an error correction capability superior than most known BF algorithms while still maintaining a lower hardware complexity compared to the soft decision decoders. In [3], the authors proposed to incorporate a probabilistic feature in the flipping step, inspired from the probabilistic BF algorithms of [8]. In the PGDBF decoder, all the bits that satisfy the gradient descent condition are not flipped by default, but instead, only a randomly chosen fraction p of them are flipped. Curiously, this small modification of the GDBF algorithm led to a large performance improvement, with error correction capability approaching the soft-decision message passing decoders [3]. An efficient hardware (HW) implementation of the FM-PGDBF decoder is proposed in this paper, which minimizes the resource overhead needed to implement the random perturbations and replace the maximum finder of the PGDBF by a predefined set of values computed in off-line.
+C. Probabilistic Gradient Descent Bit Flipping Decoder (PGDBF) and its adaptation to Flash memory
+A BF decoder is defined as an iterative update of the variable node values over the decoding iterations. We denote in this paper by vn(k) the value of the VN vn at the k-th iteration. We correspondingly denote by c(mk) the binary value of the CN
+
+cm parity check node at iteration k, which indicates whether the fact that the m-th parity-check equation is satisfied or
+
+not. The BF decoding process is terminated when all CNs
+
+values are satisfied or a maximum number of iteration Itmax is reached. The CN calculation in BF algorithms can be written
+
+as
+
+cm (k) =
+
+vn(k),
+
+vn∈N (cm)
+
+where is the bit-wise exclusive-OR (XOR) operation.
+For the n-th VN calculation, the update rule uses the information on satisfiability of the neighboring CN N (vn) to keep or flip the value of vn(k). In the case of GDBF algorithms, a function called inversion function or energy function is defined for each VN, and is used to evaluate whether the value vn(k) should be flipped or not. The original GDBF has been proposed in communication for the Additive White Gaussian Nosie (AWGN) channel [5] and the energy function was defined as in (1), where γn is the Log-Likelihood Ratio (LLR) received from AWGN channel.
+
+Λ(vkn) = (1 − 2 vn(k))γn +
+
+(1 − 2 c(mk)) (1)
+
+cm∈N (vn)
+
+For the GDBF on the AWGN channel, the energy function is real valued, and has a unique minimum, corresponding to the bit with lowest reliability. In [5], two modes for the bitflipping rule at iteration k are proposed: either only the bit having smallest energy function is flipped (single flip), or a group of bits having energy function lower than a predefined threshold are flipped (multiple flips).
+For the Binary Symmetric Channel (BSC), the energy function can be modified with the following equation:
+
+Ev(kn) = vn(k)
+
+yn +
+
+c(mk)
+
+(2)
+
+cm∈N (vn)
+
+In this case, the energy function is an integer, varies from 0 to (dvn + 1), and the bits which have the maximum value Em(ka)x = maxn Ev(kn) are flipped. Due to the integer representation of the energy function, many bits are most likely
+to have the maximum energy, leading to the multiple flips
+mode. Let us use an indicator variable to indicate the VNs which have the maximum energy at iteration k, i.e. In(k) = 1 if Ev(kn) = Em(ka)x, and In(k) = 0 otherwise. The fact that the number of bits to be flipped cannot be precisely controlled
+induces a negative impact to the convergence of the GDBF,
+as the analysis of [3] shows. To avoid this effect, the PGDBF
+has been proposed with the following modification: instead of
+flipping all the bits with maximum energy function value, only
+a random fraction of those bits are flipped. The random fraction is fixed to a pre-defined value p(nk), which could be different for each VN and each iteration. In this work, we restrict our study to the case for which pn(k) are constant for all iterations and all VNs, denoted p0 ∈ [0, 1] hereafter.
+The PGDBF of [3] can be implemented using a sequence of N random bits, generated following a Bernoulli distribution B with parameter p0, with different realizations at each iteration. We denote the random generator (RG) sequence at the kth iteration by R(k). In the GDBF algorithm, a VN vn(k) at iteration k is flipped (is XOR-ed by ’1’) when its energy function is a maximum (the indicator variable is In(k) = 1)
+
+978-1-5386-4881-0/18/$31.00 ©2018 IEEE Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:00:56 UTC from IEEE Xplore. Restrictions apply.
+
+while in PGDBF, a VN vn(k) is flipped if and only if the two conditions In(k) = 1 and Rn(k) = 1, are both satisfied. In the proposed FM-PGDBF a VN vn(k) is flipped when its energy function is greater or equal to a predefined threshold (maximum of energy) computed offline based on several Monte Carlo Simulation results. We need to predict in offline the maximum of energy for each decoding iteration. However this number of iteration can be a great number (several hundreds) and storing the whole sequence of thresholds is memory consuming. We propose to shorten this sequence and store only a fixed number of thresholds. Depending on the construction of the code, the parameters of the decoder (dvn and dcm ), this size l of the predefined sequence of thresholds is calibrated. Among iteration the decoder will use the sequence of predefined threshold in a circular way, i.e when it reaches the last value of the sequence it restarts from the beginning and take the first value as the threshold of the next iteration. The FM-PGDBF algorithm is presented in Algorithm 1.
+Algorithm 1 FM-PGDBF algorithm
+Generate T Hn, n = 1, . . . , l, in offline. Initialization k = 0, vn(0) ← yn, n = 1, . . . , N . s = Hv(0)T mod 2 while s = 0 and k ≤ Itmax do
+Generate Rn(k), n = 1, . . . , N , from B(p0). Compute Ev(kn), n = 1, . . . , N , using Eq. (2). for n = 1, . . . , N do
+if Ev(kn) >= T Hn and Rn(k) = 1 then vn(k+1) = vn(k) ⊕ 1
+end if end for s = Hv(k+1)T mod 2 k = k+1 end while Output: v(k)
+
+From Channel
+
+D Q y1
+
+v(k+1) 1
+
+v(k) D Q1
+
+… . … . ::
+CNU
+
+… E(k) E(k) E(k) . 1 2 3
+
+>
+
+>
+
+>
+
+>
+
+>
+
+>
+
+E(k) N
+>… > . … .
+
+::
+
+> E(k) max
+
+…
+
+dc
+
+.
+
+…
+
+.
+
+1… .
+
+XOR1 … .
+… .
+… . dv
+
+1
+
+∑ dv
+
+dv+1
+…
+
+.
+
+E(k) E(k) E(k)
+
+1
+
+2
+
+3
+
+1
+
+2
+
+3
+
+…
+.
+MF
+E(k) max
+
+E(k)
+
+E(k)
+
+1
+
+2
+
+=?
+
+=?
+
+…
+
+.
+
+R(k)
+
+R(k)
+
+1
+
+2
+
+v(k)
+
+v(k)
+
+1
+
+2
+
+…
+
+. …
+
+.
+
+…
+
+.
+
+::
+
+c(k) M
+
+E(k) N N
+
+…
+
+…
+
+.
+
+.
+
+1
+
+dv … M
+
+Syndro.me
+
+Check
+
+E(k) N
+=?
+R(k) N
+v(k) N
+
+XOR2 v(k+1)
+1
+
+XOR2 v(k+1)
+2
+
+… XOR2 .
+v(k+1) N
+
+Figure 1. The implementation of PGDBF and its critical path.
+
+From D Q y1 Channel
+
+D Q y2
+
+D Q yN
+
+v(k+1) 1
+
+v(k) D Q1
+
+v(k+1) 2
+
+v(k) D Q2
+
+v(k+1) N
+
+v(k) D QN
+
+c(k)
+
+1
+
+c(k)
+
+c(k)
+
+2
+
+M
+
+…
+
+…
+
+.
+
+.
+
+1
+
+dv … M
+
+Syndro.me
+
+Check
+
+XOR1
+
+… .
+CNU
+
+dc … .
+… . CNU
+
+1…
+
+dv
+
+.
+
+1
+
+∑ dv
+
+dv+1
+
+E(k) 1
+
+TH1
+
+>
+R(k) 1
+v(k) 1
+
+XOR1 … .
+
+XOR1
+
+From neighbor
+
+CNs
+…
+
+.
+
+1
+
+∑ dv
+
+dv+1
+
+E(k) 2
+
+TH2
+
+From neighbor
+
+CNs
+…
+
+.
+
+1
+…
+
+∑ dv
+
+dv+1
+
+.
+
+E(k) N
+
+THN
+
+>
+R(k) 2
+v(k) 2
+
+>
+R(k) N
+v(k) N
+
+XOR2 v(k+1)
+1
+
+XOR2 v(k+1)
+2
+
+XOR2 v(k+1)
+N
+
+Figure 2. The proposed architecture for FM-PGDBF.
+
+III. HARDWARE ARCHITECTURES
+The state-of-the-art implementations of PGDBF can be found several works such as [6][7]. These implementations follow the flooding scheduling where N Variable Node Processing Units (VNUs) are implemented to process N VNs in parallel. Similarly, M dc-XOR gates are implemented for M CNs (each XOR gate is called the check node processing unit - CNU). The maximal operating frequency of PGDBF is limited by the length of the longest data path (and socalled, the critical path) as fmax < 1/tD where tD is the length of the critical path. The longest data path in PGDBF implementation is shown by the dashed green path in Fig. 1. This critical path starts from the output of D-FlipFlop storing vn(k) to the updated VN value for the next iteration, (vn(k+1)). A noticeable part of this critical path comes from the global maximum finder (MF), which globally computes the maximum energy among N values. Many implementing methods of the MF can be found in [9]. We illustrate the implementation of MF in Fig. 1 by the binary tree of the compare-and-swap units (CASUs) [10]. The CASU passes at its output the larger value of the 2 input values. The latency of the MF module can be formulated as tMF = tc log2(N ) where tc is the delay of a single CASU module. This critical path may become longer
+
+when longer code is used. This MF is also the large part of
+
+PGDBF in term of complexity since it requires approximately
+
+log2(N ) i=1
+
+N/2i the CASUs.
+
+The architecture of our FM-PGDBF, on contrary, can avoid
+
+the negative effect of the MF, which help enhance the decoding
+
+throughput and reduce decoder complexity. Indeed, as see in
+
+Fig. 2 for each VN, a comparing module is implemented in the
+
+place of the MF and equality comparator (Fig. 1). The critical
+
+path is significantly reduced since the latency part of MF is
+
+replaced by the one of the comparator which is obviously
+
+smaller. It can be also seen that, all the hardware cost for
+
+the MF can be avoidable in the MF-PGDBF implementation
+
+which is expected to reduce the decoder complexity.
+
+IV. SYNTHESIS RESULTS AND DECODING PERFORMANCE
+The FM-PGDBF decoder implementations are implemented and synthesized by using the Xilinx tool ISE 14.7 with the target device Xilinx Virtex 6 (XC6VLX240T-1FF1156). The FPGA synthesis results (number of registers, number of Look-Up Tables) reported in this section have been obtained after place route process. We implement our LDPC decoders for various LDPC codes from a short to very long codeword
+
+978-1-5386-4881-0/18/$31.00 ©2018 IEEE Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:00:56 UTC from IEEE Xplore. Restrictions apply.
+
+Table I.
+
+HARDWARE RESOURCE USED TO IMPLEMENT GDBF, PGDBF AND FM-PGDBF DECODERS FOR DIFFERENT LDPC CODES FROM SHORT TO VERY LONG CODEWORD LENGTHS AND DIFFERENT CODE RATE.
+
+GDBF PGDBF (S= M/2) PGDBF (S= M/3)
+FM-PGDBF
+GDBF PGDBF (S= M/2) PGDBF (S= M/3)
+FM-PGDBF
+
+R040N155 329 (+0%) 410 (+24.6%) 394 (+19.8%) 410 (+24.6%)
+1735 (+0%) 1757 (+1.3%) 1757 (+1.3%) 702 (-59.5%)
+
+dv= 3 R050N1296 2613 (+0%) 2971 (+13.7%) 2863 (+9.6%) 2971 (+13.7%)
+12331 (+0%) 13650 (+10.7%) 13650 (+10.7%) 5460 (-55.7%)
+
+R075N1296 2614 (+0%) 2810 (+7.5%) 2756 (+5.4%) 2810 (+7.5%)
+
+Registers
+R050N1296 2613 (+0%) 2971 (+13.7%) 2863 (+9.6%) 2971 (+13.7%)
+
+dv= 4
+
+R075N1296 R0857N2212
+
+2614 (+0%)
+
+4445 (+0%)
+
+2810 (+7.5%) 4637 (+4.3%)
+
+2756 (+5.4%) 4585 (+3.1%)
+
+2810 (+7.5%) 4637 (+4.3%)
+
+Look-Up-Tables (LUTs) 13426 (+0%) 13228 (+0%) 12809 (+0%) 14755 (+9.8%) 13973 (+5.6%) 13553 (+5.8%) 14752 (+9.8%) 13976 (+5.7%) 13553 (+5.8%) 5902 (-56%) 5589 (-57.7%) 5421 (-57.7%)
+
+22045 (+0%) 22326 (+1.3%) 22322 (+1.3%) 8930 (-59.5%)
+
+R0868N9520 19063 (+0%) 19657 (+3.1%) 19471 (+2.1%) 19657 (+3.1%)
+94978 (+0%) 95002 (+0%) 95010 (+0%) 38000 (-60%)
+
+lengths and different code rate, i.e. the smallest LDPC code
+
+is Tanner code with length N = 155 and rate 0.4 (denoted as
+
+R040N155) and the longest is LDPC code for flash memory
+
+with N = 9520 and rate 0.868(denoted as R0868N9520).
+
+We can compare the FM-PGDBF complexity with the non-
+
+probabilistic GDBF and PGDBF implementation architecture
+
+found in [7].
+
+Note that, since the FPGA results are not available in
+
+that paper, we have obtained them by re-implementing these
+
+decoders and synthesizing them on FPGA. The synthesis
+
+results are presented in table I along with those of PGDBF
+
+and non-probabilistic GDBF which are shown as a baseline
+
+in comparison. All absolute values of registers and LUTs are
+
+presented followed by the their normalized values with respect
+
+to the GDBF.
+
+The synthesis results show that, FM-PGDBF helps reduce
+
+significantly the complexity of PGDBF implementations as
+
+expected. Indeed, FM-PGDBF requires only 40% of the GDBF
+
+LUTs to be efficiently implemented. It is reasonable that the
+
+FM-PGDBF requires slightly more registers than GDBF i.e.
+
++25% for low rate and +3% for high rate codes since it still
+
+needs the implementation of the random generator. This extra
+
+cost in term of registers is exactly the same as PGDBF decoder
+
+(s=M/2) since both are using the same probabilistic generator
+
+implementation. By reading vertically data column presented
+
+in table I, the hardware resources needed for all tested LDPC
+
+codes follow exactly our previous analysis. Interestingly, the
+
+high code rate and long codeword, the overhead LUTs required
+
+by PGDBF decoders are negligible i.e. for dv4R0868N9520,
+
+PGDBF requires 0.03% more LUTs while FM-PGDBF needs
+
+even −60%, for dv4R0857N2212, these numbers are around
+
+1.3% for PGDBF decoders and −59% for FM-PGDBF. We
+
+compute the decoding throughput for dv3R050N1296 code
+
+as
+
+θ
+
+=
+
+N ∗fmax I tave ∗nc
+
+where
+
+I tave
+
+denotes
+
+the
+
+average
+
+number
+
+of
+
+iterations, fmax is the maximum decoding frequency, and nc
+
+is the number of clock cycles required for a decoding iteration.
+
+nc = 1 for all GDBF-based decoders while nc = 6 for the MS. At α = 0.01, FM-PGDBF obtains 11.2Gbps while
+
+is it 6480 Mbps for GDBF and 5355.37 Mbps for PGDBF
+
+(s= M/2). The PGDBF decoding throughput is, in general,
+
+inferior to the one of GDBF decoder. It is due to the fact that,
+
+the probabilistic behavior slows the decoding speed leading
+
+to higher average iteration numbers. However with our new
+
+proposed FM-PGDBF we overcome this problem and we even
+
+double the throughput of the decoder compared with PGDBF.
+
+The simulated decoding performance of the decoders are
+
+shown in Fig. 3. FM-PGDBF provides an equivalent decod-
+
+ing performance of the PGDBF with slightly earlier error
+
+100 10-1 10-2 10-3
+
+FM-PGDBF, 300 Iterations BF, 300 Iterations GDBF, 300 Iterations PGDBF, 300 Iterations MS, 20 Iterations OMS, 20 Iterations
+
+Frame Error Rate (FER)
+
+10-4
+
+10-5
+
+10-6
+
+10-7 10-3
+
+10-2
+
+10-1
+
+Crossover probability, ,
+
+Figure 3. Comparison of decoders performance on a quasi-cyclic (dv = 4, dc = 8) LDPC code, with codeword length N = 1296.
+
+floor. The simulation result re-confirms the superiority of FM-PGDBF over the GDBF with around 2dB gain in FER (α = 0.02). We can notice here the interesting decoding performances of our proposed FM-PGDBF decoder in the waterfall region of the curve. Note that, operating at the Itmax = 300 in BF decoders is only in the worst case. PGDBF decoder is advantageous in term of decoding throughput as seen in [7]. Also, the comparison on the number of average iteration can be found in that paper. OMS decoder is the best in term of decoding performance with the cost of high complexity and low decoding throVu.ghpCuOt.NCLUSION
+We propose in this paper an efficient hardware architecture to implement PGDBF decoder on QC-LDPC codes, called Flash Memory adapted PGDBF. The Flash Memory adapted PGDBF uses a predefined list of maximum values for the energy function instead of computing it in run-time.
+The simulation performance and FPGA synthesis results confirm that the Flash Memory adapted PGDBF decoders have lower complexity, higher throughput and good performance with respect to other implementations in literature.
+ACKNOWLEDGMENT This work was supported by the National Science Foundation under Grant ECCS-1500170 and CCF- 1314147, the Indo-US Science and Technology Forum (IUSSTF) through the Joint Networked Center for Data Storage Research (JC16-2014-US), and the French ANR project NAND under grant agreement ANR-15CE25- 0006-01
+
+978-1-5386-4881-0/18/$31.00 ©2018 IEEE Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:00:56 UTC from IEEE Xplore. Restrictions apply.
+
+REFERENCES
+[1] D. Declercq, M. Fossorier, and E. Biglieri, “Channel coding: Theory, algorithms, and applications,” Academic Press Library in Mobile and Wireless Communications, Elsevier, ISBN: 978-0-12-396499-1, 2014.
+[2] R. G. Gallager, “Low density parity check codes,” MIT Press, Cambridge, 1963, Research Monograph series, 1963.
+[3] O. A. Rasheed, P. Ivanis, and B. Vasic´, “Fault-tolerant probabilistic gradient-descent bit flipping decoder,” IEEE Communications Letters, vol. 18, no. 9, pp. 1487–1490, Sept 2014.
+[4] G. Sundararajan, C. Winstead, and E. Boutillon, “Noisy gradient descent bit-flip decoding for ldpc codes,” IEEE Transactions on Communications, vol. 62, no. 10, pp. 3385–3400, Oct 2014.
+[5] T. Wadayama, K. Nakamura, M. Yagita, Y. Funahashi, S. Usami, and I. Takumi, “Gradient descent bit flipping algorithms for decoding ldpc codes,” IEEE Transactions on Communications, vol. 58, no. 6, pp. 1610–1614, June 2010.
+[6] K. Le, D. Declercq, F. Ghaffari, C. Spagnol, E. Popovici, P. Ivanis, and B. Vas´ıc, “Efficient realization of probabilistic gradient descent bit flipping decoders,” in 2015 IEEE International Symposium on Circuits and Systems (ISCAS), May 2015, pp. 1494–1497.
+[7] K. Le, F. Ghaffari, D. Declercq, and B. Vasic´, “Efficient hardware implementation of probabilistic gradient descent bit-flipping,” IEEE Transactions on Circuits and Systems I: Regular Papers, vol. 64, no. 4, pp. 906–917, April 2017.
+[8] N. Miladinovic and M. Fossorier, “A improved bit-flipping decoding of low-density parity-check codes,” IEEE Transactions on Information Theory, vol. 51, no. 4, pp. 1594–1606, Apr. 2005, cCF-0963726 (Medium Decoders), CCF-1314147 (TDMR), ECCS-1500170 (FSO), i-RISC, Fulbright.
+[9] B. Yuce, H. F. Ugurdag, S. Goren, and G. Dundar, “Fast and efficient circuit topologies forfinding the maximum of n k-bit numbers,” IEEE Transactions on Computers, vol. 63, no. 8, pp. 1868–1881, Aug 2014.
+[10] J. Jung and I. C. Park, “Multi-bit flipping decoding of ldpc codes for nand storage systems,” IEEE Communications Letters, vol. PP, no. 99, pp. 1–1, 2017.
+978-1-5386-4881-0/18/$31.00 ©2018 IEEE Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:00:56 UTC from IEEE Xplore. Restrictions apply.
+
+

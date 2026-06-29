@@ -1,0 +1,533 @@
+Quantized Message Passing for LDPC Codes
+
+Michael Meidlinger∗, Alexios Balatsoukas-Stimming†, Andreas Burg†, and Gerald Matz∗
+
+∗Vienna University of Technology, Austria
+Email: {mmeidlin, gmatz}@nt.tuwien.ac.at
+
+†EPFL, Switzerland
+Email: {alexios.balatsoukas, andreas.burg}@epfl.ch
+
+Abstract—We propose a quantized decoding algorithm for lowdensity parity-check codes where the variable node update rule of the standard min-sum algorithm is replaced with a look-up table (LUT) that is designed using an information-theoretic criterion. We show that even with message resolutions as low as 3 bits, the proposed algorithm can achieve better error rates than a floatingpoint min-sum decoder. Moreover, we study in detail the effect of different decoder design parameters, like the design SNR and the LUT tree structure on the performance of our decoder, and we propose some complexity reduction techniques, such as LUT re-use and message alphabet downsizing.
+
+Ln n
+
+n1 . . . ndc−1
+
+n
+
+μ¯m1 →n
+
+Φv μn→m μ¯mdv −1→n
+
+μn1 →m Φc
+
+μndc −1 →m μ¯m→n
+
+m1 . . . mdv−1
+
+m
+
+m
+
+(a)
+
+(b)
+
+Fig. 1: VN update (a) and CN update (b) for N (n) = {m, m1, . . . , mdv−1} and N (m) = {n, n1, . . . , ndc−1}
+
+I. INTRODUCTION
+Low-density parity-check (LDPC) codes have excellent error rate performance and can be efficiently decoded using message passing (MP) schemes like the sum-product (SP) and the min-sum (MS) algorithms, both of which involve real-valued (infinite precision) messages. By contrast, practical implementations require finite-precision message representations, i.e., the decoder messages have to be quantized and represented using typically 4 to 7 bits per message. Lower message resolutions tend to deteriorate the error rate performance of the code severely, especially in the error floor regime at high signal-to-noise ratio (SNR) [1]. Recent work on quantized MP decoders [2]–[4] has shown that a significant reduction of the message resolution is possible if the decoding algorithm is explicitly tailored to finite message alphabets.
+In this paper, we present a novel “min-LUT” algorithm that replaces the variable node (VN) update of the MS algorithm with a look-up table (LUT) designed to maximize the local information flow through the code’s Tanner Graph [5]. In our previous work [3], we have shown that an actual implementation of the min-LUT decoder reduced the hardware complexity and increases the decoder throughput relative to a conventional adder-based MS implementation. This paper complements [3] by providing an in-depth discussion of the algorithm and decoder design. Specifically, we discuss in detail the symmetry requirements and the information-theoretic construction of the LUTs for the message updates. Furthermore, we examine the effects of design SNR and LUT tree structure on the error performance and develop additional complexity reduction techniques such as LUT reuse and alphabet downsizing. We demonstrate that LUT reuse is attractive for implementations and can even improve error rate performance. Finally, we show simulation results illustrating the design and performance trade-offs.
+Funding by WWTF Grant ICT12-054.
+
+II. LDPC CODES AND MP DECODING
+
+A (dv, dc)-regular LDPC code with parity-check matrix H ∈ {0, 1}M×N can be represented by a Tanner graph consisting of N VNs and M check nodes (CNs). Every CN is connected to dc VNs and every VN is connected to dv CNs, where a connection between two nodes is indicated by a non-zero entry in the parity check matrix.
+LDPC codes are traditionally decoded using MP algorithms, where messages are exchanged between VNs and CNs over the course of several decoding iterations. Let Mi denote the message alphabet at iteration i. At each iteration the messages from VN n to CN m are computed using the mapping Φ(vi) : L × Mdi−v−1 1 → Mi, which is defined as1
+
+μn→m = Φ(vi) Ln, μ¯N (n)\m→n ,
+
+(1)
+
+where N (n) is the set of neighbours of node n in the Tanner graph, μ¯N (n)\m→n ∈ Mdi−v−1 1 is a vector containing the incoming messages from all neighboring CNs except m, and
+
+Ln ∈ L denotes the channel log-likelihood ratio (LLR) at VN n. Similarly, the CN-to-VN messages are computed via the mapping Φc(i) : Mdi c−1 → Mi defined as
+
+μ¯m→n = Φc(i) μN (m)\n→m .
+
+(2)
+
+Fig. 1 illustrates the message updates in the Tanner graph.
+The decision for a code bit cn is computed with a mapping Φd : L × MIdv → {0, 1} based on the incoming check node messages and the channel LLR according to
+
+cˆn = Φd(Ln, μ¯N (n)→n).
+
+(3)
+
+For the MS algorithm, the mappings read
+
+ΦM v S(L, μ¯ = L + μ¯i,
+
+(4)
+
+i
+
+ΦM c S(μ = sign(μ) min |μ|,
+
+(5)
+
+1To simplify notation, we suppress the iteration index i in the messages.
+
+,(((
+
+
+
+$VLORPDU
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:18:39 UTC from IEEE Xplore. Restrictions apply.
+
+with min |μ| denoting the minimum of the absolute values
+of the vector elements and sign(μ) = j sign(μj). The MS mappings remain unchanged for all iterations and all message
+alphabets are taken to be the reals, Mi = M = L = R. The bit decision Φd is based on the sign of the a-posteriori LLRs,
+
+ΦM d S(L, μ¯)
+
+=
+
+1 2
+
+1 − sign
+
+L+
+
+μ¯i .
+
+(6)
+
+i
+
+III. THE MIN-LUT ALGORITHM
+
+A. Basic Idea
+Since floating-point arithmetic is not feasible for practical hardware implementations, the real-valued messages of the MS algorithm are usually discretized using a small number of uniformly spaced quantization levels. Together with the well-established two’s complement and sign-magnitude binary encoding, the uniform quantization leads to efficient arithmetic circuits but leads to degraded error-rate performance.
+Recently, efforts have been made to design decoders that explicitly account for finite message and LLR alphabets [2], [4]. Instead of arithmetic computations such as (4) and (5), the update rules for these decoders are implemented as look-up tables (LUTs). There are numerous approaches to the design of such LUTs. In the following, we present an algorithm that combines the conventional MS algorithm and the purely LUTbased approach of [4]. In this min-LUT algorithm, the VN updates are realized as LUTs, whereas the CN updates follow (5). This is motivated by the following observations:
+• The CN degree is larger than the VN degree, especially for high code rates. Consequently, without further simplifications, the CN LUTs are far more complex than VN LUTs as the size of the LUTs grows exponentially in the number of inputs.
+• For the MS algorithm, the VN update (4) typically increases the dynamic range of the messages whereas the CN update (5) preserves the dynamic range. Replacing the VN update (4) with a LUT eliminates the need for a message representation that can be interpreted as a numeric value. As will be explained in Section III-B, the outputs of the LUT-based VNs can be sorted in such a way that the CN update (4) can be performed based on the LUT output labels.
+The LUT design for the VN updates is based on [4] and follows a density evolution (DE) approach. Given the CN-toVN message distributions of the previous iterations, one can design the VN LUTs for each iteration in a way that maximizes the mutual information between the VN output messages and the codeword bit corresponding to the VN in question.
+In order to initialize the DE procedure, we first characterize the LLR distribution at the decoder input in Section III-B. Furthermore, Section III-B discusses the relevance of symmetry conditions for the min-LUT algorithm. After these prerequisites, we present the actual evolution of message probability mass functions (PMFs) in Section III-C.
+
+B. Channel Model and Symmetry Conditions
+
+Throughout this paper, we focus on a binary input additive
+
+white Gaussian noise (BI-AWGN) channel py|x(y|x) with noise variance σ2 followed by a quantizer QL : R → L. The quantizer uses an even number of levels |L| and the
+
+quantization regions are symmetric about the origin. The
+
+quantized LLRs are derived from the output of the BI-AWGN
+
+channel
+
+via
+
+L
+
+=
+
+QL
+
+−
+
+2y σ2
+
+,
+
+inducing
+
+a
+
+symmetric
+
+pmf
+
+pL|x(L|x) that can in turn be used to define the reproducer
+
+values of the quantized LLRs as
+
+L
+
+log
+
+pL|x(L|0) pL|x(L|1)
+
+,
+
+(7)
+
+hence pL|x(−L|0) = pL|x(L|1) Similarly, we can assign reproducer values
+
+μ
+
+log
+
+p(mi|)x(μ|0) pm(i|)x(μ|1)
+
+(8)
+
+to the output message labels of the VN LUTs at iteration i. We again assume that the number |M| of messages is even. When the reproducer values are in an ascending order,
+
+L1 < L2 < · · · < L|L|, μ1 < μ2 < · · · < μ|M|, (9)
+
+the identities
+
+Lk ≡ −L|L|−k+1,
+
+μj ≡ −μ|M|−j+1,
+
+(10)
+
+follow from the symmetry of pL|x(L|x) and the MP algorithm (cf. [6], Definition 1) and associate each label k ∈ {1, . . . , |L|} and j ∈ {1, . . . , |M|} with a sign. Based on this association and the ordering (9), the MS CN update (5) can be performed directly on the message labels; the reproducer values (7) and (8) are not needed for decoding. However, (8) bears an interesting interpretation: As the messages become more informative over the course of iterations —implying more concentrated densities p(mi|)x(μ|x)— the reproducer values grow in magnitude. Using different LUTs for different iterations is thus similar to using different message representations for different iterations, an approach which has already been used successfully in [1].
+The symmetry of the MP algorithm discussed above is guaranteed, if the VN LUT at any iteration i satisfies
+
+Φ(vi)(−L, −μ¯1, . . . , −μ¯dv−1) = −Φv(i)(L, μ¯1, . . . , μ¯dv−1). (11)
+This identity can be reformulated based on (10) as a symmetry relation involving only labels.
+Whereas our decoder design is exemplified for the BIAWGN channel, it applies to any symmetric binary input channel followed by a symmetric quantizer. As an example, the channels characterized in [7] could be used to design decoders for bit-interleaved coded modulation (BICM) systems.
+
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:18:39 UTC from IEEE Xplore. Restrictions apply.
+
+C. Density Evolution and LUT Design
+In this section, we show how the message PMFs evolve over the course of iterations. We first describe how the distribution of the CN-to-VN messages can be computed based on the distribution of the incoming VN-to-CN messages. If the Tanner graph is cycle-free, then the individual input messages of a CN at iteration i are iid conditioned on the transmitted bit x, and their distribution is denoted by p(mi|)x(μ|x). The joint distribution of the (dc − 1) incident messages conditioned on the transmitted bit value corresponding to the recipient VN (cf. Fig. 1) reads
+
+pm(i)|x(μ|x) =
+
+1 dc−2 2
+x:
+
+dc −1
+p(mi|)x(μj |xj ),
+x=x j=1
+
+(12)
+
+where x denotes the modulo-2 sum of the components of x. Using the update rule (5), the distribution of the outgoing CN-to-VN message is then given by
+
+pm(i|)x(μ¯|x) =
+
+p(mi)|x(μ|x).
+
+μ: sign(μ) min |μ|=μ¯
+
+(13)
+
+Let μ¯ = μ¯1, . . . , μ¯dv−1 denote the (dv − 1) incident CNto-VN messages that are involved in the update of a certain VN. Then, the joint distribution of the VN input messages and the LLR is given by
+
+dv −1
+
+pL(i,)m|x(L, μ¯|x) =
+
+pL|x(L|x0)
+
+pm(i|)x(μ¯j |xj ). (14)
+
+x: x0=···=xdv −1=x
+
+j=1
+
+Given this distribution, we can construct an update rule Φv that maximizes the mutual information Ii(m; x) between m and x:
+
+Φv(i) = arg max Ii(m; x) = arg max Ii Φ(L, m); x . (15)
+
+Φ
+
+Φ
+
+Here, the maximization is over all deterministic mappings Φ
+in the form of (1) that respect the symmetry condition (11). Hence, the resulting update rule Φ(vi) maximizes the local information flow between the CNs and the VNs. An algorithm that solves (15) with complexity O |L|3|M|3(dv−1) was pro-
+vided in [5]. Using the update rule (15), we can compute the
+conditional distribution of the messages in the next iteration:
+
+pm(i|+x1)(μ|x) =
+
+pL(i,)m|x(L, μ¯|x).
+
+(L,μ¯): Φ(vi)(L,μ¯)=μ
+
+(16)
+
+The noise threshold σ∗ of a (dv, dc)-regular LDPC code ensemble with at most I decoding iterations is defined as
+
+σ∗ = sup{σ ≥ 0 : Ii(m; x) > 1− for some i ≤ I} . (17)
+
+Algorithm 1 summarizes the individual steps of a bisection algorithm that uses the DE algorithm to calculate σ∗.
+
+Algorithm 1 Density Evolution based LUT design
+
+Input: Search interval [σmin, σmax], precision Δσ > 0, , I
+1: while σmax − σmin > Δσ do
+2: σ ← (σmax − σmin)/2 3: Get pL|x(L|x) corresponding to BI-AWGN(σ2) 4: achievable ← false
+
+5: for i = 1, . . . , I do
+
+6:
+
+Update CN-to-VN distribution (12) and (13)
+
+7:
+
+Build the product distribution (14)
+
+8:
+
+Design LUT update Φv(i) (15)
+
+9:
+
+Update VN-to-CN distribution (16)
+
+10:
+
+if I(m(i); x) > 1− then
+
+11:
+
+achievable ← true
+
+12:
+
+break
+
+13:
+
+end if
+
+14: end for
+
+15: if achievable then
+
+16:
+
+σmin ← σ
+
+17: else
+
+18:
+
+σmax ← σ
+
+19: end if
+
+20: end while 21: σ∗ ← σ Output: Threshold σ∗, LUT sequence Φ(v1), . . . , Φ(vi)
+
+IV. DESIGN AND PERFORMANCE TRADE-OFFS FOR PRACTICAL DECODERS
+Algorithm 1 is well suited to determine the asymptotic performance of the min-LUT algorithm for large block length N and many decoding iterations (large I). In order to design practical min-LUT decoders with N and I not too large, we propose the following approach:
+1) Choose a practical number of maximum iterations I. 2) Define a reuse pattern I = {i1, . . . , ir} ⊆ {1, . . . , I}. 3) Choose a LUT tree structure, cf. Section IV-B 4) Choose a design SNR γ such that the corresponding
+noise level σ is below the threshold σ∗. 5) For the chosen σ, run the inner loop of Algorithm 1,
+(lines 3 to 14). However, only design a new LUT if i ∈ I. If i ∈ I, reuse the LUT from the previous iteration. 6) Check the performance of the results by error rate simulations; possibly repeat the procedure with adjusted parameters.
+The resulting LUTs can be used to synthesize a decoder that outperforms a conventional MS decoder in error rate performance, throughput, and hardware complexity [3]. Since for the above procedure there are several design parameters to be chosen, we next give an overview of the performance impact of each of the individual parameters. We support our discussion with comprehensive simulation results that illustrate the design and performance trade-offs. All simulations have been conducted using the (6, 32)-regular LDPC code (block length N = 2048, rate R = 13/16) defined for the 10 Gbit/s Ethernet standard [8].
+
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:18:39 UTC from IEEE Xplore. Restrictions apply.
+
+A. Design SNR
+The information-theoretic LUT design depends strongly on the initial LLR distribution and thus in turn on the design SNR and the LLR quantizer. Our simulations indicate that even though the min-LUT decoder is designed for one particular SNR, excellent performance is maintained over a wide range of actual noise levels, cf. Fig. 3. Re-designing the LLR quantizer or the entire decoder for different SNRs would further improve the performance but simultaneously would substantially increase the implementation cost. For this reason, we kept both the LLR quantizer and the decoder fixed over the range of simulated SNRs.
+We next discuss how the choice of the design SNR affects decoder performance. As can be seen in Fig. 3, by increasing the design SNR, we can trade off performance in the waterfall region against performance in the error floor region. The interpretation is straight-forward: decoders that are designed for bad channels work better for bad channels and vice versa. Another interpretation can be found in terms of decoding iterations: a lower design SNR implies that the decoder is operating closer to the DE threshold and thus DE convergence is much slower as compared to the case of a higher design SNR well beyond the threshold. If, however, decoders designed for low and high γ use the same number of iterations, the lack of convergence translates into a higher residual error for low design SNRs.
+B. LUT Reuse and Alphabet-Downsizing
+Algorithm 1 produces a distinct VN LUT for each iteration. While this does not affect silicon complexity for an unrolled decoder architecture, non-unrolled decoders would need to implement multiple LUTs for the VNs. Contrary to our expectations, we found in our simulations that reusing LUTs for multiple iterations does not necessarily degrade the performance and can even lead to an improvement. As an example, Fig. 4 shows that with a reuse pattern I = {1, 5} with only r = 2 different LUTs, we can improve the error rate compared to a decoder that uses distinct LUTs for every iteration. An explanation for this effect is still an open issue to be explored. At this point, we can only conjecture that the effect originates from the overly optimistic message distributions of DE, which tends to overestimate the speed of convergence for practical codes that are not cycle-free.
+Another means of reducing LUT complexity is message downsizing, i.e., reducing the size of the message set,
+|Mi | ≤ |Mi| for i > i.
+The idea here is that the messages undergo a gradual hardening while being passed through the decoder before culminating into the binary-output decision mapping (3). As can be observed in Fig. 4, a decoder with down-sized LUTs using decaying message resolutions from 3 to 2 to 1 bits over the range of I = 8 iterations performs only slightly worse than a comparable min-LUT decoder with fixed resolution of 3 bits. LUT reuse and LUT downsizing cannot be combined
+
+arbitrarily, i.e., reducing the message resolution in a certain iteration prevents reuse of the corresponding LUT.
+
+C. LUT Tree Structure
+
+Since the number of input configurations for the VN update Φ(vi) equals |L||Mi|dv−1, a full-fledged LUT would be prohibitively complex for codes with high VN degree dv. A similar problem occurs with the decision LUTs (3). To overcome this limitation, we restrict ourselves to nested update rules, e.g., for dv = 6 a possible nesting could take the form
+
+Φ(μ¯1, . . . , μ¯5) = Φ1 Φ2(μ¯1, μ¯2, μ¯3), Φ3(μ¯4, μ¯5), L .
+
+Obviously, any such nesting can be represented graphically by a directed tree, cf. Fig. 2, tree T2 for this particular example. Since we assume iid messages, the ordering of the arguments in the nesting is immaterial and we consider nesting that differ only in the ordering as equivalent.
+While the nested structure clearly reduces complexity, it is not clear a priori, which tree structure to prefer over another. In what follows, we provide guidelines on how to choose the tree structure based on information-theoretic arguments and a heuristic metric. For the moment, we do not distinguish between messages μ¯ and channel input L; the discussion of the location of L within the tree is deferred to Section IV-C3.
+1) Partial ordering: Let the tree T1 represent a specific nesting and let T2 be a refinement2 of T1. Furthermore, let Qj denote the set of all LUTs that respect the nesting induced by some tree Tj. By construction, any LUT in Q2 also conforms with the nesting associated with T1. Thus, Q1 ⊇ Q2 and
+
+max
+Φ∈Q1
+
+Ii
+
+Φ(L, m); x
+
+≥
+
+max
+Φ∈Q2
+
+Ii
+
+Φ(L, m); x
+
+.
+
+Consequently, tree refinement defines a partial ordering ≥T , effectively inducing a hierarchy in terms of maximum infor-
+
+mation flow. However, since the totality axiom is not fulfilled,
+
+not all tree structures can be compared in terms of the relation
+
+≥T , cf. Fig. 2. 2) A heuristic metric: The data processing inequality states
+
+that processing can only reduce mutual information. Therefore,
+
+for maximum information flow the paths from the input leaves
+
+to the root output should be as short as possible. We thus
+
+define the cumulative depth λ(T ) of a tree T as the sum of
+
+distances of all leaf nodes to the root node. DE simulations
+
+confirmed that cumulative depth is useful in ranking tree
+
+structures. Table I shows how a larger λ corresponds with
+
+a lower DE threshold. However, the threshold differences
+
+are small and our simulations have shown that all the trees
+
+presented here perform similar in terms of error rate. While
+
+there were small differences conforming with the ordering
+
+discussed above, they are not significant enough to serve as a
+
+basis for choosing the tree structure. Rather, we recommend
+
+choosing the tree based on its silicon complexity. Trees that
+
+are close to complete binary trees are preferable because they
+
+have short critical paths with low complexity LUTs and at the
+
+same time have small cumulative depth λ.
+
+2Graphically, a refinement of nesting corresponds to the placement of new nodes between parent and child nodes.
+
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:18:39 UTC from IEEE Xplore. Restrictions apply.
+
+Φ
+
+Φ
+
+Φ
+
+Φ Φ μL
+
+Φ ΦL
+
+ΦL
+
+μμμμ T1
+Φ ΦμL ΦΦ μμμμ
+
+μμμμμ T2
+Φ ΦL ΦΦ μ μ μμ μ
+
+μμμμμ T3 Φ ΦL
+Φμ ΦΦ μμμμ
+
+T4
+
+T5
+
+T6
+
+Fig. 2: Six different LUT tree structures. Note that T1 ≥T T4 ≥T T6, T2 ≥T T5, T3 ≥T T5, and T3 ≥T T6. However, we cannot compare T2 with T3 or T5 with T6 using the relation ≥T .
+
+100
+
+10−3
+
+FER
+
+10−6
+
+γ = 4.15 dB γ = 4.0 dB
+
+γ = 3.92 dB
+
+γ = 3.85 dB
+10−9 3 3.5 4 4.5 5 5.5 6
+
+Eb/N0 [dB]
+
+Fig. 3: FER versus channel SNR for min-LUT decoder at different design
+SNRs (I = 8, LUT tree T1, message resolution Qμ down-sized from 3 to 2 bit, QL = 3 bit per channel LLR).
+
+TABLE I: Comparison of cumulative depth and DE threshold for various tree structures (cf. Fig. 2). Here, all LUTs had a resolution of 3 bit.
+
+T
+
+T1
+
+T2
+
+T3
+
+T4
+
+T5
+
+T6
+
+λ
+
+10
+
+11
+
+11
+
+14
+
+16
+
+19
+
+σ∗ 0.5330 0.5328 0.5327 0.5313 0.5309 0.5305
+
+3) Position of the channel LLR: The mutual information between the CN-to-VN messages and the coded bits is initially zero and increases over the course of iterations until at some iteration Ii (m; x) ≥ I(L; x). Using a similar argument as before, we can conclude that until iteration i the channel LLR should be placed close to the root node to ensure a large information flow. After iteration i , the CN-to-VN messages tend to carry more information than the channel LLR an thus should be placed closer to the root node. Our simulations show that this strategy indeed provides the best FER performance; however, the loss as compared to the case where the channel LLR stays at the root node is only relevant for a large number of iterations (I > 20).
+D. Comparison with MS
+As can be seen in Fig. 4, the min-LUT decoder with a message resolution of 3 bits outperforms a conventional MS decoder using a message resolution of 4 bits by a significant margin and even beats a floating point MS decoder. The gain is even larger for the case of LUT reuse. We conclude that our min-LUT decoder is an attractive alternative to the conventional MS decoder.
+V. CONCLUSION
+In this paper, we presented the min-LUT algorithm for decoding LDPC codes. Contrary to the min-sum algorithm, the min-LUT decoder is custom-designed to work with discrete messages of very low resolution. Hence, it constitutes an attractive choice for practical hardware implementations. Using the 10 Gbit/s Ethernet code, we furthermore exemplified that the min-LUT error rate performance can be superior to min-sum decoding in spite of small message resolutions.
+
+10−2
+
+FER
+
+10−5 10−8
+
+min-sum, float min-sum, Qμ = 4 min-LUT, Qμ = 3 min-LUT, reuse min-LUT, downsize
+
+3 3.5 4 4.5 5 5.5 6
+
+Eb/N0 [dB]
+
+Fig. 4: Performance comparisons for different decoders (I = 8, LUT tree T6, QL = 4, γ = 4.2 dB).
+
+REFERENCES
+[1] X. Zhang and P. Siegel, “Quantized Iterative Message Passing Decoders with Low Error Floor for LDPC Codes,” IEEE Transactions on Communications, vol. 62, no. 1, pp. 1–14, Jan. 2014.
+[2] S. Planjery, D. Declercq, L. Danjean, and B. Vasic, “Finit Alphabet Iterative Decoders – Part I: Decoding Beyond Belief Propagation on the Binary Symmetric Channel,” IEEE Transactions on Communications, Oct. 2013.
+[3] A. Balatsoukas-Stimming, M. Meidlinger, R. Ghanaatian, G. Matz, and A. Burg, “A Fully Unrolled LDPC Decoder based on Quantized Message Passing,” in IEEE Workshop on Signal Processing Systems (SiPS), Hangzhou, China, Oct. 2015.
+[4] B. Kurkoski, K. Yamaguchi, and K. Kobayashi, “Noise thresholds for discrete LDPC decoding mappings,” in Proc. IEEE Global Telecommunications Conf. (GLOBECOM), Nov. 2008.
+[5] B. Kurkoski and H. Yagi, “Quantization of binary-input discrete memoryless channels,” IEEE Transactions on Information Theory, vol. 60, no. 8, pp. 4544–4552, Aug. 2014.
+[6] T. Richardson and R. Urbanke, “The capacity of low-density paritycheck codes under message-passing decoding,” IEEE Transactions on Information Theory, vol. 47, no. 2, pp. 599–618, Feb. 2001.
+[7] A. Alvarado, L. Szczecinski, R. Feick, and L. Ahumada, “Distribution of L-values in gray-mapped M2-QAM: closed-form approximations and applications,” IEEE Transactions on Communications, vol. 57, no. 7, pp. 2071–2079, Jul. 2009.
+[8] “IEEE Standard for Information Technology – Telecommunications and Information Exchange between Systems – Local and Metropolitan Area Networks – Specific Requirements Part 3: Carrier Sense Multiple Access with Collision Detection (CSMA/CD) Access Method and Physical Layer Specifications,” IEEE Std. 802.3an, Sep. 2006.
+
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 16:18:39 UTC from IEEE Xplore. Restrictions apply.
+
+

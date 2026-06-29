@@ -1,0 +1,1680 @@
+1
+Action-List Reinforcement Learning Syndrome Decoding for Binary Linear Block Codes
+Milad Taghipour, Bane Vasic´, Fellow, IEEE Department of Electrical and Computer Engineering, the University of Arizona, Tucson, AZ
+Email: miladt@arizona.edu, vasic@ece.arizona.edu
+
+arXiv:2507.17893v2 [cs.IT] 28 Jul 2025
+
+Abstract—This paper explores the application of reinforcement learning techniques to enhance the performance of decoding of linear block codes based on flipping bits and finding optimal decisions. We describe the methodology for mapping the iterative decoding process into Markov Decision Processes (MDPs) and propose different methods to reduce the number of states in the MDP. A truncated MDP is proposed to reduce the number of states in the MDP by learning a Hamming ball with a specified radius around codewords. We then propose a general scheme for reinforcement learning based decoders applicable to any class of codes to improve the performance of decoders. We call this scheme an action-list decoding. We design an action-list decoder based on the Deep-Q network values that substantially enhance performance. We also get benefit of automorphism group of code to further improve the code performance. Additionally, we propose a feedback-based method to exploit and enhance the performance of existing high-performing decoders by applying reinforcement learning algorithms after the existing decoders. These approaches effectively reduces the complexity of the reinforcement learning block. Finally, we present experimental results for the Low-Density Parity Check (LDPC) codes over the Binary Symmetric Channel (BSC) to demonstrate the efficiency of the proposed methods.
+Index Terms—Reinforcement Learning, Action-List Decoding, Beam Decoding, Automorphism Group, Iterative Decoders, Linear Block Codes, QC-LDPC Codes, Bit Flipping.
+I. INTRODUCTION
+E RROR correcting codes are essential for ensuring reliable communication over noisy channels. Advances in coding theory have produced highly efficient codes and decoders. However, Maximum Likelihood (ML) decoding methods, such as the Viterbi [1] and BCJR [2] algorithms, are NP-hard for binary linear block codes, making them computationally infeasible for long-length or low-rate codes. To overcome these limitations, various approximate decoding techniques have been developed that offer lower complexity while approaching ML performance. These include Ordered Statistics Decoding (OSD) [3], Polar Successive Cancellation List (SCL) decoding [4], and message-passing algorithms based on factor graphs [5]. While these methods perform well for long, well-structured LDPC codes, their effectiveness declines for short to moderate block lengths and high-density paritycheck (HDPC) codes. Additionally, decoding strategies for convolutional codes using list decoding have been shown to reduce average complexity while maintaining near-optimal performance, particularly when leveraging techniques such as code decomposition and dual list decoding [6], [7].
+
+Recent advances in artificial intelligence, particularly in natural language processing and image processing, have led to increased interest in designing effective decoders for finitelength codes to enhance their decoding performance. Designing high-performance, fast, and low-complexity decoders for error-correcting codes remains a significant challenge, particularly for short to medium-length codes across general classes of codes. To bridge the gap between existing decoders and maximum likelihood (ML) decoding, one approach involves parameterized message-passing based decoders [8]– [12], which retain the advantages of BP while improving convergence speed and error performance. The authors in [13] presented theoretical results associated with the generalization gap of the Neural BP decoder. Another approach is to view the problem of decoding as a decision-making process, using reinforcement learning (RL) to learn optimal strategies. Some works formulate decoding as a Markov decision process (MDP), where RL guides sequential bit-flipping decisions [14], [15]. In [16], the authors explore the scheduling problem in the belief propagation algorithm, framing it as a MDP and optimizing check-node scheduling policies to improve sequential decoding performance compared to traditional flooding scheduling methods. Throughout this paper, we propose a general and systematic method to reduce the state space size of the MDP. First, by focusing on the most probable error patterns and utilizing the concept of Hamming balls around codewords. In the coding theory literature, this concept is analogous to bounded distance decoding of linear block codes [17]. We observe that the Deep Q-learning algorithm demonstrates the ability to generalize and learn the optimal policy for certain states it has never encountered during training as demonstrated in Section X. We also propose a novel method to enhance the inference performance of a learned Deep QNetwork for general classes of binary linear codes. Due to the approximation of Q-values in the Deep Q-Network, the learned policy may exhibit oscillatory behavior and fail to converge. To address this issue, our proposed method employs a list of candidate solutions to guide the decoder more effectively and reduce the likelihood of convergence failures. Next, we propose a novel feedback decoding strategy designed to further enhance the performance of well-established decoders in the literature. This approach leverages an RL block to address error patterns that the chosen decoder fails to correct, thereby effectively expanding its correctable region. In general, this method can be employed to improve state-of-the-art iterative decoders and strengthen their error correction capabilities.
+
+2
+
+Then, we use the automorphism group of the code to further improve the code performance. At the first sight, it may appear counterintuitive that for the BSC permuting bit positions within a codeword would lead to any benefit since for the BSC all initial bit likelihood have the same magnitudes. However, we demonstrate that the sequential nature of reinforcement learning introduces anisotropy–position dependent bit-flipping rules–making the effect of an error pattern dependent on its position within the received codeword block. The remainder of this paper is organized as follows. Section II provides the necessary background on channel coding. Section III introduces the MDP framework and its application to decoding problems. In Section IV, we outline the RL-based bit-flipping strategy, followed by the proposed truncated MDP in Section V. In Section VI, we investigate the effect of the discount factor on the reward function. Then, we introduce the actionlist decoding technique to improve the decoder performance in Section VII. In Section VIII, the RL feedback decoding technique presented to improve the decoder performance. The automorphism group structure of the QC-LDPC code is presented in Section IX. Numerical results and performance comparisons are presented in Section X. The paper concludes with a summary of findings in Section XI.
+II. PRELIMINARIES – CHANNEL CODING BACKGROUND
+Let us assume C to be a binary linear code with parameters (n, k, dmin), where n is the code length, k is the code dimension, and dmin is the minimum distance of the code. We define a binary linear code C = {c ∈ F2n | cHT = 0}, where H is the parity-check matrix, which is an m × n binary matrix where m/n ≥ 1 − R, R = k/n is the code rate. We also define hci as the i-th column of the parity check matrix H. The error correction capability of a code can be defined on the basis of its minimum distance as t = ⌊(dmin − 1)/2⌋. A codeword c is transmitted through the Binary Symmetric Channel (BSC) as y = (1 − 2c) + z, where y is the received row vector of length n, and z is a row vector of length n generated by i.i.d. Bernoulli random variable with parameter ρ which is the cross-over probability of the channel.
+
+expressed in terms of the errors that the decoder fails to correct
+
+as
+n
+
+PF ER(ρ) = | Ei | ρi(1 − ρ)n−i
+
+(2)
+
+i=c
+
+where |Ei| denotes the number of weight-i error patterns that the decoder is unable to correct, and c denotes the minimum weight of an uncorrectable error pattern. For small values of α, the probability of error can be approximated by considering only the contribution of the lowest-weight uncorrectable error patterns. This allows for estimating the decoder’s performance on a semi-log scale in the error floor region as
+
+log lim PF ER(ρ) = log |Ei| + c log ρ.
+
+(3)
+
+ρ→0
+
+We later use this approximation to demonstrate how our proposed feedback model improves decoder performance in terms of Frame Error Rate (FER).
+
+III. PRELIMINARIES –MARKOV DECISION PROCESS
+
+Markov Decision Processes (MDPs) provides a mathe-
+
+matical framework for modeling decision-making problems
+
+where outcomes are random or deterministic under the control
+
+of a decision maker. An MDP can be defined based on
+
+(S, A, P, R, γ), where S is the set of finite states representing
+
+all situations of the environment, A is the set of finite actions
+
+that the decision maker, or agent, can take, Psas′ = P (s′ | s, a) ≜ P (St+1 = s′ | St = s, At = a) is the probability
+
+transition function P : S × A × S → [0, 1] which represents
+
+the probability of going to state s′ from state s after taking
+
+action a, R(s, a) is the reward function R : S × A → R which
+
+represents the immediate reward received after taking action a
+
+in state s, and γ ∈ [0, 1] is the discount factor which denotes
+
+the importance of future rewards. A deterministic policy π is
+
+a mapping π : S → A, where π(s) denotes the action to
+
+take in state s. The goal in an MDP is to find an optimal
+
+policy π⋆ that maximizes the expected cumulative reward
+
+π⋆ = arg maxπ Eπ[
+
+∞ t=0
+
+γtR(st, π(st))
+
+|
+
+s0
+
+=
+
+s],
+
+where
+
+Eπ
+
+is the expectation by taking actions under policy π.
+
+A. Bounded Distance Decoding
+
+Bounded distance decoding (BDD), studied in the error correction literature, aims to correct errors of weight up to w. The frame error rate (FER) of BDD over the binary symmetric channel (BSC) is given by
+
+w
+PFER(w) = 1 −
+
+n ρi(1 − ρ)n−i. i
+
+(1)
+
+i=0
+
+We utilize the BDD frame error probability, as expressed in Equation 1, as a baseline to evaluate the performance improvements achieved by our proposed methods in the Numerical Results section.
+
+B. Error Floor Estimation
+In this Section, we discuss the estimation of the ErrorFloor of LDPC codes. The probability of frame error can be
+
+A. Q-learning
+
+Q-learning is a model-free reinforcement learning algorithm that is used to solve MDPs. It has the ability to learn the optimal policy π⋆ directly from interactions with the environment without requiring the model of environment. The actionvalue function Q : S × A → R is defined to be the expected cumulative rewards starting from state s, taking action a, and using policy π to select actions afterwards
+
+∞
+Qπ(s, a) = Eπ[ γtR(st, π(st)) | S0 = s, A0 = a]. (4)
+t=0
+
+Q-learning algorithm aims to learn the optimal action-value
+
+function
+
+Q⋆(s, a) = max Qπ(s, a)
+
+(5)
+
+π
+
+that find the expected reward of taking action a in state s and following the optimal policy afterwards. The Q-learning
+
+3
+
+algorithm iteratively updates the Q-values using the following [18]. We employ a neural network to estimate a low-
+
+rule
+
+complexity approximation of the Q-table, Q(s, a). We assume
+
+Q(s, a) ← Q(s, a) + α[R(s, a) + γ max Q(s′, a′) − Q(s, a)]
+a′
+(6) updating the Q-values based on the immediate rewards received and the estimated value of subsequent maximum actionvalue estimate where α ∈ (0, 1] is the step size for updating the Q values. The Q-learning algorithm is shown in Algorithm 1 [18], where sE is the terminal state. It is worth mentioning that the complexity of Q-learning algorithm is O(|S| × |A|2), due to the necessity of updating each state-action pair and calculating the maximum Q-value over all possible actions in the subsequent state during each iteration. The selection of
+
+Qθ(s, a) represents the estimation of the Q-function with learnable parameters θ. We store transition tuples (s, a, r, s′)
+obtained from simulating the MDP in a set B called replay
+memory. For stable training, we use two neural networks a primary Q-network Qθp(s, a) for selecting actions and a target Q-network Qθt (s, a) to provide more stable Q-value updates. The agent balances exploration and exploitation using
+an ϵ-greedy policy with linear decay. Then, we update the
+parameter θ based on reducing the loss function
+
+L(θ)
+
+=
+
+E(s,a,r,s′ )∈B [r
+
++
+
+γ
+
+max
+a′ ∈A
+
+Qtθ− (s′,
+
+a′)
+
+−
+
+Qpθ (s,
+
+a)]2
+
+(9)
+
+where gradient descent based methods are employed to update
+
+Algorithm 1 Q-learning Algorithm
+
+the parameters θ to minimize the loss function defined in
+
+Input: Initialize Q(s, a) arbitrarily (e.g., randomly), except Equation (9). Periodically, after some iterations the target
+
+Q(sterminal, a) = 0. Set the number of episodes Nepisodes.
+
+network is updated to match the primary network θ− ← θ,
+
+Output: Optimal action-value function Q(s, a) for all s ∈ S, improving the stability of training. The goal is to maximize
+
+a ∈ A.
+
+cumulative rewards by learning an optimal policy over time.
+
+1: for i ← 1 to Nepisodes do
+
+The full algorithm is shown in Algorithm 2.
+
+2: Initialize state s
+
+3: while s is not terminal do
+
+4:
+
+Choose action a from state s using an exploration
+
+strategy (e.g., ϵ-greedy)
+
+5:
+
+Take action a, observe reward R(s, a) and next
+
+state s′
+
+Algorithm 2 Deep Q-learning Algorithm
+Input: Initialize replay memory B, initialize Q-networks Qpθ(s, a) and Qθt (s, a) with random weights θ and θ−, and set epo as the number of episodes. Output: Primary Q-network Qθp(s, a)
+
+6:
+
+Update Q-value:
+
+1: for i = 1, 2, . . . , epo do 2: Sample a random minibatch (s, a, r, s′) of transitions
+
+Q(s, a) ← Q(s, a)+α R(s, a) + γ max Q(s′, a′) − Q(s, a)
+a′
+
+7:
+
+s ← s′
+
+8: end while
+
+9: end for
+
+from B.
+
+r,
+
+if s′ ∈ SE
+
+3:
+
+Set y ←
+
+r
+
++
+
+γ
+
+max
+a′
+
+Qθt −
+
+(s′,
+
+a′),
+
+otherwise
+
+4: Perform a gradient descent step on (y − Qθp(s, a))2
+
+with respect to θ.
+
+actions in the Q-learning algorithm is an important step that needs to be balanced between exploration, experiencing new actions, and exploitation, choosing the best known action. The ϵ-greedy strategy is commonly employed for this purpose. It
+
+5: if fixed number of steps are reached then
+
+6:
+
+Update Qt ← Qp
+
+7: end if
+
+8: end for
+
+selects actions based on a probability distribution defined by
+
+the parameter ϵ, as follows
+
+IV. BIT-FLIPPING STRATEGY
+
+random action uniformly from A, w.p. ϵ
+
+at = arg maxa∈A Q(st, a),
+
+w.p. 1 − ϵ
+
+(7)
+
+Assuming transmission over independent memoryless channels, hard-decision maximum likelihood decoding of binary
+
+A simple and effective way to reduce exploration in favor of linear block codes can be interpreted as finding the minimum
+
+exploitation as the learning process progresses is the use of number of bit flips in the received word required to obtain the
+
+linear decay in ϵ-greedy algorithm. By controlling the decay all-zero syndrome.
+
+rate, the agent can effectively balance between discovering
+
+new actions and leveraging learned knowledge to maximize rewards. The linear decaying ϵ(t) at the episode t is given by
+
+ϵ(t)
+
+=
+
+max(ϵmin, ϵmax
+
+−
+
+ϵmax − N
+
+ϵmin
+
+·
+
+t)
+
+(8)
+
+where ϵmax/ϵmin is the maximum/minimum value of ϵ and N is the total number of episodes.
+
+A. State and Action Spaces
+Given that the code dimension is n, each of these n bits can be erroneous. In other words, the action space A should be designed to allow the flipping of each bit at any time step. Therefore, we can state A = {1, 2, · · · , n}. The decoding process can be terminated based on the value of the syndrome
+
+B. Deep Q-learning Algorithm
+
+vector, which indicates the positions of unsatisfied checks in the code. Consequently, the state space can be defined by
+
+Deep Q-learning is an extension of Q-learning algorithm all possible binary syndromes of length m. The initial state that uses deep neural networks to approximate the Q-values s0 = yHT represents the syndrome of the received vector.
+
+4
+
+Next, we need to define the transition probability function P (s′ | s, a) for an MDP. By taking action a from state s, we transition to state s′ = s + hca with probability 1, indicating that it is a deterministic MDP. Terminal state corresponds to
+the all-zero syndrome, indicating that a codeword is obtained
+and that the decoding process should be terminated. We also impose a limit of L steps, which is the maximum length of each episode. If an episode is not terminated within L steps,
+a new episode begins.
+
+B. Reward Strategy
+
+Choosing a reward strategy is crucial in Reinforcement Learning algorithms because it significantly impacts the learning efficiency and the resulting policy. Since the goal of the decoding problem is to find a codeword, we define a positive reward of 1 if an agent reaches the terminal state. It is also necessary to penalize the action of flipping a bit at each step in order to encourage the decoder to find a solution that requires the fewest possible bit flips. This helps identifying the set of least reliable bits to find a codeword, thereby minimizing the probability of word error rate. Thus, we define a reward function as in [14] for the BSC
+
+R(s, a, s′) =
+
+−
+
+1 L
+
++
+
+1,
+
+−
+
+1 L
+
+,
+
+if s′ = 0 otherwise.
+
+(10)
+
+V. TRUNCATED MDP
+
+The proposed Truncated Markov Decision Process (TMDP) faces challenges related to the number of states, which corresponds to the number of syndromes of the code, given by 2n−k. This number grows exponentially, making Q-Learning methods infeasible for long and low-rate codes. In this section, we propose a reduction in the state space size of the MDP model aimed at handling low-rate codes to learn their optimal policies. We use state reduction in the proposed MDP to make the problem more tractable. We define a Hamming ball B(c, w) with a radius w for a binary linear code of length n to cover all received words within a maximum hamming distance of w or less around a codeword c ∈ C defined as
+
+B(c, w) = {x ∈ Fn2 | dH (x, c) ≤ w}
+
+(11)
+
+where dH (x, c) represents the hamming distance between the codeword c and the received word x. We define a hamming ball B(w) with radius w of a code C to be the union of hamming balls centered at each codeword c ∈ C, i.e., B(w) = ∪∀c∈CB(c, w). The hamming ball B(w) includes all received words within a maximum hamming distance of w from any codeword c ∈ C. S(w) denotes the set of syndromes associated with B(w), where S(w) = {yHT | y ∈ B(w)}.
+To evaluate the performance of a coding and decoding scheme for linear codes over an output symmetric channel, it is sufficient to assume the transmission of the allzero codeword, provided that the decoding algorithm satisfies certain conditions, including channel symmetry and decoder symmetry (Lemma 1 in [19]). The iterative decoding algorithms considered throughout this paper satisfy these symmetry conditions, making both the learning of decision regions
+
+and the probability of error independent of the transmitted
+
+codeword. Therefore, we can assume the transmission of
+
+the all-zero codeword. Binary linear block codes may have
+
+complex decision regions that make finding the optimal policy
+
+difficult. It is known that the error correction capability of
+
+the code is a good estimate for its probability of error in
+
+a high SNR regime. Therefore, we consider only the states
+
+corresponding to syndromes related to erroneous patterns up
+
+to weight w. With this modification, we dramatically decrease
+
+the number of states to
+
+wn
+
+| S |=
+
+(12)
+
+i
+
+i=0
+
+which is significantly smaller than the total number of syn-
+
+dromes. The action space can be modified for the states on
+
+the boundary (weight-w error patterns) to be a specific set
+
+related to their syndrome. Alternatively, the action space can
+
+remain as before, with a new reward of −1 assigned for actions
+
+that transition to states outside our favorable state space. The
+
+proposed reward function can be defined as follows
+
+ − 
+
+1 L
+
++
+
+1,
+
+if s′ = 0
+
+R(s, a, s′) =
+
+−
+
+1 L
+
+,
+
+is s′ ∈ S(w)\0 (13)
+
+−
+
+1 L
+
+−
+
+1,
+
+if s′ ∈ S(w)
+
+where S(w) denotes the complement of the set S(w). In the proposed method, we aim to correct up to weight-w errors, which is closely related to the concept of bounded distance decoding (BDD) in the error correction literature, given by Equation 1, as a baseline to evaluate the accuracy of the found optimal policy. In the proposed truncated Markov Decision Process (MDP), we intuitively define a boundeddistance decoding version of the MDP, which, at best, achieves the performance corresponding to the bounded-distance error probability. In the subsequent section, we analyze the number of optimal policies that the it can be found.
+
+A. Number of Optimal Policies
+The Q-learning algorithm aims to determine the optimal policy π⋆. In this section, we analyze the existence and combinatorial properties of optimal policies that Q-learning ultimately tries to identify for decoding binary linear block codes. Under certain conditions, the Q-learning algorithm converges to the optimal policy, as stated in [18]. Given the convergence of the Q-learning algorithm, we can formulate the following theorem regarding the number of optimal policies that the algorithm can identify for decoding binary linear codes. In the subsequent section, we analyze the number of optimal policies that can be found.
+
+Theorem 1. The number of distinct optimal policies, or
+
+proposed decoders, for the Binary Symmetric channel is at
+
+least
+
+t
+
+i(ni )
+
+(14)
+
+i=1
+
+where n denotes the codelength and t represents the error-
+
+correcting capability of the code.
+
+Proof. The proof is provided in the Appendix A.
+
+5
+
+Fig. 1: Q-values as a Function of Time Steps to Terminal State.
+
+VI. FINITE HORIZON MDP REWARD FUNCTION
+
+In reinforcement learning, the objective is to ensure that all
+
+states—including those that are far from terminal states—are
+
+learned efficiently. However, learning distant states is challeng-
+
+ing due to low Q-values, vanishing gradients, and suboptimal
+
+exploration. For binary linear codes, the goal is to learn and
+
+correct error patterns up to the error-correcting capability of
+
+the code, i.e. t, and further. The expected return of a state-
+
+action pair, under a deterministic policy where the agent
+
+reaches the terminal state in exactly j steps, can be expressed
+
+as
+
+Q(j) = γj−1r − 1 − γj p
+
+(15)
+
+1−γ
+
+where r is the terminal reward, p is the per-step penalty value, and γ is the discount factor. In Figure 1, we set r = 1 and p = −1/10 to illustrate the effect of the discount factor γ. For small values of γ, Q-values drop rapidly, meaning the agent strongly prefer short term rewards. In this case, the Qvalues associated with states that are far from the terminal state become indistinguishably small, making it difficult for a Deep Q-Network (DQN) to learn meaningful representations of those states. In contrast, states that are close to the terminal state exhibit more distinct Q-values, allowing the DQN to learn them more effectively. On the other hand, for larger values of γ, the Q-values of distant states decay more slowly, preserving distinguishability and enabling the DQN to learn these states more effectively. However, in such cases, the Q-values of the initial states may become less distinguishable from one another compared to those under smaller values of γ, which can hinder the learning of precise value estimates for these early states. In the subsequent sections, we present general methodologies that leverage this intuitive analysis to design robust decoders for binary linear block codes.
+
+VII. ACTION-LIST DECODING BASED ON Q-VALUES
+The proposed approach involves determining the optimal policy by leveraging Q-values through greedy action selection. However, due to the nature of the Deep Q-Network as a function approximator, there is no guarantee that it will learn the exact Q-values. Using the optimal policy, the decoder is then executed in an iterative manner to decode the received
+
+word. During the decoding phase, the decoder may become trapped in oscillatory behavior due to the limitations of the learned policy. The objective is to develop a robust decoder that can lower the probability of error. To improve decoder performance, we propose a new type of decoder in which, at each state, multiple actions are considered rather than selecting only the best possible action based on the Q-values. The proposed approach is conceptually similar to beam search optimization [20]. Its purpose is to mitigate the issue of the decoder becoming trapped in oscillatory behavior. We define a deterministic state transition function T : S ×A → S such that s′ = T (s, a) = s + hca , which maps the current state to the next state based on the selected action. Specifically, the next state is obtained by adding the current state to the a-th column of the parity-check matrix. We have an initial state s0. The Qvalues for all actions in s0, denoted by {Q(s0, a) | a ∈ A}, are computed using the Deep-Q Network. We then select the top k actions with the highest Q-values. For each selected action a, we construct a candidate path pi
+
+pi = {s0i , s1i = T (s0, a)}
+
+(16)
+
+where i ∈ [k], and assign a score vi = Q(s0i , a) to each
+candidate path. We assume that at depth l, we maintain a list
+of candidate paths denoted by Bl = {(pi, vi) | i ∈ [k]} where each pi is the sequence of states (si0, s1i , · · · , sli) and vi is the Q-value of the last action that generated the state sil. In the path expansion stage, for each candidate path (pi, vi) ∈ Bl, we compute the Q-values at the current state sli. A path pi is extended only by actions a satisfying the condition
+
+Q(sil, a) > vi
+
+(17)
+
+which ensures that the Q-value of the new action is strictly
+greater than that of its parent. This criterion enforces the
+selection of improving paths, guiding the decoder toward con-
+vergence to the all-zero syndrome. For all actions that satisfy the condition, a new state is generated as sl+1 = T (sl, a), and an extended path is formed as pˆi = p ∪ {sl+1}, with an updated score vˆi = Q(sl, a). In the path pruning stage, all extended paths generated from the candidates in Bl are collected into a new set. From this set, the top k paths are selected based on their scores vˆ to form the updated path collection Bl+1, where |Bl+1| ≤ k, or fewer if not enough valid candidates are available. The search process terminates when at least one candidate path pi satisfies the all-zero syndrome, or when a maximum search depth Dmax is reached. The proposed method outputs the list of candidate paths that
+reach a valid codeword along with their associated scores
+which is presented in Algorithm 3. The candidate path with
+the highest estimated value is selected as the final output. In
+Figure 2, we illustrate the steps of the action-list algorithm up to depth 2 for further clarification. We begin with the
+initial syndrome. Using the policy network, we sort actions according to their estimated Q-values. The top-k actions are
+then selected as part of the expansion procedure, resulting in transitions to the next set of syndromes {s11, s21, · · · , sk1}. From each of the states at depth-1, we again select the top-k actions, yielding a total of k2 expanded paths. As a pruning step, only the top-k paths are used for further expansion. This
+
+6
+
+Fig. 2: 2-Depths expansion of Action-List Algorithm.
+
+process is repeated until either a valid codeword is found or the predefined number of steps is reached. In the actionlist algorithm, the policy network is evaluated k times at each depth, followed by k sorting operations. In the next section, we aim to leverage the performance of existing welldesigned decoders and refine their state space to improve their performance using Reinforcement Learning algorithms.
+
+VIII. FEEDBACK DECODER
+
+As explained in the Section III-A, the complexity of Qlearning algorithm is O(|S| × |A|2), which is dependent on the number of states and the square of the number of actions. For the MDP defined in Section IV-A, it becomes O(n22n−k). In this section, we aim to establish a general framework to reduce the number of states in the MDP. Since the approach described in IV becomes infeasible for longlength and low-rate codes, we propose a general feedback method to leverage the advantages of well-established codes and decoders from the literature. We incorporate a Reinforcement Learning block to correct errors that the chosen decoder cannot correct, thereby enhancing the decoder’s performance through the RL-based bit flipping mechanism. In addition, this RL-based feedback decoder can be applied sequentially for D times to further enhance performance as shown in Figure 3. Each RL block, as shown in Figure 4, is designed to correct the failures of the employed decoder, thereby expanding the overall decoder’s correctable region. We define RΦc to be the successful decoding region of a chosen decoder Φ
+
+RcΦ = {x ∈ Fn2 |Φ(x) = arg min d(x, c′)}.
+
+(18)
+
+c′ ∈C
+
+We also define the miscorrectable region of the decoder Φ as the region in which the decoder assigns a codeword to the received word that is not the closest codeword.
+
+Rm Φ = {x ∈ F2n|Φ(x) ∈ C, Φ(x) ≠ arg min d(x, c′)} (19)
+c′ ∈C
+
+Algorithm 3 Q-Guided Action-List Decoding
+
+Require: Trained Q-network Q(·, ·),initial syndrome s0, list
+
+size k, maximum iterations Dmax, parity-check matrix H. Ensure: A candidate path p∗ that reaches a valid codeword.
+
+1: Initialize beam B0 ← ∅.
+
+2: Compute Q-values for s0: q0(a) ← Q(s0, a), ∀a ∈ A
+
+3: Let A0 ← Topk({q0(a)}a∈A) 4: for each action a ∈ A0 do
+
+5: s1 ← T (s0, a)
+
+6: Add candidate path p = {s0, s1} with score v =
+
+Q(s0, a) to B0
+
+7: end for
+
+8: i ← 0
+
+9: while i < Dmax and Bi ̸= ∅ do
+
+10: Initialize candidate set T ← ∅
+
+11: for each candidate (p, v) in Bi with last state s do
+
+12:
+
+Compute Q-values: q(s, a) ← Q(s, a), ∀a ∈ A
+
+13:
+
+Let A ← Topk({q(s, a)}a∈A)
+
+14:
+
+for each action a ∈ A do
+
+15:
+
+if q(s, a) > v then
+
+▷ Only extend if
+
+improvement is observed.
+
+16:
+
+s′ ← T (s, a)
+
+17:
+
+p′ ← p ∪ {s′}
+
+18:
+
+Add candidate (p′, q(s, a)) to T
+
+19:
+
+end if
+
+20:
+
+end for
+
+21: end for
+
+22: Sort T in descending order by score.
+
+23: Let Bi+1 ← Topk(T )
+
+24: for each candidate (p′, v′) in Bi+1 do
+
+25:
+
+if Valid(s′) is true, where s′ is the last state in p′
+
+then
+
+26:
+
+return p′
+
+27:
+
+end if
+
+28: end for
+
+29: i ← i + 1
+
+30: end while
+
+31: return Best candidate path from Bi (or null if none
+
+found)
+
+Then, we can define the set of failure-inducing error patterns as the complement of the set of correctable and miscorrectable error patterns
+
+RΦf = {x ∈ Fn2 |Φ(x) ∈/ RcΦ ∪ Rm Φ }.
+
+(20)
+
+We denote by SiΦ the set of syndromes corresponding to the i (correctable, failure, or miscorrectable) decoding region RiΦ of the decoder Φ, where SiΦ = {yHT | y ∈ RiΦ} and i ∈ {c, f, m}. The states of new Markov Decision Process (MDP) are SfΦ ∪ {0}, and the action space is defined as A = {1, 2, · · · , n}. The reward function is defined as follows
+
+R(s, a, s′) =
+
+−
+
+1 L
+
++
+
+1,
+
+−
+
+1 L
+
+,
+
+if s′ ∈/ SfΦ is s′ ∈ SfΦ.
+
+(21)
+
+The RL block interacts with the existing decoder to expand its correctable region. The general decoding procedure during
+
+7
+
+Fig. 3: Feedback based Reinforcement Learning decoder.
+
+Remark 1. To correct the entire failure region, it is essential to have precise knowledge of the miscorrection region. Accordingly, the reward function is modified as follows
+
+Fig. 4: Feedback based Reinforcement Learning decoder.
+
+ − 
+
+1 L
+
++
+
+1,
+
+if s′ = ScΦ
+
+R(s, a, s′) =
+
+−
+
+1 L
+
+,
+
+if s′ ∈ SfΦ
+
+(23)
+
+−
+
+1 L
+
+−
+
+1,
+
+if s′ ∈ SmΦ
+
+inference is outlined in Algorithm 4, where π⋆(s) denotes the optimal policy. Given the convergence of the Q-learning algorithm, we formulate the following theorem to characterize the error-correction capability of the proposed feedback decoder under the convergence of the RL algorithm.
+
+Algorithm 4 Decoder with Reinforcement Learning Feedback
+
+Input:x = sign(y), H (parity-check matrix), and maximum
+
+iteration number. Output: estimated codeword cˆ.
+
+1: xin = (1 − x)/2 2: sin = mod (xinHT , 2)
+
+3: while sin ≠ 0 and maximum iterations is not reached do
+
+4: xout = Φ(xin)
+
+▷ output of the chosen decoder
+
+5: sout = mod (xoutHT , 2)
+
+6: if sout ≠ 0 then
+
+7:
+
+a = π⋆(sin)
+
+▷ Output of RL Block
+
+8:
+
+xin ← xin ⊕ a
+
+9:
+
+sin = mod (xinHT , 2)
+
+10:
+
+cˆ = xin
+
+11: else
+
+12:
+
+cˆ = xout
+
+13:
+
+Break
+
+14: end if
+
+15: end while
+
+Then, the error-correction capability of the integrated decoder, after the convergence of training, is lower bounded by the minimum of the weight of the miscorrected error and the errorcorrection capability of the code, i.e.,
+
+min t, min wH (y) .
+
+(24)
+
+y∈RΦm
+
+To further reduce the number of states, we employ the concept of truncated MDP to decrease the state space size in the following Section similar to Section V.
+
+A. Feedback Decoder with Truncated MDP
+
+By combining the concept of the feedback decoder pre-
+sented in Section VIII with the truncated Markov decision
+process (MDP) discussed in Section V, the number of states
+can be further reduced, thereby facilitating the training process
+and enabling the identification of the optimal policy. We define BRcΦ(w) as the bounded successful decoding region of a given decoder Φ with radius w, represented as
+
+BRcΦ(w) = B(w) ∩ RcΦ.
+
+(25)
+
+Similarly, we define the bounded failure and miscorrection decoding regions of the decoder Φ as
+
+Theorem 2. The error correction capability of the proposed feedback decoder, utilizing the reward function defined in Equation (21), is lower bounded by
+
+⌊
+
+miny∈RfΦ
+
+wH (y)
+
++
+
+miny∈Rm Φ
+
+wH
+
+(y)
+
+−
+
+1 ⌋
+
+(22)
+
+2
+
+where wH (·) denotes the Hamming weight of an error.
+
+Proof. The proof is provided in the Appendix B.
+
+BRΦf (w) = B(w) ∩ RΦf
+
+(26)
+
+BRΦm(w) = B(w) ∩ Rm Φ .
+
+(27)
+
+We denote BSiΦ(w) as the set of syndromes corresponding to the i decoding region BRΦi (w) of the decoder Φ, where
+
+i ∈ {c, f, m} represents the correctable, failure, and miscor-
+
+rectable
+
+region,
+
+respectively.
+
+B
+
+S
+
+Φ i
+
+(w)
+
+is
+
+defined
+
+as
+
+BSΦi (w) = {yHT | y ∈ BRiΦ(w)}.
+
+(28)
+
+8
+
+The action space is defined as in pervious sections, i.e., A = {1, 2, · · · , n}. The reward function, similar to Equation 21, is
+
+defined as
+
+ − 
+
+1 L
+
++
+
+1,
+
+R(s, a, s′) =
+
+−
+
+1 L
+
+,
+
+−
+
+1 L
+
+−
+
+1,
+
+if s′ ∈ BSΦf (w) ∩ S(w)
+
+is s′ ∈ BSfΦ(w)
+
+(29)
+
+if s′ ∈ S(w)
+
+The error correction capability of bounded feedback decoder, after the convergence of training with the reward function defined in Equation 29 and based on Theorem 2 is given by
+
+min miny∈BRΦf (w) w(y) + miny∈BRm Φ (w) w(y) − 1 , w 2 (30)
+where the minimum of the empty set is considered to be infinity, i.e., min ∅ = ∞. We can also define a reward function similar to Equation 23 as
+
+ − 
+
+1 L
+
++
+
+1,
+
+R(s, a, s′) =
+
+−
+
+1 L
+
+,
+
+−
+
+1 L
+
+−
+
+1,
+
+if
+
+s′
+
+=
+
+B
+
+S
+
+Φ c
+
+(w)
+
+if s′ ∈ BSΦf (w)
+
+(31)
+
+if s′ ∈ BSΦm(w) ∪ S(w).
+
+The error correction capability of bounded feedback decoder, after the convergence of training with the reward function defined in Equation 31 and based on Remark 1, is given by
+
+min min w(y) − 1, w .
+
+(32)
+
+y∈BRm Φ (w)
+
+To further simplify the state space, in the next section, we focus on the automorphism group of group-structured quasicyclic LDPC codes.
+
+IX. GROUP-STRUCTURED QUASI-CYCLIC LDPC CODES
+Quasi-Cyclic Low Density Parity Check (QC-LDPC) codes play a crucial role in practical settings due to their structured design. Unlike randomly constructed LDPC codes, a quasicyclic LDPC is specified by a parity-check matrix H composed of circulant submatrices. Specifically, H is structured as a j × k array of p × p circulant permutation matrices, denoted Hs,t for 0 ≤ s < j and 0 ≤ t < k, where p is prime. The integers a, b ∈ Fp and a ̸= b with orders k and j, respectively, which in turn requires k and j to be divisors of p − 1. Each circulant matrix Hs,t can be viewed as an identity matrix cyclically shifted by the amount Ps,t = bsat. The matrix H is a (jp) × (kp) matrix whose each row contain exactly k ones and each column contain exactly j ones, making it a regular (j, k) LDPC code [21].
+
+A. Automorphism Group
+Since the optimal policy may be learned for a given syndrome but not for its isomorphic counterpart, the diversity introduced by automorphic mappings can be leveraged to improve decoding performance. An automorphism of a bipartite graph is a permutation of the vertices (i.e., variable nodes and check nodes) that preserves adjacency. In other words, it is a bijection that maps variable nodes to variable nodes and check nodes to check nodes while ensuring that edges remains invariant. The cyclic shift automorphism arises by cyclically
+
+shifting each coordinate modulo p. Specifically, if one adds a fixed integer δ (mod) p to a coordinate xi, the value cycle through {0, . . . , p − 1}. Since each row block, or circulant block, of H just shifts its columns modulo p, these additive shifts do not change adjacency structure. Consequently, there exists a group of automorphisms isomorphic to the additive group Zp. We consider two multiplicative subgroups. Define an automorphism π on the set of variable nodes by π : (x1, x2, . . . , xp) → (ax1, ax2, . . . , axp) (mod p), where each xi ∈ {0, 1, . . . , p − 1} and all indexes computed mod p. Automorphism π maps the bits of the t-th block to the bits of the (t + 1 mod k)-th block. Similarly, an automorphism ρ can be defined that maps the block of parity checks to the next block of parity checks by ρ : (x1, x2, . . . , xp) → (bx1, bx2, . . . , bxp) (mod p), where each xi ∈ {0, 1, . . . , p − 1} and all indexes computed mod p. These automorphisms, both additive and multiplicative, exploit the inherent symmetry of the quasi-cyclic structure and ensure that the overall adjacency in the Tanner graph of the code is preserved. Let e denote the hard-decision received vector, and let S be the syndrome operator that computes the syndrome s associated with e. Based on this, we define the following automorphism-based strategy
+
+e1
+
+−−S→
+
+s1
+
+
+
+
+
+Γ−v 1Γv 
+
+Γs−1Γs 
+
+e2
+
+−−S→
+
+s2
+
+(33)
+
+where v2 = Γv(v1), s2 = Γs(s1), S(v1) = s1, and S(v2) = s2. This expression illustrates the property that the syndrome mapping and the automorphism Γ commute. This indicates
+that the syndrome mapping and the automorphism commute.
+
+S(Γv(e)) = Γs(S(v))
+
+(34)
+
+This property is significant because it implies that the automorphism Γ preserves the syndrome structure of the code. It shows that the symmetry given by the quasi-cyclic structure extends naturally to both the codeword space and the syndrome space.
+
+B. Number of Unique Structures
+This section focuses on quantifying the number of unique states in the QC-LDPC code to analyze the reduction in state space and its impact on decoder performance. We first formulate the counting problem to determine the number of unique states under the symmetry groups introduced in the previous section. Subsequently, we define the notion of the smallest lexicographic ordering, which allows us to represent each equivalence class of states by a single canonical representative. This enables us to consider only one unique state per equivalence class in the MDP. The necessary group theory background is provided in Appendix C. Let p be a prime number, and let b ∈ (Z/pZ)× be an element of multiplicative order exactly j, i.e., bj ≡ 1 (mod p). We consider j disjoint necklaces, each consisting of p beads. We label each necklace by an index s ∈ Z/jZ. We then define the bead set as
+
+Ω = {(s, i) : s ∈ Z/jZ, i ∈ Z/pZ}
+
+(35)
+
+9
+
+where (s, i) denotes the i-th bead of the s-th necklace. We define two symmetry group actions on the bead set Ω. The first is a rotation within each necklace, given by
+
+σ(s, i) = (s, i + 1 (mod p)),
+
+(36)
+
+which corresponds to a cyclic shift of the beads within the s-th necklace. The second is a multiplicative action defined by
+
+ρ(s, i) = ( s + 1 mod j, b i mod p).
+
+(37)
+
+This transformation simultaneously advances to the next necklace and permutes the bead positions through multiplication by b. Thus, the symmetry group is given by the semidirect product
+
+G = ⟨σ, ρ | σp = 1, ρj = 1, ρ σ ρ−1 = σb⟩ ∼= Cp ⋊ Cj. (38)
+We define the set of all binary colorings of the bead set Ω as
+
+X = {0, 1}Ω = { f : Ω → {0, 1}}
+
+(39)
+
+where each function f ∈ X assigns a binary color 0/1 to each bead in Ω. We define an action of the group G on the set X by
+(g · f )(ω) = f g−1(ω) , ∀g ∈ G, ∀ω ∈ Ω, (40)
+
+where f ∈ X. This is the left group action on functions, induced by the left action of G on Ω. Two colorings f and f ′ are equivalent if there exists a group element g ∈ G such that f ′ = g · f . Our goal is to determine the set of orbits under the
+group action, which corresponds to the set of distinct colorings
+up to symmetry
+
+X/G = { [f ] | f ∈ X},
+
+(41)
+
+where [f ] denotes the equivalence class of f ∈ X under the action of G. To compute the cardinality of X/G, we apply Burnside’s Lemma
+
+1
+
+X/G =
+
+{f ∈ X : g · f = f}
+
+|G|
+
+g∈G
+
+1 =
+
+2#cycles of g on Ω.
+
+(42)
+
+jp
+
+g∈G
+
+where the number of fixed points of g acting on X is equal to 2c, with c denoting the number of cycles of g in its action
+on the domain Ω.
+
+Theorem 3. The number of unique syndromes, Ns, in the described QC-LDPC code is bounded by
+
+1 2m−rank(H) Nfull ≤ Ns ≤ Nfull
+
+1 Nfull = jp
+
+2jp + (p − 1) 2j + p
+
+φ
+
+j d
+
+d|j
+
+d<j
+
+2p d ,
+
+(43)
+
+where j and p define the QC structure, and φ(·) denotes the Euler’s totient function.
+
+Proof. The proof is provided in the Appendix D.
+
+C. Canonical Lexicographic Representation
+
+To eliminate redundancy arising from symmetry, we use a single representative for each orbit of colorings. Selecting the lexicographically smallest element within each orbit as its canonical representative. Let Ω denotes the set of bead positions, with cardinality N , and let f be the binary coloring function. We fix once for all beads a bijection π : {1, 2, . . . , N } −→ Ω. This identification allows us to associate each coloring f with a bit-vector
+
+vf = f (π(1)), f (π(2)), . . . , f (π(N )) ∈ {0, 1}N . (44)
+
+We compare two vectors v, v′ ∈ {0, 1}N using the lexicographic order, defined as follows in
+
+v <lex v′ ⇐⇒ ∃ k : vi = vi′ (i < k), vk < vk′ . (45)
+In other words, v precedes v′ in lexicographic order if the first position at which they differ has vk < vk′ . We select the unique lexicographically smallest element within each orbit. Definition. The canonical representative of the orbit of a coloring f is
+
+can(f ) = arg min v g·f ∈ {0, 1}N ,
+
+(46)
+
+g∈G
+
+that is, the coloring in the orbit G · f whose associated bit vector is minimal with respect to lexicographic order. Based on Booth’s algorithm [22], the lexicographically minimal rotation of a length-N vector can be found in O(N ). Since there are j coset representatives arising from the multiplicative group action, the overall computational cost to determine the minimal representative of an orbit is O(jN ) = O(j2p).
+
+X. NUMERICAL RESULTS
+In this section, we present numerical results for the Tanner code with parameters (155, 64, 20) for the truncated learned bit-flipping decoder, action-list decoder, the action-list decoder with code automorphism, and the feedback decoder, as described in Sections V, VII, VIII, and IX, respectively. In Figure 5, we present the performance of the Tanner code, which is a low-rate, moderate-length code. The truncated MDP described in Section V is employed to determine the optimal flipping rule using the Q-learning algorithm. We consider three different hamming ball radii, w = {1, 2, 3}, which result in the number of states in the truncated MDP being 156, 12091, and 620776, respectively. For w = 4 and beyond, using a Q-table becomes infeasible due to the exponentially large state space. The performance of the bounded-distance decoding (BDD) method, described in Equation 1, aligns with the performance of the Q-learning method. This serves as a baseline to assess whether the Q-learning algorithm has successfully converged. Additionally, we employ the Deep Q-learning algorithm under a truncated MDP with different Hamming ball radii, w = {1, · · · , 7}. The results indicate that for weights w = {1, 2, 3}, even though the agent was only exposed to error failures related to weight-1, weight-2, or weight-3 error patterns during training, it was able to generalize and correct some states associated with higher-weight error patterns that it had never experienced during training. After a certain point, exposing the agent to additional states for
+
+10
+
+learning the optimal policy yields diminishing benefits. This is primarily due to the limited capacity of the neural network, which may not be sufficiently expressive to fully capture the complexity of the expanded state space and the corresponding reward signal values. In Figure 6, the results illustrate a similar phenomenon for a short-length and low-rate code, providing further clarification. We select a random linear block code of length 24 with a minimum distance of 10 that does not have a specific structure. The performance of the Q-learning and Deep Q-learning algorithms is simulated for different Hamming ball radii, w = {1, · · · , 7}. The results indicate that, for a random code, Deep Q-learning is capable of generalizing the optimal policy for states that it has never encountered during training for w = {1, · · · , 4}. However, for radii beyond 4, the neural network’s capacity to approximate Q-values becomes insufficient to fully capture the complexity of the significantly larger state space and the corresponding reward signal values. It is worth mentioning that, since the code is not a perfect code, we extend the Hamming ball radius to 7. In Figure 7, we evaluate the proposed Q-value guided action-list decoder, introduced in Section VII, using different list sizes {1, 5, 10, 20, 30, 40} to assess their impact on decoding performance. The results demonstrate a substantial improvement in performance as the number of candidate bit-flips increases, which helps the decoder avoid getting trapped in oscillatory behavior. For comparison, we also include the performance of bounded distance decoding (BDD) with radii 9 and 10 as baselines. In Figure 8, we present the performance of the action-list decoder with varying list sizes, incorporating the automorphism group of the Tanner code as described in Section IX. We only employ (p − 1) cyclic permutations from the automorphism group of the tanner code. As shown in Figure 8, the performance of the action-list decoder with a list size of 5, combined with the permutation group, closely approaches that of bounded distance decoding (BDD) with radius 10. We additionally present the performance of the action-list decoder with list sizes {10, 20}, incorporating automorphisms. While the frame error rate (FER) performance remains similar through Monte Carlo simulation, the bit error rate (BER) exhibits a slight improvement. For the proposed feedback decoder described in Section VIII, we select the arbitrary decoder Φ to be the bit-flipping decoder, which, in general, can be any wellestablished code and decoder pair from the literature. The goal is to enhance its performance through the integration of the RL block. The bounded error weight enumerator of the Tanner code under the BF decoder, around all-zero codeword, is E(w = 4) = 10092825x4 + 154225x3 + 620x2, where w denotes the maximum weight of the error patterns considered during decoding. The multiplicity of xi represents the number of uncorrectable weight-i errors under BF decoder. In addition, no miscorrections are observed for this code when employing the BF decoder for error patterns with weights of at most 4. In Figure 9, we illustrate the performance of the bit-flipping algorithm alongside truncated MDPs with radii w = {2, 3}, trained using the Q-learning, and radii w = {2, 3, 4}, trained using the Deep Q-learning algorithms. We also present the frame error rate (FER) estimates in the error floor region for the feedback model learned using the Q-learning algorithm
+
+based on their uncorrectable error patterns. The results demonstrate that, instead of training the RL block to learn the entire code space, we can use the existing bit-flipping algorithm and incorporate the RL block as a feedback architecture to enhance its performance. The Q-learning algorithm with w = {2, 3} achieves improved performance with guaranteed error correction. However, for w = 4, the state space becomes prohibitively large, making it impractical to use a Q-table. In this case, we train only the Deep Q-Network. Using the Deep-Q network, for w = 2, it does not effectively learn the decision boundary due to the small radius of the Hamming ball. However, for w = 3, as shown by comparison with the Q-table results, the network is able to generalize the optimal policy and successfully correct error patterns were not encountered during training. For w = 4, further performance improvement is observed in comparison to w = 3.
+A. Training Hyper-Parameters
+For training the Deep Q-learning algorithm, we employ a neural network with one hidden layer consisting of 512 neurons. The maximum number of decoding iterations is set to Dmax = 10. The training process involves 106 episodes, with a batch size of 128. For the exploration-exploitation strategy, an epsilon-greedy approach with linear decay is employed, where ϵ decreases from 0.9 to 0.05. The learning rate is set to 10−4. In Figures 7, 6, and 8, the discount factor is set to γ = 0.9, whereas in Figures 5 and 9, the discount factor is γ = 0.7. In Figures 6, we employ a neural network with a single hidden layer consisting of 128 neurons.
+XI. CONCLUSIONS
+In this paper, we propose a novel action-list decoding strategy aimed at enhancing decoding performance by considering a list of high-probability error patterns, rather than relying on greedy action selection during the inference stage. We, also, propose a novel feedback method aimed at reducing the number of states in the MDP. Additionally, we focus on enhancing the performance of a chosen decoder by targeting only those error patterns that the decoder fails to correct. In essence, the feedback method seeks to efficiently expand the correctable region of the decoder. In general, our goal is to leverage the performance of existing well-designed decoders and refine their state space and using RL algorithms to further enhance their decoding performance. Additionally, by leveraging the automorphism group, we further improve the effectiveness of the proposed method within the region explored through Monte Carlo simulations.
+ACKNOWLEDGMENTS
+The authors acknowledge the support of the National Science Foundation under grants CIF-2420424, CIF-2106189, CCF-2100013, CCSS-2052751, and CCSS-2027844. Bane Vasic´ has disclosed an outside interest in his company Codelucida to The University of Arizona. Conflicts of interest resulting from this interest are being managed by The University of Arizona in accordance with its policies.
+
+11
+
+100
+
+100
+
+FER BER
+
+10-2
+10-4
+10-6 10-3
+
+10-2
+
+QL(w=1) QL(w=2) QL(w=3) DQ(w=1) DQ(w=2) DQ(w=3) DQ(w=4) DQ(w=5) DQ(w=6) DQ(w=7)
+10-1
+
+10-2 10-4 10-6 10-8
+10-3
+
+10-2
+
+QL(w=1) QL(w=2) QL(w=3) DQ(w=1) DQ(w=2) DQ(w=3) DQ(w=4) DQ(w=5) DQ(w=6) DQ(w=7)
+10-1
+
+(a)
+
+(b)
+
+Fig. 5: Simulation results for tanner code of Bit-Flipping decoder and learned Bit-Flipping based on Q-table for truncated MDPs with weight w = {1, 2, 3} and Deep-Q learning with weights w = {1, 2, · · · , 7}. (a) Frame Error Rate, (b) Bit Error Rate.
+
+100
+
+100
+
+FER BER
+
+10-1 10-2 10-3 10-4
+
+10-1
+
+QL(w=1) QL(w=2) QL(w=3) QL(w=4) QL(w=5) QL(w=6) QL(w=7) DQ(w=1) DQ(w=2) DQ(w=3) DQ(w=4) DQ(w=5) DQ(w=6) DQ(w=7)
+
+10-1 10-2 10-3 10-4 10-5
+
+10-1
+
+QL(w=1) QL(w=2) QL(w=3) QL(w=4) QL(w=5) QL(w=6) QL(w=7) DQ(w=1) DQ(w=2) DQ(w=3) DQ(w=4) DQ(w=5) DQ(w=6) DQ(w=7)
+
+(a)
+
+(b)
+
+Fig. 6: Simulation results for a binary random linear code with parameters (24, 6, 10) of Bit-Flipping decoder and learned Bit-Flipping based on Q-table for truncated MDPs with weight w = {1, 2, 3, 4, 5, 6, 7}. (a) Frame Error Rate, (b) Bit Error Rate.
+
+REFERENCES
+[1] G. Forney, “The Viterbi Algorithm,” Proceedings of the IEEE, vol. 61, no. 3, pp. 268–278, March 1973.
+[2] L. Bahl, J. Cocke, F. Jelinek, and J. Raviv, “Optimal Decoding of Linear Codes for Minimizing Symbol Error Rate,” IEEE Transactions on Information Theory, vol. 20, no. 2, pp. 284–287, March 1974.
+[3] M. Fossorier and S. Lin, “Soft-Decision Decoding of Linear Block Codes Based on Ordered Statistics,” IEEE Transactions on Information Theory, vol. 41, no. 5, pp. 1379–1396, September 1995.
+[4] I. Tal and A. Vardy, “List Decoding of Polar Codes,” IEEE Transactions on Information Theory, vol. 61, no. 5, pp. 2213–2226, May 2015.
+[5] F. Kschischang, B. Frey, and H.-A. Loeliger, “Factor Graphs and the Sum-Product Algorithm,” IEEE Transactions on Information Theory, vol. 47, no. 2, pp. 498–519, February 2001.
+
+[6] Z. Qu, A. Antonini, W. Sui, E. Min, A. Yang, and R. D. Wesel, “Complementary Exclusion of Full Polynomials to Enable Dual List Decoding of Convolutional Codes,” in IEEE International Symposium on Information Theory (ISIT), July 2024, pp. 1776–1781.
+[7] R. Schiavone, R. Garello, and G. Liva, “Performance Improvement of Space Missions Using Convolutional Codes by CRC-Aided List Viterbi Algorithms,” IEEE Access, vol. 11, pp. 55 925–55 937, January 2023.
+[8] E. Nachmani, Y. Be’ery, and D. Burshtein, “Learning to Decode Linear Codes Using Deep Learning,” in 54th Annual Allerton Conference on Communication, Control, and Computing (Allerton), September 2016, pp. 341–346.
+[9] T. Gruber, S. Cammerer, J. Hoydis, and S. Ten Brink, “On Deep Learning-Based Channel Decoding,” in 51st Annual Conference on Information Sciences and Systems (CISS). IEEE, March 2017, pp. 1–6.
+
+12
+
+100
+
+100
+
+10-2
+
+10-2
+
+FER
+
+10-4 10-6 10-8 10-10
+
+10-2
+
+list size=1 list size=5 list size=10 list size=20 list size=30 list size=40 BDD(w=9) BDD(w=10)
+10-1
+
+BER
+
+10-4 10-6 10-8 10-10
+
+10-2
+
+list size=1 list size=5 list size=10 list size=20 list size=30 list size=40
+10-1
+
+(a)
+
+(b)
+
+Fig. 7: Simulation results for Tanner code with Deep Q-Network decoder and different beam sizes {1, 5, 10, 20, 30, 40}. (a) Frame Error Rate, (b) Bit Error Rate.
+
+100
+
+100
+
+10-2
+
+10-2
+
+10-4
+
+10-4
+
+BER
+
+FER
+
+10-6 10-8 10-10
+
+10-2
+
+list size=1, auto list size=5, auto list size=10, auto list size=20, auto BDD(w=10)
+10-1
+
+10-6 10-8 10-10
+
+10-2
+
+list size=1, auto list size=5, auto list size=10, auto list size=20, auto
+10-1
+
+(a)
+
+(b)
+
+Fig. 8: Simulation results for Tanner code with Deep Q-Network decoder and different beam sizes {1, 5, 10, 20} with cyclic permutation strategy. (a) Frame Error Rate, (b) Bit Error Rate.
+
+[10] A. Bennatan, Y. Choukroun, and P. Kisilev, “Deep Learning for Decoding of Linear Codes - A Syndrome-Based Approach,” in IEEE International Symposium on Information Theory (ISIT), June 2018, pp. 1595–1599.
+[11] L. Lugosch and W. J. Gross, “Neural Offset Min-Sum Decoding,” in IEEE International Symposium on Information Theory (ISIT), June 2017, pp. 1361–1365.
+[12] X. Xiao, B. Vasic´, R. Tandon, and S. Lin, “Designing Finite Alphabet Iterative Decoders of LDPC Codes Via Recurrent Quantized Neural Networks,” IEEE Transactions on Communications, vol. 68, no. 7, pp. 3963–3974, July 2020.
+[13] S. Adiga, X. Xiao, R. Tandon, B. Vasic´, and T. Bose, “Generalization Bounds for Neural Belief Propagation Decoders,” IEEE Transactions on Information Theory, vol. 70, no. 6, pp. 4280–4296, 2024.
+[14] F. Carpi, C. Ha¨ger, M. Martalo`, R. Raheli, and H. D. Pfister, “Reinforcement Learning for Channel Coding: Learned Bit-Flipping Decoding,” in 2019 57th Annual Allerton Conference on Communication, Control, and Computing (Allerton). IEEE, 2019, pp. 922–929.
+[15] M. Taghipour, A. K. Pradhan, and B. Vasic´, “Reinforcement Learning
+
+Assisted Decoding,” in International Telemetry Conference 2024, October 2024, pp. 1–5. [16] S. Habib, A. Beemer, and J. Kliewer, “Belief Propagation Decoding of Short Graph-Based Channel Codes via Reinforcement Learning,” IEEE Journal on Selected Areas in Information Theory, vol. 2, no. 2, pp. 627–640, April 2021. [17] S. Lin and D. J. Costello, Error Control Coding. Prentice Hall Scarborough, 2001, vol. 2, no. 4. [18] R. S. Sutton and A. G. Barto, Reinforcement Learning: An Introduction. MIT Press Cambridge, 2018. [19] T. J. Richardson and R. L. Urbanke, “The Capacity of Low-Density Parity-Check Codes under Message-Passing Decoding,” IEEE Transactions on Information Theory, vol. 47, no. 2, pp. 599–618, 2001. [20] J. Choo, Y.-D. Kwon, J. Kim, J. Jae, A. Hottung, K. Tierney, and Y. Gwon, “Simulation-Guided Beam Search for Neural Combinatorial Optimization,” in Advances in Neural Information Processing Systems, vol. 35. Curran Associates, Inc., 2022, pp. 8760–8772. [21] R. M. Tanner, D. Sridhara, and T. Fuja, “A Class of Group-Structured LDPC Codes,” in Proc. ISTA, July 2001, pp. 365–370.
+
+13
+
+100 10-2 10-4 10-6
+
+BF QL Feedback(w=2) QL Feedback(w=3) DQ Feedback(w=2) DQ Feedback(w=3) DQ Feedback(w=4) FER Estimation BF FER Estimation(w=2) FER Estimation(w=3)
+
+100 10-2 10-4
+
+BF QL Feedback(w=2) QL Feedback(w=3) DQ Feedback(w=2) DQ Feedback(w=3) DQ Feedback(w=4)
+
+FER BER
+
+10-8 10-10
+
+10-6
+
+10-12
+
+10-8
+
+10-8
+
+10-6
+
+10-4
+
+10-2
+
+100
+
+10-4
+
+10-3
+
+10-2
+
+10-1
+
+(a)
+
+(b)
+
+Fig. 9: Simulation results for the Tanner code using the Bit-Flipping decoder and and its Q-learning and Deep-Q network feedback methods for truncated MDPs with radii w = {2, 3, 4}. (a) Frame Error Rate, (b) Bit Error Rate.
+
+[22] K. S. Booth, “Lexicographically Least Circular Substrings,” Information Processing Letters, vol. 10, no. 4, pp. 240–242, July 1980.
+
+APPENDIX A PROOF OF THEOREM 1
+
+Theorem 1. The number of distinct optimal policies, or
+
+proposed decoders, for the Binary Symmetric channel is at
+
+least
+
+t
+i(ni )
+
+i=1
+
+where n denotes the codelength and t represents the errorcorrecting capability of the code.
+
+Proof. The total number of distinct syndromes is 2n−k. Let
+
+assume that the code has the error correction capability of
+
+t. In this case, all error patterns with a weight less than or
+
+equal to t are correctable. There exists a one-to-one correspon-
+
+dence between syndromes and their associated coset leader,
+
+satisfying
+
+t i=1
+
+n i
+
+≤ 2n−k, which implies the possibility of
+
+correcting certain error patterns with a weight greater than t.
+
+There are i positions in a weight-i error pattern that can be
+
+flipped to correctly transition to a weight-(i − 1) error pattern,
+
+where 1 ≤ i ≤ t. For each weight-i error pattern, there exist
+
+n i
+
+distinct syndromes, each with i optimal actions. Thus,
+
+the number of possible optimal actions transitioning from a
+
+weight-i error pattern to a weight-(i − 1) error pattern is is i(ni), where 1 ≤ i ≤ t. Since the correction of error patterns
+
+can be viewed as a sequential procedure, the multiplication
+
+axiom can be applied iteratively. We can state that the total
+
+number of distinct optimal policies, considering the correction
+
+of error patterns up to weight t, is determined by the product
+
+of the possible transitions from a weight-i error pattern to
+
+a weight-(i − 1) error pattern for 1 ≤ i ≤ t. Therefore, the
+
+number of distinct optimal policies up to correction of weight-
+
+t error patterns is given by
+
+t i=1
+
+i(ni ).
+
+If
+
+the
+
+code
+
+is
+
+perfect,
+
+the t-radius decoding region includes all syndromes, and thus the product above counts all optimal policies. Otherwise, there are additional correctable syndromes which coset leader has weight greater than t. These additional syndromes increase the number of optimal policies, making the product a lower bound.
+
+APPENDIX B PROOF OF THEOREM 2
+
+Theorem 2. The error correction capability of the proposed feedback decoder, utilizing the reward function defined in Equation (21), is lower bounded by
+
+⌊
+
+miny∈RΦf
+
+wH (y)
+
++
+
+miny∈RΦm
+
+wH
+
+(y)
+
+−
+
+1 ⌋
+
+2
+
+where wH (·) denotes the Hamming weight of an error.
+
+Proof. The Reinforcement Learning (RL) objective, based on the reward function defined in Equation (21), is to minimize the number of bit flips required to achieve the all-zero syndrome. The integration of RL with the existing decoder Φ aims to determine the optimal sequence of actions necessary to reach the all-zero syndrome. After training on the failures of the existing decoder Φ, three outcomes are possible: the syndrome associated with y may map to the correctable region, the miscorrection region, or the failure region. Upon the convergence of training, the syndrome associated with y will map to either the correctable set Rc or the miscorrection Rm set as follows
+
+Rm
+
+∀y
+
+∈ RfΦ
+
+: min d(y, y′)
+y ′ ∈RΦc
+
+≷
+Rc
+
+min d(y, y′)
+y ′ ∈RΦm
+
+(47)
+
+This implies that y will map to the region closest to it. We aim to identify the minimum weight of a failure-inducing error that results in a miscorrection set, thereby establishing the
+
+14
+
+guaranteed error-correction capability of the decoder, which can be expressed as the optimization problem in Equation 48
+
+min wH (y)
+
+y∈RfΦ
+s.t.
+
+min d(y, y′) − min d(y, y′′) > 0.
+
+(48)
+
+y′ ∈RcΦ
+
+y′′ ∈RΦm
+
+Thus, the boundary between the correctable and miscorrectable region after convergence is defined as
+
+min d(y, y′) = min d(y, y′′)
+
+y′ ∈RΦc
+
+y′′ ∈RΦm
+
+(49)
+
+For any failure word on the boundary, the probability of reaching either the correctable or miscorrectable region is equal. To identify the failure region that is guaranteed to be correctable, we first determine rc, the minimum weight of error patterns for which all errors with that weight are correctable by the decoder Φ. In other words, rc represents the minimum radius of the Hamming ball centered at the zero codeword such that all errors within this ball are correctable by the decoder Φ. Additionally, we determine rm, the minimum weight of miscorrected errors. Thus, any decoder failure with a weight below the boundary defined by the radius rc + (rm − rc)/2 = (rm + rc)/2 lies closer to the correctable region of Φ and can therefore be corrected. Consequently, all error failures with a weight lower than (rm + rc)/2 are correctable. Since all errors within the Hamming ball of radius rc are correctable, rc is defined as
+
+Definition 4. (Stabilizer). The stabilizer of an element x ∈ X is the subgroup of G consisting of all elements that fix x under the group action, defined by
+
+Stab(x) = {g ∈ G : g · x = x} ≤ G.
+
+(54)
+
+The Orbit-Stabilizer Theorem establishes a fundamental relationship between orbits and stabilizers under a group action.
+
+Theorem 5. (Orbit-Stabilizer Theorem) For every x ∈ X, there exists a natural bijection
+
+G/Stab(x) ↔ Orb(x).
+
+(55)
+
+In particular, if G is finite, then
+
+|G|
+
+| Orb(x) |=
+
+.
+
+(56)
+
+| Stab(x) |
+
+We now state Burnside’s Lemma, a fundamental result for counting the number of distinct orbits under a group action.
+
+Theorem 6. (Burnside’s Lemma) Let G be a finite group
+
+acting on a finite set X. For each g ∈ G, define the fixed-
+
+point set
+
+Fix(g) = {x ∈ X : g · x = x}
+
+(57)
+
+Then, the number of distinct orbits of X under the action of G is given by
+
+1
+
+| X/G |=
+
+| Fix(g) | .
+
+(58)
+
+|G|
+
+g∈G
+
+rc = min min wH (y), min wH (y) − 1 (50)
+
+y∈RΦf
+
+y∈RΦm
+
+If we assume that miny∈RΦf wH (y) ≤ miny∈RΦm wH (y), therefore, any error with a weight smaller than
+
+⌊
+
+miny∈RΦf
+
+wH (y)
+
++
+
+miny∈RΦm
+
+wH
+
+(y)
+
+−
+
+1 ⌋
+
+(51)
+
+2
+
+is correctable.
+
+APPENDIX C GROUP THEORY BASICS
+Let G be a finite group, and X a set. A left action of G on X is a map
+
+G × X −→ X, (g, x) → g · x,
+
+(52)
+
+satisfying the following properties:
+1) Identity: e·x = x, ∀x ∈ X, where e ∈ G is the identity element.
+2) Associativity: (gh) · x = g · (h · x), ∀g, h ∈ G and ∀x ∈ X.
+
+Definition 3. (Orbit). The orbit of an element x ∈ X under the action of a group G is defined as
+
+Orb(x) = {g · x : g ∈ G} ⊆ X.
+
+(53)
+
+It consists of all elements of X to which x can be mapped through the action of elements of G.
+
+APPENDIX D PROOF OF THEOREM 3
+
+Theorem 3. The number of unique syndromes in the described QC-LDPC code is bounded by
+
+1 2m−rank(H) Nfull ≤ Ns ≤ Nfull
+
+1 Nfull = jp
+
+2jp + (p − 1) 2j + p
+
+φ
+
+j d
+
+d|j
+
+d<j
+
+2p d ,
+
+where j and p define the QC structure, H is the paritycheck matrix of the code, and φ(·) denotes the Euler’s totient function.
+
+Proof. For each group element g = σuρs, where (0 ≤ u <
+p, 0 ≤ s < j), acting on the set Ω = Z/pZ × Z/jZ, we
+analyze the resulting action to determine the number of cycles.
+The number of cycles depends on the specific values of u and
+s. We divide the analysis into two cases, s = 0 and s ≥ 1. In the case where s = 0, the group element is g = σa, which
+corresponds to a pure rotation by u positions within each of
+the j necklaces. If u = 0, then g is the identity transformation
+and fixes all jp bead positions, resulting in jp cycles. Hence, it contributes 2jp to the sum. For 1 ≤ u < p − 1, since p is prime, we have gcd(u, p) = 1, so σu generates a single cycle of length p on each necklace. Therefore, σu exactly induces j disjoint cycles on Ω, contributing 2j to the sum. As there
+are p − 1 such nonzero values of u, the total contribution from all group elements of the form σu is 2jp + (p − 1)2j.
+
+15
+
+In the case where 1 ≤ s < j − 1, the group element is
+
+g = σuτ s. For any choice of u, the permutation g breaks
+
+the full set of jp beads into cycles of length j/ gcd(s, j) in
+
+the necklace index and simultaneously that of length p in the
+
+bead index. Hence, the total number of cycles is p gcd(s, j).
+
+Since u ranges over p values, the total contribution for a fixed
+
+s is p2p gcd(s,j). Summing over all s = 1, 2, · · · , j − 1, the
+
+overall contribution from these elements is p
+
+j−1 s=1
+
+2p
+
+gcd(s,j).
+
+From number theory, it is known that the sum over greatest
+
+common divisors can be rewritten using a divisor-sum identity
+
+j−1 s=1
+
+2p gcd(s,j)
+
+=
+
+d|j,d<j φ(j/d)2pd, where φ denotes the
+
+Euler’s totient function. Finally, the number of distinct orbits
+
+under the group action is given by
+
+1 |X/G| =
+
+j−1
+2jp + (p − 1) 2j + p 2p gcd(s,j)
+
+jp
+
+s=1
+
+1 =
+
+2jp + (p − 1) 2j + p
+
+jp
+
+(59)
+
+φ
+
+j d
+
+2p d .
+
+d|j
+
+d<j
+
+The number of distinct syndromes in the code space is |S| = 2rank(H) = 2n−k. Thus, the number of redundant rows in the parity-check matrix H is m−rank(H). Thus, the counting is an overestimate, and Nfull provides an upper bound on the number of unique syndromes. Since the coloring of redundant rows can be identified through independent row colorings, the total number of distinct orbits for the group-structured QC-LDPC code can be lower bounded by |X/G|/2m−rank(H), where |X/G| denotes the number of orbits under the group action, as given in Equation (59).
+
+

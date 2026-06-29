@@ -1,0 +1,172 @@
+2016 IEEE Canadian Conference on Electrical and Computer Engineering (CCECE)
+
+Implementation of Decoders for Symmetric Low Density Parity Check Codes on Parallel Computation Platforms using OpenCL
+
+Andrew J. Maier Dept. of Electrical and Computer Engineering University of Alberta Edmonton, Alberta T6G 2R3 E-mail: amaier@ualberta.ca
+
+Bruce F. Cockburn Dept. of Electrical and Computer Engineering University of Alberta Edmonton, Alberta T6G 2R3 E-mail: cockburn@ualberta.ca
+
+Abstract—OpenCL is a high-level language that allows mixed hardware/software systems to be specified and compiled to run on heterogeneous parallel computing platforms. The hardware parallelism can take the form of multi-core central processing units (CPUs), massively parallel graphics processing units (GPUs), and, most recently, field-programmable gate array (FPGA) fabrics. OpenCL compilers for CPUs and GPUs have been available for over 6 years, but only recently has compiler support been extended to include FPGAs. This paper investigates OpenCL designs for the computationally demanding standard iterative decoding algorithm for low-density parity check (LDPC) codes. The LDPC decoding algorithm offers several kinds of potentially exploitable parallelism. Our objective was to investigate the design trade-offs in OpenCL that will produce the best performance when compiled by the Altera Offline Compiler (AOC v15.1) for OpenCL-to-FPGA. Within a relatively short design time we were able to implement a decoder that achieved 5.12 Mbps with a length-1024 (3,6)regular code.
+1. Introduction
+Modern digital communication systems require the use of error correcting codes (ECCs) [1]. Turbo codes and lowdensity parity check (LDPC) [2] codes that approach the error-free capacity limit, predicted by Shannon [3], are now widely used in communication systems. LDPC codes have been adopted in many recent communication standards such as cellular standards (e.g. 4G LTE [4]), wireline standards (e.g. 10GBASE-T Ethernet [5]), cable modem standards (e.g. DOCSIS 3.1 [6]), and digital satellite communications (e.g. DVB-S2 [7]). A major implementation challenge is that the standard iterative decoding algorithms require a great deal of computation within maximum decoding times.
+Many LDPC decoder implementations have been reported in the literature. An early monolithic LDPC decoder was described by Blanksby and Howland [8]. Their fully parallel design resulted in a high-throughput decoder, but it was ultimately only practical for relatively short codes because of the large area required for the interleaver network.
+
+Decoders were then proposed to handle the relatively long LDPC codes in communication standards such as DVB-S2 [9] and 10GBASE-T Ethernet [5]. Researchers have investigated so-called hardware-aware LDPC codes to reduce the decoder hardware cost without sacrificing too much coding gain, such as those created by Liao et al. [10]. Brandon et al. [11] investigated a bit-serial decoder design suitable for larger codes. Fully parallel stochastic LDPC decoders have also been implemented in an attempt to reduce the complexity of the decoder hardware [12].
+Along with the hardware implementations, flexible software solutions have been reported for parallel hardware systems such as multi-core CPUs and massively parallel GPUs. Because of their architecture, GPUs are very efficient at processing large amounts of data under the single instruction multiple data (SIMD) vector model making them an attractive hardware alternative for many demanding problems such as LDPC decoding. High-level programming languages, like Compute Unified Device Architecture (CUDA) and Open Computing Language (OpenCL), have been introduced to allow programmers to develop portable implementations for GPUs and other parallel hardware platforms [13]. These languages have the advantage of portability as source code can be recompiled and run on other OpenCL devices directly without alteration. Some of these implementations, which make use of OpenCL and CUDA, were able to achieve performance similar to that of an optimized fully parallel hardware decoder [14] [15]. Research has been done to implement a DVB-S2 LDPC [7] decoder on an FPGA using OpenCL [16] with throughput comparable to that of Application-Specific Integrated-Circuit (ASIC) decoders. This performance was only possible by designing a codeaware LDPC decoder design. Development of custom hardware, while offering high performance in a compact design, requires significantly more design time and risk compared to designs created using high-level synthesis tools such as OpenCL [17].
+In this paper, we investigate the design of a flexible LDPC decoder implementation for an FPGA using the Altera Offline Compiler (AOC) [18]. Our design implements a variable codeword-length decoder for (3,6)-regular LDPC
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:41:31 UTC from IEEE Xplore. Restrictions apply. 978-1-4673-8721-7/16/$31.00 ©2016 IEEE
+
+codes. In Section 2, we review the iterative decoder algorithm and describe how it is implemented. The OpenCL Development environment and the mapping of algorithm constructs to OpenCL code are discussed in Section 3. In Section 4, we discuss previous attempts to develop an LDPC decoder using OpenCL for an FPGA target. Specifically, in Sections 4.1 and 4.2, we consider two architectures that make use of the different available memories on the FPGA. Section 5 discusses the experimental results of the decoder implementation. Finally, in Section 6, we assess the flexibility of the software by comparing the decoder performance and cost on other other OpenCL enabled devices, such as a multi-core CPU and a GPU.
+2. LDPC Decoder Algorithm
+The iterative LDPC decoding algorithm transforms input channel measurements into an output codeword that satisfies embedded parity constraints. For LDPC block codes, the codeword length (number of bits) is fixed. The LDPC decoding algorithm can be described as operations in the nodes of a bipartite Tanner Graph containing Variable Nodes (VN) and Check Nodes (CN) (see Figure 1). Decoding is ideally done using a sum-product belief propagation model which is prohibitively expensive computationally. The algorithm is typically simplified using the min-sum belief propagation model [2]. Mapped onto a bipartite graph, the algorithm involves passing messages between the Variable Nodes and Check Nodes. In Figure 1, the check nodes (CN) are denoted by ‘+’ and the variable nodes (VN) are denoted by ‘=’. Figure 2 shows the datapaths of the VNs and CNs.
+The VN datapath, shown in Figure 2a, consists of an addition stage and a subtraction stage (the sum portion of the algorithm). The three incoming messages In1, In2, In3, and the one channel measurement represented in 2’s complement format are first added together. The original In1, In2, and In3 values are then subtracted from the sum, producing the required outputs. Those outputs Out1, Out2, and Out3, in sign-and-magnitude format, are then sent across the interleaver to the check nodes.
+The CN datapath shown in Figure 2b forms the min portion of the min-sum algorithm. The input messages for each check node arrive in sign-and-magnitude format to the CN inputs. The CN calculation has two separate components: the parity calculation and the minimum find operations. The CN must find both the first and second minimum magnitudes of the received input signals. The output magnitudes (labeled 1 through 6) are then given the value of the first minimum. However, the input node that was found to be the minimum is returned the value of the second minimum. For example: If a CN gets the following inputs [1 -6 5 4 -10 2], the first input (of value 1) will be found as the minimum and Output 1 will be the second minimum of 2. All other outputs will be given the first found minimum resulting in the output magnitudes [2 1 1 1 1 1]. The sign for each output depends on the sign of the other inputs. First, a total parity is calculated over all input sign bits. The total parity is XORed against each individual input
+
+Figure 1. Tanner Graph for an (8,4) LDPC Code
+sign bit to determine the output sign bit for that respective connection. Finally, the sign bit for each output is combined with the selected minimum magnitude. The signed message is converted to 2’s complement form before being returned to the connected VN.
+3. Review of OpenCL Basics
+Open Computing Language (OpenCL) was developed to reduce the complexity associated with programming for heterogeneous parallel platforms [14]. These platforms consist of multi-core central processing units (CPUs), massively parallel graphics processing units (GPUs), and, most recently, field-programmable gate arrays (FPGAs). The OpenCL standard is intended to promote software portability and the efficient exploitation of available parallel architectures.
+An example OpenCL architecture is shown in Figure 3. The host device (CPU) is connected to the OpenCL capable device via its memory (typically using a PCIe bus for GPUs and FPGAs). The host supplies the device with a series of instructions and data transfers. This usually begins with an input data transfer from the host to the device via DMA into the Global Memory of the OpenCL device. The host code then instructs the device to begin execution.
+OpenCL software consists of two components called the host code and the OpenCL kernel code. Host code is written in C/C++ using the OpenCL API. This code is executed on the host device and contains the setup and control of the connected device. Kernel code is written in OpenCL and is executed solely on the connected device(s). Instances of these kernels are called work-items. The number of work-items and their dimensions (and thus the dimensions of parallelism) are specified when the kernels are created. As shown in Figure 3, N number of work-items can be created. These N work-items can be created in up to three dimensions, which can simplify programming depending on the organization of the data to be processed. Work-items are then organized together into work-groups. Work-groups can also be organized and indexed in up to three dimensions to fit the data model.
+There are five different types of memory involved with an OpenCL program: the host memory, device global memory, device constant memory, local memory, and private memory. Figure 3 shows the relative location of these memories. Host memory is typically the RAM memory of the host CPU device. Global memory is typically implemented in the device RAM (Synchronous DRAM for the Altera Stratix V GX A7 FPGA) allowing for relatively large data sets. Global memory is accessible by all work-items during
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:41:31 UTC from IEEE Xplore. Restrictions apply.
+
+(a) Variable Node Architecture
+
+(b) Check Node Architecture
+
+Figure 2. Node Architectures in the LDPC Decoder for a (3,6)-Regular Code
+
+task execution. However, solely using this type of memory
+
+can cause performance issues due to the latency introduced
+
+by a potential bottleneck as well as required synchronization
+
+between work-items for memory access orders. Similarly,
+
+constant memory is implemented within the global memory
+
+of each device, but it is a read-only memory for kernels.
+
+OpenCL is then able to optimize accesses to constant mem-
+
+ory providing low latency access for all work-items. The
+
+local memory is smaller but faster and would be comparable
+
+to a synthesized cache for the developer. This memory
+
+is usually located on or near the processing chip itself
+
+depending on the device. For the FPGA, local memory is
+
+implemented using the FPGA on-chip block memory allow-
+
+ing its size and placement to be customized. Independent local memories are used for each operating work-group in
+
+Figure 3. OpenCL Connection Diagram
+
+the design allowing its work-items to quickly access and share data. Finally, private memory is comparable to the registers of a processing core. The memory is separate and independent for each operating work-item and cannot be shared. Local variables and intermediate values are typically stored in private memory. Within an FPGA, private memory is implemented using the same FPGA on-chip memory as local memory. Because of the relative locations of both private and local memory on the FPGA, accessing either type is a zero-latency operation.
+Using the available memory models, we will investigate the development of an efficient LDPC decoder using the AOC for OpenCL-to-FPGA tool from Altera [18].
+
+into log-likelihood ratios (LLRs), and passes the interleaver information and the measurements to the device. With the size of the codeword and the kernel code pre-compiled for the device, the host code sends the connection information for the interleaver to each node via DMA transfer to the device global memory (the channel measurements are also sent to their respective VNs). Different configurations of the software were investigated to find the most efficient way to implement the interleaver network. With respect to writing OpenCL code for the GPU and CPU, an obvious first configuration is a two-kernel system where the VN and CN types are implemented in separate kernels.
+
+4. FPGA Implementations
+
+4.1. Global Memory Interleaver
+
+The main challenge with implementing an efficient LDPC decoder in a FPGA with OpenCL is memory management and the implementation of the required interleaver network using the provided memory types. The scalability of the design was one of the first priorities as longer codewords inherently require more memory accesses. The first challenge with the implementation is how to organize data transfer between devices. The host code takes the input raw channel measurements, converts the values
+
+A two-kernel decoder design fits well with the OpenCL memory models as it allows the developer to naturally partition the different tasks of the min-sum algorithm into their VN and CN components. Creating a separate kernel for both the VNs and the CNs introduces an easier flow control for another dimension of pipelining. For example, VNs and CNs could execute in parallel on different codewords. The numbers of each node type are determined by the LDPC code. Implementing the VNs and CNs in separate kernels
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:41:31 UTC from IEEE Xplore. Restrictions apply.
+
+allows the developer to instantiate a different number of work-items for each node type.
+With the flexibility of reprogrammable FPGAs, it would be advantageous to develop a design that is able to handle many different codeword sizes and LDPC codes. To allow a single software source design to handle several different codes, the high-level design of the interleaver must be general enough for the compiler to place it, but fast enough to ensure high decoding throughput.
+As all of the initial bit LLRs are stored in the global memory, we first implemented the interleaver in global memory. VNs and CNs are then executed independently under the control of the host device for each VN-to-CN-toVN decoding iteration. Upon completion, the nodes write their output messages to the appropriate locations in the global memory where that data is read by the connected VN or CN.
+There are many drawbacks and bottlenecks associated with using the global memory for node-to-node communication. As explained in Section 3, global memory for the FPGA is actually implemented in an off-chip SDRAM. For each access to the global memory, relatively long stalls are incurred. Kernel synchronization is also required as each node cannot read the new data until the previous calculation has completed. The two-kernel implementation requires control to handle the synchronization and determine the start and stop times. Although this does allow early completion for decoders that converge on a parity-consistent codeword without requiring the fixed number of iterations (e.g. 32), it requires more memory access and communication. A more efficient implementation would be to hold the data on the FPGA chip throughout the entire decoding operation.
+4.2. Local Memory Interleaver
+To keep data within the FPGA throughout the entire decoding process, the data must exist either in private or local memory. In OpenCL, the host device is only permitted to access the device global memory. The kernel is responsible for loading and allocating any data to be used in either private or local memory. Altera introduced the concept of OpenCL channels [19] with the first release of the AOC. A channel is a first-in-first-out buffer that allows communication between different kernels and that resides in on-chip memory, allowing efficient transfer between kernels. We initially investigated a two-kernel implementation that used channels for the message passing; however, it was not an elegant solution for the decoder. The channels were created primarily with the purpose of creating master-slave connections where the demand of a task could be split among multiple workers through channels. In the design of an LDPC decoder, connections must be made to specific VNs or CNs. This would require strict ordering and scheduled access to the channels to ensure that the data ends up at the correct node inputs.
+Because of the complications of transferring the data via OpenCL channels, we investigated designs in which the VNs and CNs exist within the same kernel. In this way, we can
+
+instantiate a single work-group for all the required workitems. Including all of the work-items within a single workgroup ensures that we can use local memory to implement the interleaver network (as discussed in Section 3). During program execution, n work-items are created in a single dimension, where n is the number of CNs in the code: for example n = 256 in a (512,256) LDPC code. Each work-item must then operate on one check node and two variable nodes. Due to the order of the instructions and the organization of the code, it is not possible to have the VNs and CNs operating simultaneously. However, we can gain a dimension of parallelism by vectorizing the kernel. Using OpenCL, we are able to able to create vectored versions of all integer data types (bool, char, short, int, and long). The compiler restricts the vector lengths to 1, 2, 4, 8, or 16. We performed many experiments that varied the vector lengths with the available data types. The best fit for storing log-likelihood ratio values was the char data type (8-bit).
+The vectorization of the kernel required a few changes to the design of the algorithm to permit SIMD processing of the LLR data. Conditional branching statements that are present with a SIMD data structure on a typical CPU or GPU introduce a bottleneck as the vector must be initially split up to handle the possible instruction paths. After completion of the branch statements, synchronization is then required to regroup the data. Although there is no performance loss when branching in an FPGA, more space is required to generate the hardware for all possible execution paths. All branches were removed and replaced with vectored statements in which all possible results are computed simultaneously for each vector component and then the correct results are selected, as a final step, using bit masks. A notable challenge was the minimum calculation in the CN.
+A tournament structure implemented the comparisons that find the first and second minimum LLR magnitudes for each CN, as shown in Figure 4. Incoming messages from the connected VNs are compared in pairs in the first round. The lesser of the two values in each pair moves to the next round of the main tournament, while the larger values are sent to a second tournament that determines the second minimum. This tournament structure gives the OpenCL AOC the flexibility to generate a hardware pipeline in the compute unit which will allow multiple CNs to simultaneously calculate the minimums.
+5. Experimental Performance Results
+Both interleavers were synthesized for a Stratix V GX A7 FPGA (Nallatech P385n-A7 board) [20] using the AOC for OpenCL. Using the built-in profiling tools, we were able to obtain performance statistics from the implementations. For the local memory interleaver, (3,6)-regular LDPC codes of lengths varying from 32 to 1024 were considered.
+The decoders were tested using the host code to simulate incoming messages. Additive White Gaussian Noise (AWGN) of controlled signal-to-noise ratios was added to all-zero codewords. The bit signals were then converted into LLRs and stored as an 8-bit char type in a 2’s complement format. LLR values were assigned according to
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:41:31 UTC from IEEE Xplore. Restrictions apply.
+
+Messagemagnitudes
+
+... fromnVN variablenodes
+
+1
+
+nVN
+
+...
+Comparator Tree
+
+Comparator Tree
+
+1 ... nVN
+Minimum Select Magnitude Signals
+
+2nd Minimum Magnitude
+
+Figure 4. Check Node Minimum Comparator Trees
+
+Figure 6. GPU Throughput Comparison
+
+Figure 5. Local Memory Implementation Throughput
+an exponential binning [2]. The signal data and interleaver connection information was then sent to the FPGA device global memory via PCIe. The host code, after setting up the kernel, executed the code on the generated FPGA hardware. After 32 iterations, the decoder wrote the output data to the device global memory, as discussed in Section 4.2. This was then repeated for all the possible dimensions of vectorization for each of the LDPCs, as shown in Figure 5.
+Figure 5 shows how throughput increases with the width of vector elements. The solution containing 16 different codewords into a single vector provides the highest throughput for each of the tested LDPC codes. However, each implementation reveals a similar throughput plateau at code lengths of 256 or more. Although we were not able to determine the exact cause of the performance limit, we suspect that the problem was related to pipeline stalling. Each of the solutions uses the same number of compute units, while allowing the compiler the flexibility to synthesize the pipeline and maximize the data throughput.
+6. Cross-Platform Compatibility
+OpenCL is intended to provide portable designs for heterogeneous parallel platforms. Although the implementations were developed for the specific Stratix V GX A7 FPGA, the same kernel code can be directly recompiled on any OpenCL enabled device. We investigated running the local memory interleaver implementation discussed in Section 4.2 on both the NVIDIA GTX 690 3072 CUDAcore GPU and Intel i7-3930K HyperThreaded 12-core CPU.
+
+Figure 7. CPU Throughput Comparison
+Although the source code is portable, the differences in the devices are still highlighted in the maximum available memories. When compiling for an FPGA, local and private memory (as discussed in Section 3) are implemented in onchip block RAM. Because of this, the amounts of local and private memory are decided at compile-time allowing the compiler to create as much memory as required. For fixed architecture devices, such as the GPU and the CPU, memory synthesis is not possible. Consequently in the local memory implementation, large amounts of local memory are requested for the longer codewords as we must store not only the interleaver network but also the connection information for each node. Because of these restrictions, it is not possible to run the same OpenCL code from the FPGA to the GPU or CPU for certain code scenarios.
+When the synthesized OpenCL code was run directly on the GPU, the throughput was predictably lower than that achievable on the FPGA shown in Figure 6. The GPU (shown as the dotted lines), was unable to run for large vector and codeword values due to the OpenCL limitation on local memory. Those results show up as a zero throughput.
+Similarly, when the code was compiled for the CPU, the throughput was lower than for the FPGA, shown in Figure 7. As with the GPU, the CPU was unable to run many of the larger codeword and vector sizes due to the OpenCL limitation on maximum local memory size.
+7. Conclusions
+OpenCL provides a high-level design environment for creating heterogeneous parallel systems. The focus of our project was to investigate the use of OpenCL with the
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:41:31 UTC from IEEE Xplore. Restrictions apply.
+
+relatively new Altera-Offline-Compiler [18] to develop efficient, high-performance LDPC decoders for the Stratix V GX A7 FPGA. Limitations imposed by the compiler affected the possible software architectures. A balance must be struck to allow sufficient flexibility and scope for compiler optimizations. Apart from taking advantage of the latest compiler optimizations, one needs to be aware of the different performance characteristics of the OpenCL memory models. For the highest performance on FPGAs, we recommend that communication and computation should be done within the FPGA (local, private, or constant memory) whenever possible. Using the local memory approach, we achieved a throughput (all codeword bits) of 5.12 Mbps for a length-1024 (3,6)-regular LDPC code on the FPGA. This can be achieved using Altera OpenCL channels between kernel; however, our work suggests that new channel access mechanisms would be desirable that provide greater control over the data access order. Our decoder design could be further optimized with memory compression in the interleaver; however, for large regular and irregular codewords, the most appropriate scalable approach would be to use a multi-kernel architecture.
+Although OpenCL was developed as a cross-platform heterogeneous programming language, the developer must still make optimizations based on the hardware devices. This was highlighted when the throughput of the optimized FPGA local memory implementation was not matched by running the program on the GPU and CPU. Without any alterations from the FPGA code, executing the program on a GPU resulted in a throughput of 1.28 Mbps and 2.35 Mbps on the multi-core CPU. Similarities do exist in the structure of the optimized OpenCL code for CPUs and GPUs; however, special consideration is still required for an FPGA target. Given the current level of compiler maturity, LDPC decoders developed in OpenCL for FPGAs are not able to match the performance achieved by custom hardware design. Although the result was not comparable to industrial standard decoding rates, migration from a software design in C into OpenCL took very little time compared to the expected time to design an optimized custom hardware design.
+Future work on this topic should include research and experimentation with different software architectures for the OpenCL kernels. Designs that further test the functionality of OpenCL channels should also be investigated. With growing OpenCL acceptance and improving compiler technology, it would also be worthwhile to utilize other vendor compilers and expand the range of target FPGA devices.
+As OpenCL-to-FPGA compiler technology improves, the performance potential of FPGA hardware will be better unlocked to complement the parallelism of CPUs and GPUs.
+Acknowledgments
+The authors gratefully acknowledge the financial support of the Natural Sciences and Engineering Research Council of Canada under grant 105567 as well as design software provided by CMC Microsystems.
+
+References
+[1] J. Proakis and M. Salehi, Digital Communications, 5th ed. McGrawHill Education, 2007.
+[2] L. Shu and D. J. Costello, Error Control Coding, 2nd ed. Pearson Education India, 2004.
+[3] C. E. Shannon, “A mathematical theory of communication,” The Bell System Technical Journal, vol. 27, pp. 379–423, 623–656, July 1948.
+[4] “Long-Term Evolution (LTE),” 3rd Generation Partnership Project (3GPP), 3GPP Mobile Communications Standard Release 8, Dec. 2008.
+[5] Z. Zhang, V. Anantharam, M. Wainwright, and B. Nikolic, “An efficient 10GBASE-T Ethernet LDPC decoder design with low error floors,” Solid-State Circuits, IEEE Journal of, vol. 45, no. 4, pp. 843– 855, April 2010.
+[6] “Data-over-cable service interface specifications DOCSIS(R) 3.1: Physical layer specification CM-SP-PHYv3.1-I01-131029,” Cable Television Laboratories, Louisville, CO, USA, Standard, Oct. 2013.
+[7] “DVB fact sheet: 2nd generation satellite DVB-S2 (EN 302 307),” DVB Project, Geneva, Switzerland, Standard, Aug. 2012.
+[8] A. J. Blanksby and C. J. Howland, “A 690-mW 1-Gb/s 1024-b, rate-1/2 low-density parity-check code decoder,” Solid-State Circuits, IEEE Journal of, vol. 37, no. 3, pp. 404–412, 2002.
+[9] P. Urard, E. Yeo, L. Paumier, P. Georgelin, T. Michel, V. Lebars, E. Lantreibecq, and B. Gupta, “A 135Mb/s DVB-S2 compliant codec based on 64800b LDPC and BCH codes,” in Solid-State Circuits Conference, 2005. Digest of Technical Papers. ISSCC. 2005 IEEE International, Feb 2005, pp. 446–609, Vol. 1.
+[10] E. Liao, E. Yeo, and B. Nikolic, “Low-density parity-check code constructions for hardware implementation,” in Communications, 2004 IEEE International Conference on, vol. 5, June 2004, pp. 2573–2577, Vol.5.
+[11] T. Brandon, R. Hang, G. Block, V. C. Gaudet, B. Cockburn, S. Howard, C. Giasson, K. Boyle, P. Goud, S. S. Zeinoddin et al., “A scalable LDPC decoder ASIC architecture with bit-serial message exchange,” Integration, the VLSI Journal, vol. 41, no. 3, pp. 385–398, 2008.
+[12] S. Tehrani, S. Mannor, and W. Gross, “Fully parallel stochastic LDPC decoders,” Signal Processing, IEEE Transactions on, vol. 56, no. 11, pp. 5692–5703, Nov 2008.
+[13] K. Abburi, “A scalable LDPC decoder on GPU,” in VLSI Design (VLSI Design), 2011 24th International Conference on, Jan 2011, pp. 183–188.
+[14] “The OpenCL specification,” Khronos OpenCL Working Group, Tech. Rep., Dec. 2008.
+[15] G. Falca˜o, L. Sousa, and V. Silva, “Massive parallel LDPC decoding on GPU,” in Proceedings of the 13th ACM SIGPLAN Symposium on Principles and Practice of Parallel Programming. ACM, 2008, pp. 83–90.
+[16] F. Pratas, J. Andrade, G. Falcao, V. Silva, and L. Sousa, “Open the gates: Using high-level synthesis towards programmable LDPC decoders on FPGAs,” in Global Conference on Signal and Information Processing (GlobalSIP), 2013 IEEE, Dec 2013, pp. 1274–1277.
+[17] K. Hill, S. Craciun, A. George, and H. Lam, “Comparative analysis of OpenCL vs. HDL with image-processing kernels on Stratix-V FPGA,” in Application-specific Systems, Architectures and Processors (ASAP), 2015 IEEE 26th International Conference on, July 2015, pp. 189–193.
+[18] “Altera SDK for OpenCL getting started guide,” Altera, Standard Release, Nov. 2015.
+[19] “Altera SDK for OpenCL programming guide,” Altera, Standard Release, Nov. 2015.
+[20] “Stratix V device overview,” Altera, Tech. Rep., Oct. 2015.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 15:41:31 UTC from IEEE Xplore. Restrictions apply.
+
+

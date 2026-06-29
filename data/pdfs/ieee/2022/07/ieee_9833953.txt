@@ -1,0 +1,491 @@
+2022 IEEE 23rd International Workshop on Signal Processing Advances in Wireless Communication (SPAWC) | 978-1-6654-9455-7/22/$31.00 ©2022 IEEE | DOI: 10.1109/SPAWC51304.2022.9833953
+
+Finite-Alphabet Message Passing using only Integer Operations for Highly Parallel LDPC Decoders
+
+Tobias Monsees, Dirk Wu¨bben, Armin Dekorsy Department of Communications Engineering
+University of Bremen, 28359 Bremen, Germany Email: {tmonsees, wuebben, dekorsy}@ant.uni-bremen.de
+
+Oliver Griebel, Matthias Herrmann, Norbert Wehn University of Kaiserslautern, 67663 Kaiserslautern, Germany
+{griebel, herrmann, wehn}@eit.uni-kl.de
+
+Abstract—In this paper, we present a new design of Finite Alphabet (FA) Message Passing (MP) decoders using only integer operations. We utilize Discrete Density Evolution with a multidimensional Lookup-Table (mLUT) design for Variable Node (VN) updates to consider all input messages jointly for reducing the information loss compared to the frequent sequential LUT design approaches. From this mLUT design, we derive a minimuminteger computation (MIC) decoder that allows for different bit-widths for node operations and message exchanges between nodes. The mLUT operations for VN updates are replaced by low complexity signed integer additions and threshold operations, and the Check Node (CN) updates simplify to a minimum search over integers. For a (816,406) regular LDPC code, we show that our 3-bit MIC decoder achieves the communication performance of the corresponding mLUT decoder and outperforms a 4bit state-of-the-art Min-Sum (MS) decoder. We show that the node implementations on a 22 nm FD-SOI technology yield an improved area and energy efficiency over the respective MS implementation. To the best of our knowledge, this is the first time that an implementation improvement for the VNs and CNs is shown when using FA MP.
+Index Terms—LDPC code, finite alphabet message passing, mutual-information based design, implementation efficiency
+I. INTRODUCTION
+Beyond 5G and 6G wireless communication systems target peak data rates of 100 Gb/s to 1 Tb/s with processing latencies between 10-100 ns [1]. For such high data rate and low latency requirements, the implementation of the Forward Error Correction (FEC) decoder, that is the most complex and computationally intense component in the baseband processing chain, is a major challenge [2].
+Low-Density Parity Check (LDPC) codes [3] are FEC codes with capacity approaching error correction performance [4] and are part of many communication standards, e.g. DVBS2x, Wi-Fi, and 3GPP 5G-NR. In contrast to other advanced FEC codes, like Polar and Turbo codes, the decoding of LDPC codes is dominated by data transfers [2] making high throughput decoders very challenging in which area and power is largely dominated by the routing. Two sets of nodes, the variable and check nodes, iteratively exchange messages over the edges of a bipartite graph (Tanner graph of the code). Very high throughput decoders can be achieved by mapping
+This work was funded by the German ministry of education and research (BMBF) under grants 16KIS1180K, 16KIS1185 (FunKI) and 16KISK016, 16KISK004 (Open6GHub).
+
+the Tanner graph one-to-one on hardware, i.e., instantiating a dedicated processing unit for each node and hardwiring the edges of the Tanner graph. Unrolling and pipelining the decoding iteration can further increase the throughput [5]. Such Full-Parallel (FP) decoders can achieve in principal throughputs towards 1 Tb/s. However, due to the large routing challenge, such decoders are limited to smaller block sizes in the order of about 1 kbit. This problem is even exacerbated in very advanced technology nodes since routing does scale much worse than transistor density.
+Finite Alphabet (FA) Message Passing (MP) decoding has been introduced as a method to mitigate the routing challenges in unrolled LDPC decoders by reducing the bit-widths of the exchanged messages and, thus, the number of necessary wires [6]. In contrast to the conventional MP decoding algorithms like the Belief Propagation (BP) and its approximations, e.g. Min-Sum (MS), Offset Min-Sum (OMS) and Normalized Min-Sum (NMS) [7], the node operations in FA decoding are designed to fulfil a pre-specified design criterion. The Lookup-Table (LUT)-decoder [8], [9] is designed to maximize mutual information between a code bit and its message under the assumption that all operations are decomposed into a sequence of two inputs. In contrast to Mutual InformationMaximizing Quantized Belief Propagation (MIM-QBP) [10] and Reconstruction-Computation-Quantization (RCQ) [11], we derive a representation of the multidimensional Variable Node (VN) LUT that aims to minimize the local node complexity by using only low-range integers and avoids complexity drawbacks of a LUT implementation [12]. The challenge with these decoders is the trade-off between reduced routing complexity by smaller number of quantization and increased node complexity due to the LUTs, i.e. the area and power of the VN node of state-of-the-art (SoA) FA MP based decoders is typically larger than its NMS equivalent. We will show that our new approach will solve this problem and decrease the complexity of the node implementation. The new contributions of this paper1 are summarized as follows:
+1Notation: Random variables are denoted by sans-serif letters x, random vectors by bold sans-serif letters x, realizations by serif letters x and vector valued realizations by bold serif letters x. Sets are denoted by calligraphic letters X . The distribution px(x) of a random variable x is abbreviated as p(x). x → y → z denotes a Markov chain and R, Z, F2 denotes the real numbers, integers and Galois field 2, respectively.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:23:43 UTC from IEEE Xplore. Restrictions apply.
+
+• we propose the Minimum-Integer Computation (MIC) decoder that processes only low-range integers and realizes both update functions by integer operations,
+• in our evaluation, we show that the MIC decoder using only integers of low-range has communication performance of an information maximizing multidimensional LUT (mLUT) decoder,
+• in a 22nm Fully-Depleted Silicon-on-Insulator (FD-SOI) implementation we show that the decoder achieves better area and energy efficiency than a SoA NMS decoder.
+
+II. INFORMATION OPTIMIZED MP FOR LDPC CODES
+
+A. System Model
+
+We consider a regular LDPC code defined by its parity check matrix H ∈ F2M×N with dV ones per column and dC ones per row. The information word u ∈ FK2 is encoded into the codeword c ∈ F2N and the Binary Phase Shift Keying (BPSK) modulated vector x = 1 − 2c is transmitted over
+
+an Additive White Gaussian Noise (AWGN) channel leading to the receive vector y ∈ RN given by y = x + n with noise variance σn2. The corresponding Tanner graph consists of VNs for each codebit and Check Nodes (CNs) for each
+
+check equation with an edge connecting VN n and CN
+
+m if Hm,n = 1. For the iterative BP decoding, extrinsic information for the codebits cn are exchanged on these edges.
+
+We denote the Variable-Node to Check-Node (VN-to-CN)
+
+messages as Ln→m ∈ R and the Check-Node to VariableNode (CN-to-VN) messages as Ln←m ∈ R. In the first
+
+iteration, all VN-to-CN messages are initialized by channel
+
+Log-Likelihood
+
+Ratios
+
+(LLRs)
+
+L(n0→) m
+
+=
+
+L(yn)
+
+=
+
+2 σn2
+
+yn
+
+for
+
+n = 1, ..., N with m ∈ Nn and Nn defining the set of CNs
+
+connected to VN n. At iteration i, the CN update for all CNs
+
+m = 1, ..., M and its connected VNs n ∈ Mm is
+
+
+
+
+
+Ln(i←) m = 2 arctanh 
+
+tanh Lj(i→−m1)  . (1) 2
+
+j ∈Mm \n
+
+fC,BP (·)
+The VN update for VNs n = 1, ..., N is
+
+Ln(i→) m = L(yn) +
+
+L(ni←) v , ∀m ∈ Nn
+
+(2)
+
+v ∈Nn \m
+
+fV,BP (·)
+
+and the bit decision cˆ(ni,)BP is determined by the sign of (2) by adding all messages Ln(i←) v for v ∈ Nn in the summation term.
+
+B. Information Maximizing Quantizer
+
+For FA MP decoding, each receive signal yn is mapped
+
+to a nQ-bit signed integer zn ∈ Z using the scalar nQ-bit
+
+channel
+
+quantizer
+
+Qch
+
+:
+
+Y
+
+→
+
+Z
+
+=
+
+{−
+
+2nQ 2
+
+, ..., −1, 1, ...,
+
+2nQ 2
+
+}.
+
+The quantizer Qch is designed on symbol level to maximize
+
+mutual information I(x; z) considering an AWGN with design
+
+noise variance σw2 . The underlying optimization problem
+
+Q⋆ch = argmax I(x; z) , s.t. |Z| = 2nQ ,
+
+(3)
+
+Qch
+
+is a clustering problem with Kullback-Leibler divergence as similarity measure and a special case of the underlying optimization problem of the Information Bottleneck Method (IBM) [9], [13]. The optimum quantizer for binary input has been derived in [14]. It yields a deterministic function where the joint distribution between symbol x and the quantizer output z given by
+
+1
+
+(y − x)2
+
+p(z|x) =
+Iz
+
+exp 2πσw2
+
+−
+
+2σw2
+
+dy ,
+
+(4)
+
+with Iz = {y | Qc⋆h(y) = z} as the interval of receive signals y mapped to the quantizer output z.
+
+We denote the LLRs of the quantizer output z ∈ Z by
+
+L(z) = log
+
+p(z|x=1) p(z|x=−1)
+
+. The transformation z
+
+→ L(z) is
+
+information lossless in the sense that I(x; z) = I(x; L(z)). In
+
+the following, we review an important property of the solution
+
+in (3) that will be used again in Sec. III. First, we define the
+
+set of all LLRs Ly = {L(y) | y ∈ Y} in order to specify an
+equivalent quantizer for LLRs QL : Ly → Z that achieves the same quantization result QL(L(y)) = Q⋆ch(y) = z.
+Lemma 1 (LLR separation [14]): There exist an optimal quantizer Q⋆ch of (3) with an equivalent representation QL where two preimages Bz′ = {L ∈ Ly | QL(L) = z′} and Bz′′ = {L ∈ Ly | QL(L) = z′′} with z′, z′′ ∈ Z for z′ ̸= z′′
+are separated by a real valued threshold.
+
+For a discrete set Y, Dabirnia et al. show that this property
+
+holds for all information maximizing quantizers [15]. Further-
+
+more, Lemma 1 is a special case of the more general separating
+
+hyperplane condition [16].
+
+C. Multidimensional LUT (mLUT) Decoder Design
+The mLUT decoder follows the same MP structure of the BP decoder but uses only signed integers as messages on the Tanner graph and signed integer based VN and CN updates. In the mLUT decoder design, we design the VN update for each iteration to maximize extrinsic information of a codebit cn. For the CN update, we utilize an integer based minimum search. The design procedure is based on Density Evolution (DE) with quantization [8] where it is assumed that messages of the same type are independent and identically distributed (i.i.d.) during one iteration, i.e. we can omit the codebit index n. Based on these assumptions it is sufficient to design only one VN update function per iteration. In the following, we keep the iteration index i only in the distribution of messages for simplicity of notation. For the design of the first CN update, we assume that the VN-to-CN messages are initialized by signed integers tj ∈ Z that follow the same distribution p(0)(tj|cj) = p(z|c) for j = 1, ..., dC − 1 determined by (4), using the BPSK relation x = 1−2c. For the CN update, we consider the distribution of the dC − 1 VN-to-CN messages t = [t1, ..., tdC−1] ∈ T(d0C)−1 = ZdC−1 and the codebit c at iteration i, given by
+
+p(i)(t|c) = 1 dC−2 2
+
+dC −1
+p(i−1)(tj |cj ) , (5)
+
+c: c=c j=1
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:23:43 UTC from IEEE Xplore. Restrictions apply.
+
+where c = c1⊕...⊕cdC−1 is the modulo 2 sum of connected codebits. We utilize the signed integer based minimum search
+[17] as CN update
+
+
+
+
+
+dC −1
+
+a = fC,min(t) =  sign (tj) min{|t1|, ..., |tdC−1|} . (6)
+
+j=1
+
+The distribution between the CN-to-VN message a ∈ A(i) = T(i−1) and the codebit c depends on the CN update, i.e.
+
+p(i)(a|c) =
+
+p(i)(t|c) ,
+
+(7)
+
+t∈T(di− C−1)1 : fC,min(t)=a
+
+that can be calculated efficiently in a recursive fashion. For designing the VN update, we require the joint distribu-
+tion of the discrete channel information z together with the CN-to-VN messages am combined in a = [z, a1, ..., adV−1] ∈ Z × A(diV)−1 = V(i) and the codebit c, determined by
+
+dV −1
+
+p(i)(a|c) = p(z|c) p(i)(am|c) ,
+
+(8)
+
+m=1
+
+where p(i)(am|c) = p(i)(a|c) for m = 1, ..., dV − 1. Given the distribution (8), the VN update fV(i)(a(i))) = t(i) that maximizes Mutual Information (MI) I(c; t(i)) is determined as the solution of the optimization problem (c → a(i) → t(i))
+
+fV(i,)MI = argmax I c; t(i) s.t. |T(i)| = 2nM .
+
+(9)
+
+fV
+
+Parameter nM defines the bit-width of the messages exchanged between VN and CN and controls the complexity of the message exchange. For the remainder, nM = nQ is assumed for simplicity. The optimization problem in (9) equals the channel quantization problem for binary input (Sec. II-B). The optimal deterministic function is a mLUT that conserves more mutual information compared to a design that decomposes the optimization problem into a sequence of 2-dimensional LUTs [8], [9] with the drawback of higher implementation costs for realizing multidimensional LUTs. The distribution of the VN-to-CN messages for the next iteration in (5) is given by
+
+p(i)(tj |cj ) = p(i)(t|c) =
+
+p(i)(a|c) ,
+
+a∈V(i) : fV(i,M) I(a)=t
+
+(10)
+
+for j = 1, ..., dC − 1. For the design of the mutual information maximizing mLUT decoder, we iterate over (5), (7), (8), (9) and (10) and declare convergence if I(c; t(i)) approaches one
+after imax number of iterations.
+
+III. MINIMUM-INTEGER COMPUTATION DECODER DESIGN
+
+In this section, we replace the information maximizing mLUT for VN updates in (9) by simple integer computations. To motivate the derivation, we consider first the VN update using LLRs for the discrete input messages of nQ-bit followed by subsequent quantization to nQ bits for the output. Second, we avoid the inherent addition of real valued LLRs by decomposing this operation into i) mapping of the nQ-bit input messages into nR-bit signed integers with nR ≥ nQ, ii)
+
+execution of integer additions, iii) threshold quantization to nQ bits. For a sufficiently large nR these operations replace exactly the mLUT functionality. Furthermore, by decreasing the bit resolution nR this approach allows to find information optimized approximations with lower VN update complexity.
+
+A. Equivalent LLR Quantizer
+
+Similar to (2), the VN output corresponding to the LLR of the message vector a equals the addition of the LLRs of the channel output z and of the individual messages am
+
+L(i)(a) = log
+
+p(i)(a|c = 0) p(i)(a|c = 1)
+
+dV −1
+= L(z)+ L(i)(am) . (11)
+
+m=1
+
+As a result of Lemma 1, a |T(i)| − 1 threshold quantizer
+
+fV(i,)MI(a) = Q(Vi,)L L(i)(a)
+
+(12)
+
+can be determined that achieves the same output as the information optimal mLUT in (9).
+
+B. Computations over Integers
+
+Our approach is to find an equivalent representation of (12)
+
+where the computations over real numbers are replaced by
+
+computations over signed integers and an integer quantization
+
+function. To that end, we define the signed integer based node calculation2 as
+
+
+
+
+
+dV −1
+
+fV(i,)IC,s(a) = QV(i,)s ⌊sL(z)⌉ +
+
+⌊sL(i)(am)⌉ ,
+
+
+
+
+
+r=ϕ(i)(z) m=1 rm=ϕ(Vi)(am)
+
+(13)
+
+with real valued scaling factor s > 0 and integer mappings
+
+ϕ(i) : Z → Rs(i) ⊂ Z and ϕV(i) : A(i) → R(si,)V ⊂ Z.
+
+The scaling factor s might be different per iteration. We
+
+denote the output of the integer mappings as r = ϕ(i)(z)
+
+and rm = ϕV(i)(am), respectively. We interpret Ws(i)(a) =
+
+⌊sL(z)⌉ +
+
+dV −1 m=1
+
+⌊sL(i)
+
+(am
+
+)⌉
+
+∈
+
+Ws(i)
+
+⊂
+
+Z
+
+as
+
+an
+
+scaled
+
+signed integer equivalent of L(i)(a) in (11). For any real
+
+valued scaling factor s > 0, we can construct a quantizer
+
+Q(Vi,)L,s(sL(i)(a)), where any two different preimages are sep-
+
+arated by a single threshold and where the thresholds of Q(Vi,)L,s
+
+are scaled values of the thresholds of Q(Vi,)L in (12). By varying
+
+the scaling factor s in (13), we can reduce the sum of relative
+
+errors e(i)(s) =
+
+a∈V(i) |1 −
+
+| Ws(i) (a)
+sL(i) (a)
+
+to
+
+find
+
+a
+
+corresponding
+
+integer calculation (13) with the costs of increasing the values
+
+(i.e. required bit resolution for representation) in the integer range R(si) and R(si,)V if we increase the scaling factor s. To
+that end, we define the condition for exact representation via
+
+the signed integer based node calculation defined in (13). We
+
+use the preimages of the information maximizing VN update in (9) At(i) = {a ∈ V(i) : fV(i,)MI(a) = t} and the set of values of Ws(i)(a) that are related to one specific t, given by Ws(,it) = {Ws(i)(a) ∈ Ws(i) : a ∈ A(ti)}. The output of the
+
+2With ⌊·⌉ as round to nearest integer (away from 0 if fraction part is .5)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:23:43 UTC from IEEE Xplore. Restrictions apply.
+
+information maximizing VN update can be calculated exactly if different sets Ws(,it) are disjoint, i.e.
+
+Ws(,it)′ ∩ Ws(,it)′′ = ∅ ∀t′′, t′ ∈ T(i) for t′′ ̸= t′ .
+
+(14)
+
+Condition (14) ensures that the output of fV(i,)MI(a) in (12) can be represented exactly by using a suitable quantization function Q(Vi,)s in (13).
+Our aim is to keep the single threshold separation property to simplify the quantization operation Q(Vi,)s. For this purpose, we define a restricted condition of (14) by non-overlapping
+intervals as
+
+Ws(,it)′,L, Ws(,it)′,R ∩ Ws(,it)′′,L, Ws(,it)′′,R = ∅ , ∀t′′, t′ ∈ T(i) ,
+(15) with Ws(,it),L = min Ws(,it) and Ws(,it),R = max Ws(,it). For exact representation, we search for the minimum value of s such
+that condition (15) is satisfied. For nR-bit limited integer calculation, we ensure that the integer valued range R(si) and Rs(i,)V of the integer mappings in (13) satisfy
+
+max |ϕ(i)(z)| < 2nR
+z
+
+,
+
+max
+a
+
+|ϕV(i)(a)|
+
+<
+
+2nR
+
+(16)
+
+for all iterations 1 ≤ i ≤ imax and select the output cluster that maximizes mutual information if condition (15) is not fulfilled.
+
+IV. NODE HARDWARE ARCHITECTURES
+With the definition of the MIC node update functions in (6) and (13), we can derive respective FP hardware architectures, that constitute the main building blocks for an unrolled FP LDPC decoder.
+
+adder tree (center), similar to a conventional full-parallel VFU [5], embedded by respective input (left) and output (right) stages. The discrete channel information z, the incoming and outgoing messages am and tm, with 1 ≤ m ≤ dV are each nM = nQ bit, whereas the corresponding reconstructed messages r and rm are each nR bit wide. The input and output stages perform the required integer mappings. Furthermore, the input and output stages perform a number format conversion from sign-magnitude to two’s complement and vice versa. The latter is already taken into account in the design of the one dimensional LUTs ϕ, ϕV and QV,s. Similarly, the harddecision bit cˆ is obtained by evaluation of the respective two dimensional LUT.
+V. RESULTS AND DISCUSSION
+The MIC approach is evaluated in terms of FEC performance and implementation efficiency for a (816, 406) regular LDPC code with VN degree dV = 3 and CN degree dC = 6.
+A. Frame Error Rate (FER)
+Fig. 2 shows the FER performance of the MIC decoder for integer bit-widths nR ∈ {4, 5, 6} with nM = nQ = 3 quantization and message bit-width. The decoders were designed for a target FER of 10−3. As baseline, we include the FER of a double precision floating point BP decoder without quantization of receive signals as well as the FERs for NMS decoder with scaling factor γ = 0.75 and a nM = nQ = 3 mLUT decoder. All decoders use the flooding schedule and are limited to 10 decoding iterations for practical reasons.
+
+A. Check Node Functional Unit (CFU)
+The Check Node Functional Unit (CFU) of the MIC decoder is similar to that of a conventional NMS or OMS decoder. It is composed of a minimum search stage with a subsequent output stage for each output message. For a detailed description, we refer to the relevant literature, e.g. [5]. In contrast to a conventional CFU, there is no need to perform a Sign-Magnitude (SM)/Two’s Complement (TC) conversion as well as the message normalization, respectively. Therefore, respective units are omitted.
+
+B. Variable Node Functional Unit (VFU)
+
+Fig. 2. FER of the MIC decoder for different integer bit-widths nR in comparison with various SoA decoders at ten iterations.
+
+Fig. 1. Variable Node Functional Unit for a degree dV = 3 VN.
+The Variable Node Functional Unit (VFU) for a degree dV = 3 MIC VN is depicted in Fig. 1. It is composed of an
+
+For nR = 6 the MIC decoder achieves the same FER as the mLUT decoder by meeting condition (16). For lower integer resolutions nR = 5 and nR = 4, we observe a performance degradation of less than 0.1 dB for the considered target FER. Thus, nR can be used to trade-off computational complexity and performance of the decoder. In contrast to conventional FA decoder designs, the bit-width of the exchanged messages nM, that is crucial for the routability of the decoder, can remain at small values (here nM = 3).
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:23:43 UTC from IEEE Xplore. Restrictions apply.
+
+For the NMS decoder with nQ = 3, a message quantization of at least nM = nR = 4 is required to achieve a FER close to that of the MIC decoder. An increase to nM = nR = 5 shows a slight improvement, but overall the performance does not exceed the MIC decoder with nR = 4. This is also the case for higher message resolutions in the NMS decoder, which are omitted in this plot for better clarity.
+B. Implementation Results
+Implementation efficiency of our MIC approach is evaluated on node level. I.e. VFUs and CFUs are implemented in a 22 nm FD-SOI technology using a Super-Low-VT (SLVT) standard library under worst-case Process, Voltage and Temperature (PVT) conditions. Synthesis is performed with Synopsys Design Compiler. The MIC node implementations are then compared with their counterparts from a SoA NMS decoder. In detail, we compare the nM = 3, nR = 4 MIC nodes with the nM = nR = 4 NMS nodes since they provide comparable FER performance, both with nQ = 3. We also extrapolate the results to decoder level.
+
+TABLE I POST-SYNTHESIS RESULTS OF VN AND CN FUNCTIONAL UNITS
+
+Critical Path [ns] Area [um2]
+Power [uW ]
+
+NMS 0.24 200 382
+
+VFU MIC 0.24 179 322
+
+Imp. 0% 11% 15%
+
+NMS 0.29 269 518
+
+CFU MIC 0.15 143 252
+
+Imp. 48% 47% 51%
+
+Table I shows the corresponding synthesis results. Here, we only list the results of the first iteration VFU, as the variations in timing, area and power over the iterations are negligible. When looking at the results, the length of the critical paths of the VFUs for NMS and MIC are similar, but area and power of the MIC VFU are decreased by 11% and 15%, respectively. The improvements in the CFU are much larger with around 50% in critical path, area and power. The large gains in the CFU stem from i) a lower message bit width nM (3 vs. 4 bit), ii) the removal of the message normalization unit, and iii) the removal of the SM/TC conversion unit. A similar observation was made in [12], where a 5 bit MS decoder was compared to a 3 bit Min-LUT decoder for a dV = 6, dC = 32 code, where the CFU area was reduced by around 50%, but the VFU area increased by 100%.
+We can perform a first fast extrapolation of these area results to an unrolled FP decoder architecture. For this, we consider a code that contains 816 VNs and 406 CNs. This extrapolation yields a logic area reduction by about 25%. Routing area is first order also reduced by 25% since the the bit widths, and thus the wiring, reduces from 4 bits to 3 bits. It has to be mentioned that the real savings would be larger since the routing area grows rather quadratically than linearly for routing dominated architectures. Moreover it is expected that the power is also largely reduced. However, the implementation of a full decoder is out of scope of this paper.
+But this simplified extrapolation shows that an unrolled LDPC decoder architecture can be implemented much more
+
+efficiently with our new MIC approach compared to a NMS decoder without loss in FER performance. Furthermore, this approach enables the possibility to address a major issue for high throughput LDPC decoder implementations, i.e. the implementations of larger code block sizes that is constraint by routing congestion for SoA NMS decoder architectures.
+VI. CONCLUSION
+We presented the Minimum-Integer Computation (MIC) decoder based on FA MP where the multidimensional mutual information maximizing Variable Node (VN) Lookup-Table (LUT) is replaced by an equivalent low-range integer calculation. This equivalent integer representation calculates the output of the VN LUT exactly or approximately depending on the bit resolution of the internal integer calculations. For the implementation, we showed that the MIC design has lower complexity than the Normalized Min-Sum (NMS) decoder with comparable performance.
+REFERENCES
+[1] W. Saad, M. Bennis, and M. Chen, “A Vision of 6G Wireless Systems: Applications, Trends, Technologies, and Open Research Problems,” IEEE Network, vol. 34, no. 3, pp. 134–142, 2020.
+[2] C. Kestel, M. Herrmann, and N. Wehn, “When Channel Coding Hits the Implementation Wall,” in IEEE 10th International Symposium on Turbo Codes Iterative Information Processing (ISTC 2018), 2018.
+[3] R. Gallager, “Low-Density Parity-Check Codes,” IRE Transactions on Information Theory, vol. 8, no. 1, pp. 21–28, 1962.
+[4] D. MacKay, “Good error-correcting codes based on very sparse matrices,” IEEE Transactions on Information Theory, vol. 45, no. 2, 1999.
+[5] P. Schla¨fer, N. Wehn, M. Alles, and T. Lehnigk-Emden, “A New Dimension of Parallelism in Ultra High Throughput LDPC Decoding,” in SiPS 2013 Proceedings, 2013, pp. 153–158.
+[6] R. Ghanaatian, A. Balatsoukas-Stimming, T. C. Mu¨ller, M. Meidlinger, G. Matz, A. Teman, and A. Burg, “A 588-Gb/s LDPC Decoder Based on Finite-Alphabet Message Passing,” IEEE Transactions on Very Large Scale Integration (VLSI) Systems, vol. 26, no. 2, pp. 329–340, 2018.
+[7] J. Chen and M. Fossorier, “Density Evolution for Two Improved BPBased Decoding Algorithms of LDPC Codes,” IEEE Communications Letters, vol. 6, no. 5, pp. 208–210, 2002.
+[8] F. J. C. Romero and B. M. Kurkoski, “LDPC Decoding Mappings that Maximize Mutual Information,” IEEE Journal on Selected Areas in Communications, vol. 34, no. 9, pp. 2391–2401, Aug. 2016.
+[9] J. Lewandowsky and G. Bauch, “Information-Optimum LDPC Decoders based on the Information Bottleneck Method,” IEEE Access, Jan. 2018.
+[10] X. He, K. Cai, and Z. Mei, “On Mutual Information-Maximizing Quantized Belief Propagation Decoding of LDPC Codes,” in IEEE Global Communications Conference (GLOBECOM 2019), Dec. 2019.
+[11] L. Wang, R. D. Wesel, M. Stark, and G. Bauch, “A ReconstructionComputation-Quantization (RCQ) Approach to Node Operations in LDPC Decoding,” in IEEE Global Comm. Conf. (GLOBECOM), 2020.
+[12] A. Balatsoukas-Stimming, M. Meidlinger, R. Ghanaatian, G. Matz, and A. Burg, “A Fully-Unrolled LDPC Decoder based on Quantized Message Passing,” in IEEE Works. on Signal Proc. Systems (SiPS), 2015.
+[13] B. M. Kurkoski, “On the Relationship Between the KL Means Algorithm and the Information Bottleneck Method,” in 11th International ITG Conference on Systems, Communications and Coding (SCC), Feb. 2017.
+[14] B. M. Kurkoski and H. Yagi, “Quantization of Binary-Input Discrete Memoryless Channels,” IEEE Transactions on Information Theory, vol. 60, no. 8, pp. 4544–4552, 2014.
+[15] M. Dabirnia, A. Martinez, and A. G. i Fa`bregas, “A Recursive Quantizer Design Algorithm for Binary-Input Discrete Memoryless Channels,” IEEE Transactions on Communications, vol. 69, no. 8, 2021.
+[16] D. Burshtein, V. D. Pietra, D. Kanevsky, and A. Nadas, “Minimum Impurity Partitions,” The Annals of Statistics, vol. 20, no. 3, 1992.
+[17] M. Meidlinger, G. Matz, and A. Burg, “Design and Decoding of Irregular LDPC Codes Based on Discrete Message Passing,” IEEE Transactions on Communications, vol. 68, no. 3, pp. 1329–1343, 2020.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:23:43 UTC from IEEE Xplore. Restrictions apply.
+
+

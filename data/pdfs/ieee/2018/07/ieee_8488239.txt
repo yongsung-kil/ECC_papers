@@ -1,0 +1,1054 @@
+2018 10th International Conference on Communication Software and Networks
+
+The Design and Implementation of High-Speed Codec Based on FPGA
+
+Weiji Ren, Hao Liu
+School of Information and Electronic Beijing Institute of Technology Beijing, China
+e-mail: 549986817@qq.com, skyskyfordream@163.com
+
+Abstract—This article mainly proposes a high-speed encoding and decoding method for LDPC code on FPGA. This method converts a quasi-cyclic LDPC code into a block quasi-cyclic LDPC code, and uses a similar transformation to generate a corresponding generator matrix, thereby improving the parallelism of encoder and decoder and making them have high throughput. Finally, we implemented high-speed encoding and decoding on the FPGA chip of the Kintex7 system by using the CCSDS-recommended (8176, 7154) LDPC code, and these encoder and decoder achieve a throughput of 2.97 Gbps under the condition of 5 iterations.
+Keywords-LDPC code; quasi-cyclic LDPC code; high throughput
+I. INTRODUCTION
+In recent years, LDPC codes have become main research object in channel coding field. It is a block code whose performance is close to the Shannon capacity limit and has a sparse parity check matrix [1]. Compared with Turbo codes, the decoder of LDPC codes have low computational complexity. The hardware implementation of decoders can be roughly divided into parallel and partial parallel operations.
+In the partially parallel decoding structure [2], the connection between check node and variable node is random if check matrix of the LDPC code is randomly constructed, which makes it difficult for time division multiplexing of processing unit. Therefore, it is difficult to implement highspeed partial parallel decoding for codewords that are completely randomly constructed. Thus, LDPC code must be designed as a special structure.
+The parity check matrix of a quasi-cyclic LDPC code [3], [4] can be divided into an array of cyclic matrixes. For the parallel decoding of high-throughput, high-parallelism LDPC codes, a common challenge is to process a large number of memory for reading and writing in order to prevent memory access conflicts. Because check node and variable node must be read into or written to the memory at the same time when they process multiple messages.
+Based on high-speed requirements of encoders and decoders, this article selects quasi-cyclic LDPC codes which are easy to design and implement. According to its pattern, it can be converted into corresponding block quasi-cyclic LDPC code and generator matrix, and high-speed encoder and decoder are designed in a high degree of parallelism, including decoding data input and output module, updating
+
+of variable node and check node, storage of decoding information. The design methods for improving the throughput of encoders and decoders have been optimized, such as efficient use of hardware resources, high system clock stability, and effective reduction of maximum number of iterations. Based on the research and analysis of LDPC code correlation principle and its coding algorithm, we use MATLAB simulation to design and optimize LDPC encoder and decoder by using FPGA, and then write Verilog hardware program for testing and analysis. The test results show that this design can achieve the requirements of relevant indicators. And the high-speed encoding and decoding of encoder and decoder is realized at the rate of 2.97 Gbps under the condition of almost no loss of encoding and decoding performance.
+
+II. PARTIAL PARALLER DECODER AND QUASI-CYCLIC LDPC CODES
+
+A. Belief Propagation Iterative Decoding Algorithm
+
+According to characteristics of BP iterative decoding algorithm, we can simplify three algorithms: probability domain iterative decoding algorithm, logarithmic domain iterative decoding algorithm and minimum sum decoding algorithm. Most of the engineering uses the minimum sum decoding algorithm because it uses only the minimum and addition operations to facilitate hardware implementation. The input of decoder is the soft demodulation information
+
+yn , n 1, 2, , N from demodulator, and the output is
+
+hard decision result of the decoding. The intermediate
+
+variables
+
+are
+
+L(k ) mn
+
+and
+
+Z
+
+(k) mn
+
+,
+
+where:
+
+m is
+
+variable
+
+node;
+
+n is
+
+check
+
+node;
+
+L(k ) mn
+
+is
+
+the
+
+iteration
+
+information
+
+from
+
+check
+
+node to variable node;
+
+Z (k) mn
+
+is the iterative information from
+
+variable node to check node. Let N (m) denotes a set of
+
+variable nodes connected to check node n , and M (n)
+
+denotes a set of check nodes connected to the variable
+node m . The iterative process can be seen as the message
+passing process on the bidirectional graph determined by check matrix. The iterative steps of the modified minimum sum decoding algorithm [5] under the condition of additive white Gaussian noise channel are as follows:
+Initialization: for all n ^0,1, 2, , N`
+
+978-1-5386-7223-5/18/$31.00 ©2018 IEEE
+
+427
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:47:26 UTC from IEEE Xplore. Restrictions apply.
+
+Z (0) m,n
+
+Z (0) n
+
+2yn V 2 m M (n)
+
+(1)
+
+2 For AWGN channel, the factor V 2 in initial LLR
+message has no effect on the iterative process, so it can be ignored and the channel estimation is not required. Therefore, the initialized formula can be changed to the following form:
+
+Z (0) m, n
+
+yn m M (n)
+
+(2)
+
+Iteration: a) check node update
+
+O  L(k) mn
+
+k
+
+u
+
+sgn(Zm(kn'1) )
+
+n 'N (m)\n
+
+min
+n 'N (m)\n
+
+Z (k 1) mn '
+
+(3)
+
+Where, Ok is correction factor which is related to the
+
+row weight of check matrix. Generally, Ok is about
+
+0.7 to 0.8.
+
+b) variable node update
+
+¦ Z (k) mn
+
+Z (0) n
+
+
+
+L(k ) m'n
+
+(4)
+
+m'M (n)\m
+
+c) decoding: calculate posterior likelihood ratio(LLR)
+
+for each bit
+
+¦ Z (k) n
+
+Z (0) n
+
+
+
+L(k ) mn
+
+(5)
+
+mM (n)
+
+According
+
+to
+
+the
+
+value
+
+of
+
+Z (k) n
+
+,
+
+the
+
+estimated
+
+value
+
+^ (k)
+xn can be obtained as follows:
+
+For n
+
+1, 2,
+
+,N
+
+,
+
+if
+
+Z (k) n
+
+!0
+
+,
+
+the
+
+judgment
+
+^ (k)
+
+^ (k)
+
+is xn 0 ; otherwise, it is xn 1 .
+
+If the number of iterations exceeds a certain number, the
+
+^ (k)
+iteration stops and xn (n 1, 2, , N ) is used as the
+
+decoding output. Otherwise, continue with next iteration.
+
+B. Partial Parallel Decoding Structure Based on Block Matrix
+
+From the BP iterative decoding algorithm, it can be seen
+
+that each check node (each row of the check matrix) can be
+
+iterated simultaneously when check node iterates. Similarly,
+
+when variable nodes are iterated, each variable node (each
+
+column of the check matrix) can also be iterated at the same
+
+time. Therefore, BP iterative decoding algorithm is a parallel
+
+algorithm, which can theoretically achieve high-speed
+
+decoding. However, in engineering, it cannot necessarily be
+
+implemented in parallel. In BP iterative decoding process,
+
+intermediate
+
+variables
+
+L(k ) mn
+
+and
+
+Z (k) mn
+
+need
+
+to
+
+be
+
+stored:
+
+the
+
+information
+
+of
+
+L(k ) mn
+
+is
+
+needed
+
+in
+
+CNU
+
+operation;
+
+similarly,
+
+the information of
+
+Z (k) mn
+
+is
+
+needed
+
+in
+
+VNU
+
+operation.
+
+If
+
+L(k ) mn
+
+is
+
+stored
+
+in
+
+one
+
+memory
+
+cell,
+
+only
+
+one
+
+number
+
+can
+
+be
+
+operated per clock cycle when writing into or reading the
+
+memory
+
+cell,
+
+and
+
+it
+
+is
+
+the
+
+same
+
+for
+
+Z (k) mn
+
+operations.
+
+Although there may be multiple CNU units and VNU units
+
+working at the same time, the speed of reading and writing
+
+from
+
+L(k ) mn
+
+or
+
+Z (k) mn
+
+is
+
+slow,
+
+which
+
+leads
+
+to
+
+most
+
+of
+
+the
+
+time
+
+is in waiting state. Thus, it cannot work effectively and the
+
+parallel operations cannot be achieved.
+
+One solution is to store every data in
+
+L(k ) mn
+
+and
+
+Z (k) mn
+
+in a
+
+register,
+
+and
+
+any
+
+data
+
+in
+
+L(k ) mn
+
+and
+
+Z (k) mn
+
+can
+
+be
+
+read
+
+or
+
+written at any time. According to this solution, the CNU unit
+
+and VNU unit can work completely in parallel, and the
+
+decoder can achieve high speed. However, this method
+
+consumes a lot of resources and is not practical when code
+
+length is long.
+
+If
+
+L(k ) mn
+
+and
+
+Z (k) mn
+
+are stored in a plurality of storage units,
+
+which
+
+means
+
+we
+
+can
+
+read
+
+and
+
+write
+
+multiple
+
+data
+
+in
+
+L(k ) mn
+
+and
+
+Z (k) mn
+
+per
+
+clock,
+
+thereby
+
+several
+
+CNU
+
+units
+
+and
+
+VNU
+
+units can work at the same time. Therefore, partially parallel
+
+decoding [6] can be achieved by multiplexing these several
+
+CNU units and VNU units.
+
+C. Equivalent Transformation of Quasi-Cyclic LDPC Codes
+
+Firstly, quasi-cyclic LDPC code determines its parity
+check matrix H according to certain constraints. The parity
+check matrix of quasi-cyclic LDPC code is composed of a
+cyclic matrix array on GF (2) , which is consist of c u t
+
+parts, and each part is a b u b matrix, for c and t are constant and c d t . The general form of quasi-cyclic parity
+check matrix is as follows:
+
+ª A1,1 A1,2
+
+A1,t º
+
+Hqc
+
+««A2,1 «
+
+A2,2
+
+A2,t
+
+» »
+
+»
+
+(6)
+
+« ¬
+
+Ac,1
+
+Ac,2
+
+Ac
+
+,t
+
+» ¼
+
+The general form of quasi-cyclic generation matrix of
+
+quasi-cyclic LDPC codes is:
+
+ªI O
+
+G qc
+
+««O «
+
+I
+
+« «¬O O
+
+O G11 O G21
+
+G1c º
+
+G2c
+
+» »
+
+»
+
+(7)
+
+I G(tc)1
+
+G
+
+(t
+
+c)c
+
+» »¼
+
+where, I is a unit matrix, O is all-zero matrix, A1,2 is
+
+cyclic sparse matrix and Gij is cyclic matrix, and all of these matrix are in the size of b u b . Zongwang Li et al. [7]
+
+claimed that matrix Gqc having the above structure is a SC
+form generator matrix (Systematic-Circulant form Generator Matrix). The SC-shaped generator matrix of quasi-cyclic
+
+428
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:47:26 UTC from IEEE Xplore. Restrictions apply.
+
+LDPC code allows us to use a shift register to implement linear complexity encoding of LDPC codes.
+It has been found that if the order of cyclic matrix constituting quasi-cyclic LDPC code check matrix has an
+integer factor b b1b2 and satisfies (b1, b2 ) 1 [8], [9],
+and [10], it can be decomposed into:
+
+Hqc diag(c){Pc} Hbqc diag(t){Pt}
+
+(8)
+
+where, diag(n){Pn} denotes an nb nb -order block diagonal matrix with b b -order matrix P as its basic element, and the matrix Hbqc is defined as:
+
+h11 h12
+
+h1t
+
+Hbqc = h21 h22
+
+h2t
+
+(9)
+
+hc1 hc2
+
+hct
+
+where, Hbqc is an approximate block circulant matrix array, which is consist of c u t parts, and each part is a b u b matrix. The block cycle matrix hij (i 1, c; j 1, ,t)
+is obtained by cyclic matrix Aij through the same row and
+column permutation. Similarly, the quasi-cyclic LDPC code SC-quasi-cyclic
+generation matrix is decomposed into:
+
+^ ` ^ ` Gqc diag(tc) Pc Gbqc diag(t) Pt
+
+(10)
+
+ªI
+
+«
+
+Gbqc
+
+« «
+
+I
+
+«
+
+¬«
+
+F11
+
+F1c º
+
+F21
+
+F2c
+
+» »
+
+»
+
+(11)
+
+I F(tc)1
+
+F(t
+
+c)c
+
+» ¼»
+
+where, Fi, j is a block circulant matrix, for i 1, ,t  c, j 1, , c , and they are respectively obtained by Gij through row and column permutation.
+
+III. DESIGN AND IMPLEMENTATION OF PARTIAL PARALLEL ENCODER AND DECODER WITH HIGH DEGREE OF
+PARALLELISM
+
+This paper adopts (8176, 7154) LDPC encoding
+
+proposed by CCSDS and the generated matrix of LDPC
+
+encoding (8176, 7154) is shown in Figure 1. Where, I is an 511u511 identity matrix, 0 is a 511u511 zero matrix,
+
+and Bi, j
+
+is a 511u511 cyclic matrix,
+
+for i 1, ,14; j 1, 2 .
+
+I 00 0I0 00I
+
+0 B1,1 0 B2,1 0 B3,1
+
+B1,2 B2,2 B3,2
+
+000
+
+I B14,1 B14,2
+
+Figure 1. (8176, 7154) LDPC code generation matrix
+
+The check matrix of a (8176, 7154) LDPC code, whose
+dimension is1022u8176 , is composed of 2u16 blocks, and each block is a 511u511 cyclic shift submatrix. The
+row weight and column weight of check matrix are 32 and 4, respectively. The check matrix of LDPC encoding (8176, 7154) is shown in Figure 2.
+
+A1,1 A2,1
+
+A1,2 A2,2
+
+A1,16 A2,16
+
+Figure 2. (8176, 7154) LDPC code check matrix
+
+We decompose b 511 into b1 73 and b2 7 .
+
+A. Design Scheme of LDPC Encoder
+
+Assuming that the sequence of information to be
+transmitted is d , the encoder outputs code
+
+word c d G [d | p] [d | p1,p2 ] . Where, p denotes an LDPC coded parity bit, p1 denotes the first 511 check
+
+bits, and p2 denotes the 512 thru 1022 check bits. We can
+
+easily perform fast encoding by using the quasi-cyclic nature
+
+of G matrix. We divided information sequence into 14
+
+segments
+
+in
+
+encoding
+
+process,
+
+which
+
+is d [d1,d2, d14 ] . Therefore, check digit p can be
+calculated by the following formula:
+
+B1,1 B1,2 p d B2,1 B2,2
+
+B B 14,1
+
+14,2
+
+(12)
+
+B1,1 B1,2
+
+[d1, d2 , d14 ] B2,1 B2,2
+
+B B 14,1
+
+14,2
+
+The parity bit pi (for i 1, 2 ) can be calculated by this
+formula by using the property of generation matrix which can be partitioned.
+
+429
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:47:26 UTC from IEEE Xplore. Restrictions apply.
+
+ª B1,i º
+
+pi
+
+[d1, d2 ,
+
+d14 ]
+
+« «
+
+B2,i
+
+«
+
+» » »
+
+(13)
+
+¬«B14,i
+
+» ¼
+
+d1B1,i  d2B2,i  d14B14,i where,  means that two vectors are added by the bit mode
+2. The implementation of encoder is shown in Figure 3. The information which is divided into 14 segments will be outputted parallel after it is received and buffered. The 14 parallel output information sequences are sent to two sub-
+encoders to perform the calculations of check bits p1
+
+and p2 , respectively. After the calculation of check digit is
+
+completed, we cache encoding results and perform parallelto-serial conversion according to interface requirements.
+S
+(QFRGHU
+
+,QIRUPDWLRQ6HTXHQFHG
+
+%XIIHU
+
+3DUDOOHO WR6HULDO
+
+2XWSXW
+
+S
+(QFRGHU
+
+Figure 3. Encoder implementation block diagram
+
+According to equation (13), we can see that in the
+process of calculating pi (for i 1, 2 ), the calculation of dk Bk,i (for k 1, 2, ,14 ) can be performed in parallel,
+as shown in Figure 4:
+
+,QIRUPDWLRQ6HTXHQFHG G
+
+&RPSRQHQW(QFRGHU
+
+G
+&RPSRQHQW(QFRGHU
+
+
+
+G
+&RPSRQHQW(QFRGHU
+
+G
+
+3L
+
+&RPSRQHQW(QFRGHU
+
+ 
+
+
+
+G
+&RPSRQHQW(QFRGHU
+Figure 4. Implementation of pi calculation in checkout sequence
+
+According to the characteristic of sub-matrix Bk,i
+(for k 1, 2, ,14;i 1, 2 ), we can perform fast encoding
+easily. The calculation of dk Bk,i (for k 1, 2, ,14 ) is
+performed respectively by component encoders 1-14, and
+check sequence pi is obtained by the output which is added
+by bit mode of component encoder. It takes about 73 clock cycles to complete one component encoding, and about 3 clocks are used for pipeline processing every 7 channels. It takes 4 clock cycles to accumulate the results of 14
+component encoders. Since the calculations of p1 and p2
+are performed in parallel, when the calculations of component encoders are completely parallel, it takes only about 80 clock cycles to complete one LDPC encoding process.
+According to above design scheme, it can be concluded that it takes about 80 clock cycles to complete one LDPC encoding process. Therefore, the LDPC encoding takes
+0.27 s for scheduled FPGA work clock is 297 MHz.
+Since code rate is 2.97 GHz, the time length of one frame of
+data is about 8176 / 2.97GHz 2.75 s . Therefore, this
+encoder design scheme can meet throughput index requirement of 2.97 GHz.
+B. Design Scheme of Partial Parallel Decoder
+We use a 7-block parallel decoding structure by decomposing check matrix into block circulant matrix and its implementation block diagram is shown in Figure 5.
+The decoder consists of the following parts: a memory address generation module, a confidence information memory group, a channel likelihood ratio memory group, a decision memory group, two check node update groups, 16 variable node update groups, and a decoding bit output module. Channel likelihood ratio memory group is used to store channel likelihood ratio (internal message), which is the initialization information of the decoder. In the process of decoding a frame of initialization information, initialization information continuously called by the iterative operation remains unchanged. The decision memory bank is used to store decoding decision output results. The belief information memory group is used to store intermediate calculation results (external information) in iterative
+decoding process. Since cyclic matrix ( 511u511 ) is transformed into a block cycle matrix ( 73u 73 ), each subblock ( 7 u 7 ) is a cyclic matrix, so the depth of each
+memory is 73 and memory width is 7 times width of quantization. Each node processing unit CFUG and VFUG contain 7 variable node message update function modules (CFU) and 7 variable node message update function modules (VFU) respectively, so each node processing unit CFUG and VFUG can complete 7 rows or 7 columns of message update at the same time.
+
+430
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:47:26 UTC from IEEE Xplore. Restrictions apply.
+
++RUL]RQWDO2SHUDWLRQ
+&)8 &)8 &)8 &)8 &)8 &)8 &)8
+&)8*
+&)8 &)8 &)8 &)8 &)8 &)8 &)8
+&)8*
+
+Line Sequence Line Sequence
+Column Sequence Column Sequence
+Line Sequence Line Sequence
+Column Sequence Column Sequence
+
+0B  0B 
+0B  0B 
+0B  0B 
+0B  0B 
+
+9H UWLF DO 2S HUDW LRQ
+
+9)8
+9)8*
+
+7KH0HPRU\RI
+
+&KDQQHO/LNHOLKRRG5DWLR &DOFXODWLRQ0RGXOH
+
+&KDQQHO
+
+&
+
+/LNHOLKRRG5DWLR
+
+7KH0HPRU\RI%HOLHI0HVVDJH
+
+Line Sequence Line Sequence
+
+0B  0B 
+
+ĂĂ
+
+Line Sequence Line Sequence
+
+0B* 0B*
+
+Column Sequence Column Sequence
+Line Sequence
+Line Sequence
+Column Sequence Column Sequence
+
+0B  0B 
+0B  0B 
+0B  0B 
+
+ĂĂ
+
+Column Sequence Column Sequence
+
+ĂĂ ĂĂ
+
+Line Sequence
+Line Sequence
+Column Sequence Column Sequence
+
+0B* 0B*
+0B* 0B*
+0B* 0B*
+
+9)8
+9)8*
+&
+
+ĂĂ
+
+9)8
+
+9)8*
+
+ĂĂ
+
+&
+
+$GGUHVV *HQHUDWRU
+&RQWURO 0RGXOH
+
+2XWSXW0RGXOH
+
+'HFLVLRQ0HPRU\
+
+=
+
+=
+
+ĂĂ
+
+=
+
+Figure 5. The Structure of 7-Block Parallel LDPC Decoder
+
+The workflow for each iteration of entire decoder is as follows:
+a) Horizontal scanning (check node update) The input of horizontal arithmetic module inputs 32 sets of data each time, each set of data contains 7 data. Since
+the corresponding 7 u 7 small matrix is only a circular
+matrix, row number and column number corresponding to one in sparse matrix do not correspond to each other in a part of cyclic matrix. That is, the number one in first
+row of 7 u 7 small matrix is not necessarily in first
+column (the starting position of the horizontal scan is not zero), and so it is necessary to sort each group of data before entering receiving end. According to check node update formula, the module can be divided into the position of absolute value, minimum value, secondary small value, the location of minimum value in each row of data, and the symbol function. The output of this module corresponds to input. It outputs 32 sets of data at a time and each set of data contains 7 data. Correspondingly, each set of data needs to be reordered and stored in corresponding RAM in original form. b) Vertical scanning (variable node update)
+
+Similar to check node update module, the input of
+
+variable node update module inputs 4 sets of data at a
+
+time, and each set of data contains 7 data.
+
+According to variable node update formula, the module
+
+only needs to perform summation processing on initial
+
+data and data on check node.
+
+The output of module corresponds to input. It outputs 4
+
+sets of data at a time and each set of data contains 7 data.
+
+Finally, new data can be stored in corresponding RAM.
+
+In addition, since iterative decoding process of LDPC
+
+code is a process in which variable nodes and check nodes
+
+alternately transfer external information, VNU and CNU are
+
+input and output each other. Therefore, two frames of data
+
+may be input at the same time, and alternate iterative
+
+decoding may be performed in the form of variable updating
+
+of another frame of data when one frame of data is checked
+
+and updated. Figure 6 shows working sequence in iterative
+
+decoding process.
+
+LWHU
+
+LWHU
+
+918
+
+3URFHVV)LUVW )UDPH
+
+3URFHVV6HFRQG )UDPH
+
+3URFHVV)LUVW )UDPH
+
+3URFHVV6HFRQG )UDPH
+
+3URFHVV)LUVW )UDPH
+
+&18
+
+,'/(
+
+3URFHVV)LUVW )UDPH
+
+3URFHVV6HFRQG )UDPH
+
+3URFHVV)LUVW )UDPH
+
+3URFHVV6HFRQG )UDPH
+
+Figure 6. Working sequence in iterative decoding process
+
+431
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:47:26 UTC from IEEE Xplore. Restrictions apply.
+
+This section provides a preliminary analysis of throughput of partial parallel LDPC decoder described above. During check node update process, due to the use of two CFUG parallel structures, each CFUG also includes 7 CFU modules, and its implementation degree of parallelism can be
+considered as 14. It takes about 1022 14 73 clock cycles
+to complete the row update of check matrix. At the same time, the search for minimum value and secondary small value requires approximately 10 clock cycles, and corresponding shift calculation requires approximately 7 clocks. Corresponding to update of variable nodes, a 16-way VFUG parallel implementation structure is adopted. Each VFUG includes 7 VFU modules, and its implementation
+degree of parallelism is 112. It takes about 8176 112 73
+clock cycles to complete the column update of check matrix, and it takes 3 clock cycles to complete node accumulation and solve variable node. Considering other processing delays and other factors in update process, a full iteration takes about 180 clock cycles.
+According to performance simulation results of decoding algorithm, it meets coding gain requirements when the maximum number of iterations is 5 under the condition of using NMSA decoding algorithm and 3bit width of quantization for LLR. Therefore, it takes about 1065 clock cycles to complete one frame decoding. It is expected that FPGA operating clock is 297 MHz, then one frame decoding
+takes about 3.586Ps .When the code rate is 2.97 GHz, the
+length of corresponding two-frame LDPC code is
+about 5.506Ps .According to calculation, throughput
+requirement can be satisfied.
+
+IV. THE FPGA IMPLEMENTATION RESULTS OF ENCODER AND DECODER
+The encoder and decoder of (8176, 7154) quasi-cyclic LDPC codes are implemented on Xilinx's FPGA. FPGA adopts Kintex7 series XC7K325T chip, and the resource and storage resource of encoder and decoder utilization are shown in following table.
+
+TABLE I.
+
+THE RESOURCE UTILIZATION TABLE OF (8176, 7154) LDPC CODE ENCODER
+
+Resource Category
+Slice Flip Flops Slice LUT
+Occupied Slices Block RAM/FIFO
+
+Number
+92233 54747 21911
+38
+
+Percentage of Total Resources
+22% 26% 43% 8%
+
+TABLE II.
+
+THE RESOURCE UTILIZATION TABLE OF (8176, 7154) LDPC CODE DECODER
+
+Resource Category
+Slice Flip Flops Slice LUT
+Occupied Slices Block RAM/FIFO
+
+Number
+83253 46065 18626
+40
+
+Percentage of Total Resources 20% 22% 36% 8%
+
+After layout and wiring simulation under ISE software environment and actual circuit test, the operating frequency of codec can reach 300MHz. At the operating frequency of 297 MHz, information throughput of codec is 2.97 Gbps, and the number of iterations is equal to 5.
+V. CONCLUSION
+The author proposes a constructing method that can realize high-speed parallel coding LDPC codes. The parity check matrix of quasi-LDPC codes is transformed into a block quasi-cyclic LDPC code by row or column permutation, and a corresponding method is used to transform generating matrix. Partial parallel decoding and partial parallel encoding of LDPC codes become possible by using this method. This method increases the parallelism of encoder and decoder without changing basic structure of single-channel partial parallel encoding and decoder. Address generator of memory group can still be implemented with a simple counter, and does not need extra resources to control multiple data, so this method is simple and effective. Finally, an encoder and decoder for a (8176, 7154) quasi-cyclic LDPC code is implemented on a Xilinx FPGA chip, and its information data throughput reaches 2.97 Gbps.
+REFERENCES
+[1] Gallager, R. G. (1962). Low-density parity-check codes. Information Theory Ire Transactions on, 8(1), 21-28.
+[2] Zhang, T., & Parhi, K. K. (2001). Joint code and decoder design for implementation-oriented (3, k)-regular LDPC codes. Asilomar Conference on (Vol.2, pp.1232-1236 vol.2). IEEE.
+[3] Tanner, R. M., Sridhara, D., Sridharan, A., Fuja, T. E., & Costello, D. J. J. (2004). Ldpc block and convolutional codes based on circulant matrices. IEEE Transactions on Information Theory, 50(12), 29662984.
+[4] Fossorier, M. P. C. (2004). Quasicyclic low-density parity-check codes from circulant permutation matrices. Information Theory IEEE Transactions on, 50(8), 1788-1793.
+[5] Heo, J. (2003). Analysis of scaling soft information on low density parity check code. Electronics Letters, 39(2), 219-221
+[6] Zhang, T., & Parhi, K. K. (2002). A 54 Mbps (3,6)-regular FPGA LDPC decoder. Signal Processing Systems (pp.127-132). IEEE.
+[7] Li, Z., Chen, L., Zeng, L., Lin, S., & Fong, W. H. (2006). Efficient encoding of quasi-cyclic low-density parity-check codes. IEEE Transactions on Communications, 54(1), 71-81.
+[8] Winograd, S. (1976). On computing the discrete fourier transform. Proceedings of the National Academy of Sciences of the United States of America, 73(4), 1005-1006.
+[9] Truong, T. K., Chen, P. D., Wang, L. J., Chang, Y., & Reed, I. S. (2006). Fast, prime factor, discrete fourier transform algorithms over gf(2m) for 8ӊmӊ10. Information Sciences An International Journal, 176(1), 1-26
+[10] Zhang, Z. M. (2009). An 800mbps quasi-cyclic ldpc encoder implementation with fpga. Signal Processing, 25(12), 1937-1940.
+
+432
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:47:26 UTC from IEEE Xplore. Restrictions apply.
+
+

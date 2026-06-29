@@ -1,0 +1,359 @@
+ProductAE: Toward Training Larger Channel Codes based on Neural Product Codes
+Mohammad Vahid Jamali∗, Hamid Saber†, Homayoon Hatami†, and Jung Hyun Bae† ∗Department of Electrical Engineering and Computer Science, University of Michigan, Ann Arbor, mvjamali@umich.edu
+†Samsung Semiconductor, Inc., SOC Lab, {hamid.saber, h.hatami, jung.b}@samsung.com
+
+ICC 2022 - IEEE International Conference on Communications | 978-1-5386-8347-7/22/$31.00 ©2022 IEEE | DOI: 10.1109/ICC45855.2022.9839215
+
+Abstract—There have been significant research activities in recent years to automate the design of channel encoders and decoders via deep learning. Due the dimensionality challenge in channel coding, it is prohibitively complex to design and train relatively large neural channel codes via deep learning techniques. Consequently, most of the results in the literature are limited to relatively short codes having less than 100 information bits. In this paper, we construct ProductAEs, a computationally efficient family of deep-learning driven (encoder, decoder) pairs, that aim at enabling the training of relatively large channel codes (both encoders and decoders) with a manageable training complexity. We build upon the ideas from classical product codes, and propose constructing large neural codes using smaller code components. More specifically, instead of directly training the encoder and decoder for a large neural code of dimension k and blocklength n, we provide a framework that requires training neural encoders and decoders for the code parameters (n1, k1) and (n2, k2) such that n1n2 = n and k1k2 = k. Our training results show significant gains, over all ranges of signal-to-noise ratio (SNR), for a code of parameters (225, 100) and a moderate-length code of parameters (441, 196), over polar codes under successive cancellation (SC) decoder. Moreover, our results demonstrate meaningful gains over Turbo Autoencoder (TurboAE) and state-of-the-art classical codes. This is the first work to design product autoencoders and a pioneering work on training large channel codes.
+I. INTRODUCTION
+Channel encoders and decoders are the essential components of any communication system that enable reliable communication by protecting the transmission of messages across a random noisy channel. Channel coding is one of the most principal problems in communication theory [1], [2], and there are many landmark codes, such as Turbo codes [3], low-density paritycheck (LDPC) codes [4], and polar codes [5], developed over decades of strong theoretical research.
+In recent years, there has been tremendous interest in the coding theory community to automate the design of channel encoders and decoders by incorporating deep learning methods [6]–[23]. This is done by replacing the encoders and decoders (or some parts of the encoder and decoder architectures) with neural networks or some trainable models. The objectives and gains are vast, such as reducing the encoding and decoding complexity, improving the performance of classical channel codes, applications to realistic non-trivial channels and to emerging use cases, and designing universal decoders that simultaneously decode several codes, to mention a few.
+A major technical challenge here is the dimensionality issue that arises in channel coding context due to huge code spaces (there are 2k distinct codewords for a binary linear code of dimension k). Therefore, it is prohibitively complex, if not impossible, to design and train relatively large neural channel
+
+encoders and decoders. In fact, only a small portion of all codewords will be seen during the training phase. Therefore, the trained models for the encoders and decoders may fail in generalizing to unseen codewords, which constitute the main portion of codewords for a relatively large k. Additionally, one needs to use huge networks with excessively large number of trainable parameters, which makes the training for larger k’s prohibitively complex. Consequently, the achievements in the literature are mostly limited to relatively short codes having less than 100 information bits.
+Most of the literature focuses on decoding well-known codes using data-driven neural decoders [14]–[23], and only a handful of works focus on discovering both encoders and decoders [8]–[11]. A major challenge in jointly training the encoder and decoder is to avoid local optima that may occur due to non-convex loss functions. It is worth mentioning that the pair of encoder and decoder together can be viewed as an over-complete autoencoder, where the goal is to find a higher dimensional representation of the input data such that the original data can be reliably recovered from a noisy version of the higher dimensional representation [8].
+In this paper, we invent product autoencoders (ProductAEs) – a new class of neural channel codes, i.e., a family of deeplearning driven (encoder, decoder) pairs – with two major contributions: first, it is a pioneering work that targets enabling the training of large channel codes; and second, it is the first work on designing neural product codes. To this end, we build upon the ideas from classical product codes, and propose constructing large neural codes using smaller code components. Particularly, instead of directly training the encoder and decoder for a large code of dimension k and blocklength n, we provide a framework that requires training smaller neural encoder and decoder components of parameters (n1, k1), (n2, k2),. . . ,(nM , kM ) such that n1n2. . . nM = n and k1k2. . . kM = k for some positive integer M .
+Our training results for a ProductAE of parameters (225, 100), constructed based on the product of two smaller neural code components of parameters (15, 10), show significant performance gains compared to the polar code under successive cancellation (SC) decoding. More importantly, we demonstrate achieving the same gain for a moderate-length ProductAE of parameters (441, 196). This clearly establishes the generalization of our proposed architecture for training larger codes. Additionally, our results demonstrate meaningful gains over Turbo Autoencoder (TurboAE) and state-of-theart classical codes. This important achievement is attained by applying innovative ideas from deep learning and intuitions
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:15:59 UTC from IEEE Xplore. Restrictions apply.
+3898
+
+Iterate I times
+
+U = uij k2×k1
+
+Enc. 1 (n1, k1)
+code
+
+Uk(12)×n1
+
+Enc. 2 (n2, k2)
+code
+
+U(n22)×n1
+
+Channel
+
+Yn2 ×n1
+
+Dec. 2
+
+Yn(22)×n1
+
+Dec. 1
+
+Yn(12)×n1
+
+Fig. 1. Block diagram of a typical communication system incorporating two-dimensional (2D) product codes. Enc. 1 and Dec. 1 encode and decode rows of the 2D inputs while Enc. 2 and Dec. 2 encode and decode the columns of their input arrays.
+
+from channel coding theory to further improve the training performance of our proposed neural product codes.
+
+II. PRELIMINARIES
+
+A. Channel Coding
+
+Consider transmission of a length-k sequence of information
+
+bits u across a noisy channel. The channel encoder E(·)
+
+maps u to a length-n sequence of coded symbols c = E(u)
+
+called a codeword. Here, k and n are the code dimension and
+
+blocklength, respectively, and the resulting code is denoted by
+
+an (n, k) code. Also, the code rate is defined as R = k/n.
+
+In the case of transmission over the additive white Gaussian
+
+noise (AWGN) channel, which is considered in this paper, the
+
+received noisy signal can be expressed as y = c + n, where
+
+n is the channel noise vector whose components are Gaussian random variables with mean zero and variance σ2. The ratio of
+
+the average energy per coded symbol to the noise variance is
+
+called the signal-to-noise ratio (SNR). In this paper, we assume
+
+that the encoder satisfies a soft power constraint such that the
+
+average power per coded bit is 1 (see Section III-C4), and thus SNR = 1/σ2.
+
+On the other hand, the decoder D(·) exploits the added redun-
+
+dancy in the encoder to estimate the transmitted message from
+
+the noisy received sequence as uˆ = D(y). The main objective
+
+of channel coding is to increase the reliability by minimizing the
+
+error rate that is often measured by the bit error rate (BER) or
+
+block
+
+error
+
+rate
+
+(BLER),
+
+defined
+
+as
+
+BER
+
+=
+
+1 k
+
+k 1
+
+Pr(uˆi
+
+=
+
+ui)
+
+and BLER = Pr(uˆ = u), respectively.
+
+B. Product Codes
+Product coding scheme is a powerful technique in constructing large channel codes, and building larger codes upon product codes can provide several advantages such as low encoding and decoding complexity, large minimum distances, and a highly parallelizable implementation [24]–[27]. The encoding and decoding procedure of two-dimensional (2D) product codes is schematically shown in Fig. 1. Considering two codes C1 : (n1, k1) and C2 : (n2, k2), their product code that has the size (n1n2, k1k2) is constructed in the following steps: first, forming the length-k1k2 information sequence as a k2 × k1 matrix U; second, encoding each row of U using C1 to get a matrix U(1) of size k2 × n1 (or encoding each column using C2 to get a matrix of size n2 ×k1); and third, encoding each column of U(1) using C2 to get a matrix U(2) of size n2 × n1 (or encoding each row using C1 to get a matrix of size n2 × n1). The decoding also proceeds the same way by first decoding each column and then each row (or vice versa) of the received noisy signal.
+
+In general, to construct an M -dimensional product code C, one needs to iterate M codes C1, C2, · · · , CM . In this case, each m-th encoder, m = 1, · · · M , encodes the m-th dimension of the M -dimensional input array. Similarly, each m-th decoder decodes the noisy vectors on the m-th dimension of the received noisy signal. Assuming Cm : (nm, km, dm) with the generator matrix Gm, where d stands for the minimum distance, the parameters of the resulting product code C can be obtained as the product of the parameters of the component codes, i.e.,
+
+M
+
+X = Xm,
+
+X ∈ {n, k, d, R},
+
+(1)
+
+m=1
+
+G = G1 ⊗ G2 ⊗ · · · ⊗ GM ,
+
+(2)
+
+where ⊗ is the Kronecker product operator. A near-optimum iterative decoding algorithm for product codes built using linear block codes has been proposed in [25], which is based on softinput soft-output (SISO) decoding of the component codes. It has been shown in [25] and [26] that the decoding performance of product codes significantly improves using SISO decoders and also by applying several decoding iterations. Interested readers are referred to [26] and the references therein for more details on product codes.
+
+III. PRODUCT AUTOENCODER
+A. Proposed Architecture and Training
+In this paper, we build upon 2D product codes. However, the proposed architectures and the methodologies naturally apply to higher dimensions. It is worth mentioning that the choice of 2D product codes balances a trade-off between the complexity and performance. Indeed, from the classical coding theory perspective, although higher dimension product codes have lower encoding and decoding complexity for a given overall code size, they may result in inferior performance compared to lower dimension product codes due to exploiting the product structure to a greater extent (compared to a direct design).
+In our ProductAE architecture, each encoder is replaced by a distinct neural network (NN). Also, assuming I decoding iterations, each pair of decoders at each iteration is replaced by a distinct pair of NN decoders resulting in 2I NN decoders in total. Given that the ProductAE structure enables training encoders and decoders with relatively small code components, fully-connected NNs (FCNNs) are applied throughout the paper1.
+ProductAE training is comprised of two main steps: (i) decoder training schedule; and (ii) encoder training schedule.
+
+1We also explored convolutional NN (CNN)-based ProductAEs. However, we were able to achieve better training results with FCNN-based implementations.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:15:59 UTC from IEEE Xplore. Restrictions apply.
+3899
+
+Neural decoder (fixed during enc. training sch.)
+Channel
+Power normalization
+
+Batch of B
+random sequences UB ×k2 k1
+
+Reshape to UB ×k2 ×k1
+
+E1(Φ1): neural encoder 1
+
+input size k1
+
+output size n1
+
+E2(Φ2): neural encoder 2
+
+input size k2
+
+output size n2
+
+Channel
+
+Uˆ B×k2×k1
+
+Repeat
+
+Lenc1 hidden layers of size Nenc1
+
+Lenc2 hidden layers of size Nenc2
+
+Φ1
+
+Φ2
+
+T enc times
+
+Encoder optimizer (Adam with lrenc)
+
+Backpropagation
+
+Compute loss L(U, Uˆ )
+
+Fig. 2. Encoder training schedule. The architecture of the neural product encoder is also depicted.
+
+More specifically, during each training epoch, we first train the
+decoder several times while keeping the encoder network fixed,
+and then we train the encoder multiple times while keeping the
+decoder weights unchanged. In the following, we first present
+the encoder architecture and describe its training schedule, and
+then we do the same for the decoder. 1) Encoder Architecture and Its Training Schedule: As
+shown in Fig. 2, we replace the two encoders by two FCNNs, namely E1(Φ1) and E2(Φ2), each parametrized with a set of weights Φ1 and Φ2, respectively. Each j-th encoder, j = 1, 2, has a input size of kj, output size of nj, and Lencj hidden layers of size Nencj. Upon receiving a batch of k2 × k1 arrays of information bits, the first encoder maps each length-k1 row to a length-n1 real-valued vector, resulting in a tensor UB(1×) k2×n1 . The second NN encoder then maps each real-valued length-k2 vector in the second dimension of U(1) to a length-n2 realvalued vector. Note that the mappings here are, in general,
+nonlinear mappings, and the resulting code is a nonlinear and
+non-binary code. At the end, the power normalization, to be
+clarified in Section III-C, will be applied to the codewords. The encoder training schedule at each epoch is as follows.
+First, a batch of B length-k1k2 binary information sequences will be reshaped to a tensor UB×k2×k1 to fit the NN encoders. After encoding the input, the real-valued codewords will be
+passed through the AWGN channel and then will be decoded
+using the NN decoder (explained in Section III-A2), that is
+fixed throughout the encoder training schedule, to get the batch of decoded codewords Uˆ B×k2k1 (after appropriate reshaping). By computing the loss between the transmitted and decoded sequences L(U, Uˆ ) and backpropagating the loss to compute
+its gradients, the encoder optimization takes a step to update the weights of the NN encoders E1(Φ1) and E2(Φ2). This procedure will be repeated Tenc times while each time only updating the encoder weights for a fixed decoder model.
+2) Decoder Architecture and Its Training Schedule: As shown in Fig. 3, we replace the pair of decoders at each ith iteration, i = 1, · · · I, by a pair of distinct FCNNs resulting in 2I NN decoders Dj(i), j = 1, 2, each parametrized by a set of weights Θj(i). The architecture of each FCNN decoder is
+
+depicted in Fig. 3. Each NN decoder Dj(i) has Ldecj,i hidden layers of size Ndecj,i. Generally speaking, the first I − 1 pairs of NN decoders work on input and output sizes of the length of coded bits nj, while the last pair reverts the encoding operation by reducing the lengths from nj to kj. Also, as further clarified in Section III-B, some of the decoders may take multiple lengthnj vectors as input, and output multiple copies of length-nj vectors.
+During the decoder training schedule, at each epoch, first a batch of B reshaped binary information sequences will be encoded using the fixed NN encoder. The real-valued codewords will be passed through the AWGN channel, with a carefully selected (range of) decoder training SNR, and then will be decoded using the NN decoder to get the batch of decoded codewords Uˆ B×k2k1 . After computing the loss and its gradients, the decoder optimizer then updates the weights of the NN decoders. This procedure is repeated Tdec times while each time only updating the decoder weights for a fixed encoder model.
+B. Additional Modifications
+In this section, we briefly present additional modifications applied to the NN decoder architecture.
+1) Channel Output Injection: Following the structure of the SISO decoder for classical product codes [25], in addition to the output from the previous decoder, we also pass the channel output to all NN decoders. In this case, the first decoder D2(1) only takes the channel output as the input. All the next 2I − 2 decoders take the channel output besides the output of the previous decoder, while the last decoder D1(I) only takes the output of the previous decoder as input (due to some issues with the size of the tensors being concatenated at the input of this decoder). Our initial results show that this method alone is not able to make a considerable improvement in the training. However, the combination of this method with the other modifications presented in this section is promising.
+2) Adding Feature Size: As shown in Fig. 3, each NN decoder, except the last one, outputs F vectors as the soft information, where F denotes the feature size. This is equivalent to saying that each NN decoder outputs F different estimates of
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:15:59 UTC from IEEE Xplore. Restrictions apply.
+3900
+
+Batch of B random sequences
+UB ×k2 k1
+
+Reshape to UB ×k2 ×k1
+
+Neural encoder (fixed during the decoder training schedule)
+
+Channel
+
+YB ×n2 ×n1
+
+Repeat Tdec times
+
+Decoder optimizer
+(Adam with lrdec)
+
+Compute loss L(U, Uˆ ) Uˆ and
+
+D1(I)(Θ1(I)) Input size: F n1
+Output size: k1
+
+backpropagate
+
+Ldec1,I hidd. layers of size Ndec1,I
+
+Θ(1I )
+
+D2(I)(Θ(2I)) Input size: (1+F )n2
+Output size: F k2
+Ldec2,I hidd. layers of size Ndec2,I
+Θ2(I )
+
+D1(1)(Θ1(1)) Input size: (1+F )n1
+Output size: F n1
+Ldec1,1 hidd. layers of size Ndec1,1
+Θ1(1)
+
+D2(1)(Θ(21)) Input size: n2 Output size: F n2
+Ldec2,1 hidd. layers of size Ndec2,1
+Θ(21)
+
+Fig. 3. Decoder training schedule. The architecture of the neural product decoder is also depicted. I iterations of the decoder are replaced by 2I neural decoders Dj(i)(Θj(i)), i = 1, ..., I, j = 1, 2, parametrized by the set of trainable weights Θj(i).
+
+the soft information instead of one. This is done by increasing the output size of the FCNNs. These estimates will then be carefully reshaped and processed before feeding the next decoder such that F properly formed vectors are given to the next decoder (increasing the input size of FCNNs).
+3) Subtraction of Soft Information: We input the difference of the soft input from the soft output of a decoder to the next decoder, i.e., the increments of the soft information is given to the next decoder. To this end, the first decoder D2(1) only takes the channel output. Also, the second decoder directly receives the output of the first decoder since there was no soft input to D2(1). All the next decoders, except the last one (due to dimensionality issue), take the increments of soft information.
+We carried out extensive experiments to investigate the impacts of the aforementioned modifications. Our training results demonstrate that the combination of all these three methods together significantly improves the training performance.
+4) Other Modifications: Besides the modifications detailed above, we also explored some other modifications to our ProductAE architecture, some of which helped in improving the training performance and some did not. For example, we explored adding an l2 regularizer to the loss function of the encoder. We also investigated replacing the subtraction operation between the soft input and output of NN decoders (see Section III-B3) with some FCNNs. To do so, we defined distinct FCNNs of input size 2 and output size 1, each doing an elementwise operation between an element of the soft input and an element of the soft output to substitute their difference. Through extensive experiments, however, we were not able to improve upon our best training results with these two modifications. One particularly useful method though was loading the best model of an experiment after the saturation of the training loss versus the number of epochs, and then running a few number of epochs with a significantly large batch size. In Section III-C, we discuss how we handle training with very large batch sizes while avoiding memory shortage.
+C. Further Implementation Details
+In this section, we briefly discuss some other aspects of the implementations that have not been covered above.
+
+1) Training with Very Large Batch Sizes: It is well known that increasing the batch size can significantly improve the training performance by averaging out the channel noise [8]. Throughout our experiments, we used relatively large batches of size at least B = 5, 000. Also, as discussed in Section III-C, several epochs with much larger batch sizes are applied after the saturation of the model. In order to accommodate large enough batch sizes, beyond the memory shortage, we run l smaller batches of size Bs while accumulating the gradients of loss without updating the optimizer across these batches. The overall operation is then equivalent to having a single large batch of size lBs.
+2) Optimizers, Activation Functions, and Loss Function:
+• “Adam” optimizer is chosen with learning rate lrenc for the encoder and lrdec for the decoder.
+• “SELU” (scaled exponential linear units) is applied as the activation function to all hidden layers. No activation function is applied to the output layer of any of the NN encoders and decoders.
+• “BCEWithLogitsLoss()” is adopted as the loss function, which combines a “sigmoid layer” and the binary crossentropy (BCE) loss in one single class in a more numerically stable fashion.
+3) Encoder and Decoder Training Schedules and SNRs: The encoder and decoder training schedules were discussed in Section III-A. Throughout our experiments, we used Tenc = 100 and Tdec = 500. Also, at each encoder or decoder training iteration, the training SNR (equivalently, the noise variance of the channel) is carefully chosen. In particular, we used a singlepoint of γ dB for the encoder training SNR but a range of [γ − 2.5, γ + 1] dB for the decoder training SNR. Therefore, during each encoder training iteration, a single SNR is used to generate all noise vectors of the batch. However, during each iteration of the decoder training schedule, B random values are picked uniformly from the interval [γ−2.5, γ+1] dB to generate B noise vectors of appropriate variances.
+4) Encoder Power Normalization: In order to ensure that the average power per coded symbol is equal to one and thus the average SNR is 1/σ2, the length-n real-valued encoded
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:15:59 UTC from IEEE Xplore. Restrictions apply.
+3901
+
+Fig. 4. Testing result of ProductAE (15, 10)2 compared to polar code Fig. 5. Testing result of ProductAE (21, 14)2 compared to polar code
+
+(225, 100) under SC decoding.
+
+(441, 196) under SC decoding.
+
+sequences c = (c1, c2, . . . , cn) are normalized as follows.
+
+√
+
+c = nc/||c||2.
+
+(3)
+
+IV. EXPERIMENTS
+In this section, we first present the performance results for two ProductAEs of rate 4/9, namely, ProductAE (15, 10)2 and a moderate-length ProductAE (21, 14)2, where (n, k)2 denotes the product of two (n, k) codes. We then compare the ProductAE performance with TurboAE and also state-of-the-art classical channel codes. Our trained models are obtained with B = 5000, lrenc = lrdec = 2 × 10−4, I = 4, F = 3, and γ = 3 dB. All FCNNs have 7 hidden layers except the last pair of decoders which have 9 layers. Also, the size of all hidden layers is set to Nenc = 200 for the encoder FCNNs and Ndec = 250 for the decoder FCNNs.
+
+A. ProductAE (15, 10)2
+Fig. 4 presents the performance of ProductAE (15, 10)2, where a single model is tested across all ranges of SNRs. As a benchmark, the ProductAE performance is compared to a polar code of the same length, i.e., with parameters (225, 100), under SC decoding. This polar code is obtained by puncturing 31 coded bits of a (256, 100) polar code at random. As seen, our trained ProductAE (15, 10)2 beats the BER performance of the equivalent polar code with a significant margin over all ranges of SNR. Also, even though the loss function is a surrogate of the BER, our ProductAE is able to achieve almost the same BLER as the polar code.
+
+B. ProductAE (21, 14)2
+
+Fig. 5 compares the performance of the trained ProductAE (21, 14)2 with a polar code of parameters (441, 196), that is obtained by puncturing 71 coded bits of a (512, 196) polar code at random, under SC decoding. It is truly remarkable that the moderate-length ProductAE (21, 14)2 beats the BER performance of the equivalent polar code with a large margin over all ranges of SNR while also maintaining almost the same BLER performance. To the best of our knowledge, this is the first-ever work to report successful training of pure neural (encoder, decoder) pairs, i.e., a completely new class of nonlinear neural codes paired with efficient decoders, over such relatively large code dimensions.
+
+C. Comparisons with TurboAE
+In this section, we compare the performance of ProductAEs with rate-1/3 TurboAEs (300, 100) and (600, 200). TurboAE (300, 100) is directly trained [8] while TurboAE (600, 200) result is obtained by testing a model trained for TurboAE (300, 100). Given that the trained ProductAEs have a different rate of 4/9 compared to TurboAEs, we compare their performance in terms of the energy-per-bit to the noise ratio, denoted by Eb/N0 in this paper, to be discussed in the following.
+One way to compare the performance of two codes of different rates is by looking at the Eb/N0 instead of SNR. Note that Eb/N0 = SNR/R,2 i.e., Eb/N0 = SNR+10 log10(1/R) in dB. Fig. 6 compares the performance of ProductAEs with TurboAEs in Eb/N0. It is observed that the ProductAE (21, 14)2 beats the performance of TurboAE (600, 200) with a good margin at relatively low BERs. For example, there are 0.5 dB and 0.2 dB gains at the BERs of 10−6 and 10−5, respectively. Also, ProductAE (15, 10)2 approaches the performance of TurboAE (300, 100) at high Eb/N0’s.
+Note that this comparison is in favor of TurboAE as it has a larger block-length than the ProductAE counterparts, and it is well known that the performance improves for larger length codes. Therefore, a fair comparison requires looking at TurboAEs of the same blocklength as our ProductAEs, e.g., by puncturing 75 and 159 coded bits of TurboAEs (300, 100) and (600, 200), respectively, which degrades the TurboAEs performance compared to the results in Fig. 6.
+D. Comparisons with Classical Codes
+Fig. 7 compares the performance of our ProductAEs with state-of-the-art classical codes, namely polar under CRC-ListSC decoder, LDPC, and tail-biting convolutional code (TBCC). All these three codes have parameters (300, 100), and their performance are directly extracted from [8, Fig. 1]. Remarkably, ProductAE (15, 10)2 beats the performance of TBCC with a good margin over all ranges of Eb/N0 and that of polar and LDPC codes for BER values of larger than 10−4. Similar to TurboAE, the comparison here is against ProductAE, since a fair comparison requires reducing the blocklength of the considered
+2Note that our definitions of SNR and Eb/N0 as 1/σ2 and 1/Rσ2, respectively, are slightly different from the definitions 1/2σ2 and 1/2Rσ2, respectively, used in some other works [12], [28].
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:15:59 UTC from IEEE Xplore. Restrictions apply.
+3902
+
+Fig. 6. Performance comparison of ProductAE and TurboAE.
+Fig. 7. Performance comparison of ProductAE with classical codes.
+classical codes to 225 bits, e.g., through puncturing 75 bits. Note that ProductAE (21, 14)2, with less than 1.5 times larger blocklength but almost twice larger code dimension, is able to outperform the state-of-the-art classical codes, with a good margin, over all BER ranges of interest.
+V. CONCLUSIONS In this paper, we presented training ProductAEs motivated by the goal of training larger channel codes based on smaller code components. This work is the first to explore training product codes, and is a pioneering work in training large channel codes. Although we demonstrated excellent performance gains, compared to polar code and TurboAE, as well as state-of-the-art classical codes, via training ProductAEs of dimensions 100 and 196, the architecture and training procedure are general and can be applied to train larger ProductAEs. Given that the ProductAE enables a low encoding and decoding complexity, flexible code rate and length, parallel implementation, etc., the achieved performance gains are truly remarkable, and call for extensive future research. This work paves the way toward designing larger neural codes that beat the state-of-the-art performance with potential applications in the design of the next generations of wireless networks.
+REFERENCES
+[1] C. E. Shannon, “A mathematical theory of communication,” The Bell system technical journal, vol. 27, no. 3, pp. 379–423, 1948.
+[2] C. E. Shannon, “Communication in the presence of noise,” Proceedings of the IRE, vol. 37, no. 1, pp. 10–21, 1949.
+
+[3] C. Berrou, A. Glavieux, and P. Thitimajshima, “Near Shannon limit errorcorrecting coding and decoding: Turbo-codes. 1,” in Proc. IEEE Int. Conf. Commun. (ICC), vol. 2, May 1993, pp. 1064–1070.
+[4] R. Gallager, “Low-density parity-check codes,” IRE Trans. Inf. Theory, vol. 8, no. 1, pp. 21–28, 1962.
+[5] E. Arikan, “Channel polarization: A method for constructing capacityachieving codes for symmetric binary-input memoryless channels,” IEEE Trans. Inf. Theory, vol. 55, no. 7, pp. 3051–3073, 2009.
+[6] H. Kim, S. Oh, and P. Viswanath, “Physical layer communication via deep learning,” IEEE J. Sel. Areas Inf. Theory, vol. 1, no. 1, pp. 194–206, 2020.
+[7] H. Kim, Y. Jiang, S. Kannan, S. Oh, and P. Viswanath, “Deepcode: feedback codes via deep learning,” IEEE J. Sel. Areas Inf. Theory, vol. 1, no. 1, pp. 194–206, 2020.
+[8] Y. Jiang, H. Kim, H. Asnani, S. Kannan, S. Oh, and P. Viswanath, “Turbo autoencoder: Deep learning based channel codes for point-to-point communication channels,” Proc. Adv. Neural Inf. Process. Syst. (NeurIPS), vol. 32, pp. 2758–2768, 2019.
+[9] T. O’shea and J. Hoydis, “An introduction to deep learning for the physical layer,” IEEE Trans. Cognit. Commun. Netw., vol. 3, no. 4, pp. 563–575, 2017.
+[10] A. V. Makkuva, X. Liu, M. V. Jamali, H. Mahdavifar, S. Oh, and P. Viswanath, “KO codes: inventing nonlinear encoding and decoding for reliable wireless communication via deep-learning,” in Proc. Int. Conf. Mach. Learn. (ICML). PMLR, 2021, pp. 7368–7378.
+[11] T. J. O’Shea, K. Karra, and T. C. Clancy, “Learning to communicate: Channel auto-encoders, domain specific regularizers, and attention,” in Proc. IEEE Int. Symp. Signal Process. Inf. Technol., 2016, pp. 223–228.
+[12] M. V. Jamali, X. Liu, A. V. Makkuva, H. Mahdavifar, S. Oh, and P. Viswanath, “Reed-Muller subcodes: Machine learning-aided design of efficient soft recursive decoding,” in Proc. IEEE Int. Symp. Inf. Theory (ISIT), 2021, pp. 1088–1093.
+[13] H. Ye, L. Liang, and G. Y. Li, “Circular convolutional auto-encoder for channel coding,” in Proc. IEEE 20th Int. Workshop Signal Process. Adv. Wireless Commun. (SPAWC), 2019, pp. 1–5.
+[14] E. Nachmani, Y. Be’ery, and D. Burshtein, “Learning to decode linear codes using deep learning,” in Proc. 54th Annu. Allerton Conf. Commun., Control, Comput. (Allerton). IEEE, 2016, pp. 341–346.
+[15] T. Gruber, S. Cammerer, J. Hoydis, and S. ten Brink, “On deep learningbased channel decoding,” in Proc. 51st Annu. Conf. Inf. Sci. Syst. (CISS). IEEE, 2017, pp. 1–6.
+[16] E. Nachmani, E. Marciano, L. Lugosch, W. J. Gross, D. Burshtein, and Y. Be’ery, “Deep learning methods for improved decoding of linear codes,” IEEE J. Sel. Topics Signal Process., vol. 12, no. 1, pp. 119–131, 2018.
+[17] B. Vasic´, X. Xiao, and S. Lin, “Learning to decode LDPC codes with finite-alphabet message passing,” in Proc. Inf. Theory Appl. Workshop (ITA). IEEE, 2018, pp. 1–9.
+[18] C.-F. Teng, C.-H. D. Wu, A. K.-S. Ho, and A.-Y. A. Wu, “Low-complexity recurrent neural network-based polar decoder with weight quantization mechanism,” in Proc. IEEE Int. Conf. Acoust., Speech, Signal Process. (ICASSP), 2019, pp. 1413–1417.
+[19] A. Buchberger, C. Häger, H. D. Pfister, L. Schmalen, and A. G. Amat, “Pruning neural belief propagation decoders,” in Proc. IEEE Int. Symp. Inf. Theory (ISIT), 2020, pp. 338–342.
+[20] W. Xu, Z. Wu, Y.-L. Ueng, X. You, and C. Zhang, “Improved polar decoder based on deep learning,” in Proc. IEEE Int. Workshop Signal Process. Syst. (SiPS), 2017, pp. 1–6.
+[21] S. Cammerer, T. Gruber, J. Hoydis, and S. Ten Brink, “Scaling deep learning-based decoding of polar codes via partitioning,” in Proc. IEEE Global Commun. Conf. (GLOBECOM), 2017, pp. 1–6.
+[22] A. Bennatan, Y. Choukroun, and P. Kisilev, “Deep learning for decoding of linear codes-a syndrome-based approach,” in Proc. IEEE Int. Symp. Inf. Theory (ISIT), 2018, pp. 1595–1599.
+[23] N. Doan, S. A. Hashemi, and W. J. Gross, “Neural successive cancellation decoding of polar codes,” in Proc. IEEE Int. Workshop Signal Process. Adv. Wireless Commun. (SPAWC), 2018, pp. 1–5.
+[24] P. Elias, “Error-free coding,” Research Laboratory of Electronics, Massachusetts Institute of Technology, 1954.
+[25] R. M. Pyndiah, “Near-optimum decoding of product codes: Block turbo codes,” IEEE Trans. Commun., vol. 46, no. 8, pp. 1003–1010, 1998.
+[26] H. Mukhtar, A. Al-Dweik, and A. Shami, “Turbo product codes: Applications, challenges, and future directions,” IEEE Commun. Surveys Tuts., vol. 18, no. 4, pp. 3052–3069, 2016.
+[27] M. V. Jamali, M. Fereydounian, H. Mahdavifar, and H. Hassani, “Lowcomplexity decoding of a class of Reed-Muller subcodes for low-capacity channels,” arXiv preprint arXiv:2202.03654, 2022.
+[28] M. Fereydounian, M. V. Jamali, H. Hassani, and H. Mahdavifar, “Channel coding at low capacity,” in Proc. IEEE Inf. Theory Workshop (ITW), 2019, pp. 1–5.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 13:15:59 UTC from IEEE Xplore. Restrictions apply.
+3903
+
+

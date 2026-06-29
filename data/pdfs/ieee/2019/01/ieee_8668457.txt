@@ -1,0 +1,1411 @@
+IEEE TRANSACTIONS ON SIGNAL PROCESSING, VOL. 67, NO. 9, MAY 1, 2019
+
+2399
+
+Joint Decoder Design for SSDs
+Qing Li
+
+Abstract—Error-correction codes (ECC) and redundant array of independent disks (RAID) are commonly used to protect NAND-based solid state drives (SSD) from serious noise/disturb. In order to tolerate more errors, common solutions are more complex ECCs and RAIDs. Meanwhile, due to the errorcorrection mechanisms and flash translation layer, NAND-based SSDs inevitably generate abundant redundant information. The theme of this paper is to show that instead of designing new error correction mechanisms from scratch, the NANDbased SSD reliability can be greatly improved by utilizing current decoders to explore the inherent information between redundant pages. We first propose a joint decoder to recover multiple pages by utilizing redundant pages within a stripe of ECC/RAID, and then we consider a joint decoder to recover multiple pages by utilizing write-amplified (WA) pages. The simulation results show that with the proposed algorithm, a performance gain of as much as 1.8 dB can be obtained. The theoretical study reveals that the joint decoding model can be studied from the perspective of relay channel model, and this helps to explore how much information can be reliably stored with the RAID/WA system in SSD.
+Index Terms—SSD, ECC, RAID, write-amplification, LDPC, density evolution, relay-channel coding.
+I. INTRODUCTION
+N AND-BASED Solid State Drives (SSD) are used in diverse consumer electronics applications due to their high speed, physical robustness, and non-volatility. However, NAND has quite a few unique noises or disturb mechanisms [17], which pose a serious threat to its reliability. In this work, we propose a novel decoding model, i.e., joint decoder, to improve the SSD reliability by incorporating the redundant information in the decoding process.
+We present the necessary background of NAND-based SSD (see Fig. 1) and more details are referred to [3]. A basic unit of NAND-based SSD is a page whose size ranges between 2KB and 64KB. A group of pages (e.g., ∼ 100) form a block. A plane contains multiple blocks (e.g., ∼ 1000). A channel connects multiple planes (e.g., ∼ 32). Several plans (e.g., ∼ 4) is packaged as a chip. A stripe consists of pages on different channels. NANDbased SSDs are commonly accessed through Flash Translation Layers (FTLs) [9]. The core functions of FTL are mapping from Logical Address (LA) to Physical Address (PA), wear leveling and garbage collection, etc.
+Manuscript received June 24, 2018; revised February 20, 2019; accepted March 10, 2019. Date of publication March 18, 2019; date of current version April 1, 2019. The associate editor coordinating the review of this manuscript and approving it for publication was Prof. Xin Wang. This paper was presented in part at the 53rd and 55th Annual Allerton Conference on Communication, Control, and Computing, Monticello, IL, USA, October 2015 and 2017.
+The author is with the ScaleFlux Inc., San Jose, CA 95112 USA (e-mail:, qingli.tamu@gmail.com).
+Digital Object Identifier 10.1109/TSP.2019.2905822
+
+Fig. 1. NAND-based Solid State Drive structure.
+Due to error-correction mechanisms and FTLs, NAND-based SSDs inevitably generate redundant information. One reason is the error-correction mechanism, where pages are protected by ECCs (error-correction codes) and stripes are protected by RAIDs (redundant array of independent disks) [2]. ECCs and RAIDs form a two-level error-correction hierarchy, where ECCs are first applied to corrupted pages and then RAIDs when ECCs fail (for which we say a hard error occurs). However, when both ECCs and RAIDs fail, the current error-correction mechanism has no way to recover corrupted pages despite redundant pages within one stripe.
+In this work, we use xn ∈ {0, 1}n to denote a codeword of length n ∈ N+, and [n, k, d] to denote a linear block code with block length n, code dimension k ∈ N+, and minimum distance d ∈ N+. By abusing the notation, we may skip minimum distance d, and use [n, k] to denote a linear block code with block length n and code dimension k. A linear [m, k, d] (m ∈ N+) code is a RAID if there are k information pages, r = m − k redundancy pages, and it can tolerate r hard errors. For example, consider an array of m SSD pages within a stripe, m − 1 pages carry information, while the m-th is the XOR-summing of the m − 1 information pages. The pattern is repeated for each stripe of pages in planes. Such an architecture is called RAID 4 or RAID 5, and only one hard error is recoverable. RAID 6 is an [m, m − 2, d] linear code and can tolerate two hard errors.
+We use Fig. 2 to illustrate this. In Fig. 2, let M0, M1, M2, M3 ∈ N+ be data at a logical addresses LA0, LA1, LA2 and LA3, respectively, xn0 , x1n, xn2 and xn3 be their codewords initially stored at PA0, PA1, PA2 and PA3, respectively. xn0 , xn1 , x2n, x3n are codewords within a stripe, and let xn4 be the codeword stored in a parity page of [5,4,2] RAID (i.e., xn4 = x0n + xn1 + x2n + xn3 ) stored at PA4. y0n, y1n, . . . , y4n are noisy codewords of x0n, xn1 , . . . , xn4 . If there is only one hard error, it can be recovered from other pages of the same stripe. However, if there are two page failures, e.g., y0n and y2n, neither can be recovered with current error-correction mechanisms.
+Another reason of redundant information is the out-of-place updating policy, which means the updated data is stored at a
+
+1053-587X © 2019 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission. See http://www.ieee.org/publications_standards/publications/rights/index.html for more information.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:55:45 UTC from IEEE Xplore. Restrictions apply.
+
+2400
+
+IEEE TRANSACTIONS ON SIGNAL PROCESSING, VOL. 67, NO. 9, MAY 1, 2019
+
+Fig. 2. Illustration of an ECC-RAID solution in SSDs and the joint decoder of ECC-RAID codes.
+
+Fig. 4. Illustration of an LDPC bipartite graph and message-passing decoding process.
+
+Fig. 3. Illustration of write-amplification in SSDs and the joint decoder of WA codes.
+new physical address and the original data remains in memories physically. Out-of-place updating leads to abundant copies of identical/similar pages whenever wear leveling, garbage collection, etc. is issued. The ratio between the number of codewords in physical memories and the number of logical codewords issued by hosts is defined as WA (write amplification). WA is an undesirable phenomenon because more amount of information is physically written to the storage media, and it causes serious security issues (see [15], [16], [18]). [7], [30] estimate that WA can be as high as 3 ∼ 13.
+We use Fig. 3 to illustrate this. Let M ∈ N+ be data at a logical address LA0 and xn be its codeword initially stored at PA0. Due to out-of-place updates and garbage collections etc, copies of yn may be stored at PA1, PA2, . . . , PAt gradually, only one of which is mapped to LA0 (indicated by the valid arrow in Fig. 3). y0n, y1n, . . . , ytn are noisy codewords of xn at PA0, . . . , PAt, respectively. Whenever a hard error happens in ytn, y0n, y1n, . . . , ytn−1 are also highly likely to contain hard errors as noise/disturbs in NAND-based SSDs are accumulated as time goes by [17]. Again, there is no way to recover corrupted pages whenever a hard error happens despite write-amplified pages with current error-correction mechanisms.
+In order to tolerate more errors, common solutions are more complex ECCs (e.g., [20], [32]) and RAIDs (e.g., [1], [10], [21], [23]). The theme of this work is to show that instead of designing new error correction mechanisms from scratch, the NANDbased SSD reliability can be greatly improved by utilizing current decoders to explore the inherent information between redundant pages. In more details, we first propose a joint decoder to recover multiple pages by utilizing redundant pages within a stripe of ECC/RAID, and we consider the joint decoder to recover multiple pages by utilizing write-amplified pages. The simulation results show that with the proposed algorithm,
+
+a performance gain of as much as 1.8 dB can be obtained. The theoretical study reveals that the joint decoding model can be studied from the perspective of relay channel model, and this helps to explore how much information can be reliably stored with the RAID/WA system in SSD. Due to the NAND-based SSD idiosyncrasy, the relay strategy studied here is a new instance of the conventional decode-and-forward strategy [6], where the forwarding message is generated by RAID/WA. Therefore, the proposed joint decoder can be applied to other relay channel applications, where a similar relay strategy is used (e.g., [13], [27]). To the best knowledge of the author, this is the first time that NAND-based SSD is studied from the perspective of relay channel coding setting.
+This paper is organized as follows. In Section II, we present necessary preliminaries used throughout the paper. In Section III, we present a joint decoder for ECC/RAID 4 and show that even with a single parity page it is possible to recover two hard errors; we generalize the joint decoder scheme to an ECC/RAID 6 system to accomplish the same task with two parity pages. In Section IV, we study one joint decoder for WA codes. Section VI concludes the paper and suggests problems for future research.
+II. LDPC PRELIMINARIES
+In this paper, we focus on Low-Density Parity-Check (LDPC) code, which is widely used in SSDs [32]. For simplicity, we assume the underlying channel is the binary erasure channel for illustrating purpose, and the memoryless binary-input continuous-output Additive White Gaussian Noise (AWGN) channels during analysis and simulation parts, although more accurate channel models exit (e.g., [24], [28]).
+An [n, k] LDPC code is defined by the null space of (n − k) × n sparse parity check matrix. Its sparse parity check matrix can be represented by a bipartite graph between (n − k) check nodes in one set and n variable nodes in the other set as shown in Fig. 4. In this work, we only consider regular (dv, dc)LDPC codes, where dv denotes the number of neighbors of a variable node and dc denotes the number of neighbors of a check node. The regular LDPC is easy to analyze [26] and is a good choice of many applications considering the trade-off between its hardware complexity and performance [31].
+An LDPC is decoded by iterative message-passing algorithms (see Fig. 4): after each variable is initialized with the input channel message, the decoding messages are iteratively computed
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:55:45 UTC from IEEE Xplore. Restrictions apply.
+
+LI: JOINT DECODER DESIGN FOR SSDs
+
+2401
+
+by all the variable nodes and the check nodes and exchanged
+
+through the edges between the neighboring nodes.
+
+More specifically, let the log-likelihood ratios (LLRs), v =
+
+log
+
+p(y|x=1) p(y|x=−1)
+
+,
+
+be
+
+the
+
+output
+
+message
+
+of
+
+a
+
+variable
+
+node,
+
+where
+
+x is the bit value of the variable node and y is all the information
+
+available to the node up to the present iteration obtained from
+
+edges other than the one carrying v. Likewise, we define the
+
+output
+
+message
+
+of
+
+a
+
+check
+
+node
+
+as
+
+u
+
+=
+
+log
+
+p(y |x =1) p(y |x =−1)
+
+,
+
+where
+
+x is the bit value of the variable node that gets the message from
+
+the check node, and y denotes all the information available to
+
+the node up to the present iteration obtained from edges other
+
+than the one carry u.
+
+The variable node message is updated as
+
+dv −1
+
+v = ui,
+
+(1)
+
+i=0
+
+where ui, i = 1, . . . , dv − 1, are the incoming LLRs from the neighbors of the variable node except the check node that gets the message v, and u0 is the observed channel LLR of the output bit associated with the variable node.
+The check node message is updated as
+
+tanh
+
+u
+
+=
+
+dc −1
+tanh
+
+vj
+
+,
+
+2
+
+2
+
+j=1
+
+where vj, j = 1, . . . , dc − 1, are the incoming LLRs from dc − 1 neighbors of a check node, and u is the message sent to the remaining neighbor.
+For many channels, LDPC code with message passing exhibits a threshold phenomenon: as the block length tends to be infinity, an arbitrarily small bit-error probability is achieved if the noise level is smaller than a certain threshold. However, if the noise level is larger than the threshold, the probability of bit error is larger than a positive constant. The algorithms to determine the threshold is called density evolution, e.g., efficient algorithms for AWGN channel are [8], [26].
+
+III. JOINT DECODING OF LDPC/RAID CODES
+In the following, we present the problem statement of joint decoding of LDPC/RAID and an illustrating example in Section III-A, we propose a decoding scheme for the LDPC/RAID 4 scheme in Section III-B, and the joint decoder scheme is generalized to LDPC/RAID 6 in Section III-C. The experimental performances are presented in Section V, and the information theoretic study is presented in Appendix A.
+
+A. Problem Statement Let the m page codewords within a stripe be (xn0 , x1n, . . . ,
+xm n −1), each of them is an [n, n − k] LDPC codeword, and let (y0n, y1n, . . . , ymn −1) denote the noisy codewords of (x0n, x1n, . . . , xnm−1) through a storage channel. We assume (xn0 , x1n, . . . , xm n −1) form a RAID 4/5 system. Without loss of generality, assume (y0n, y1n, . . . , ydn−1) are d hard errors within a stripe, and the objective is to recover (y0n, y1n, . . . , ydn−1) jointly with ydn, . . . , ymn −1. We assume that d, the number of hard errors,
+
+Fig. 5. Bilayer LDPC code for LDPC/RAID 4.
+is greater than two for RAID 4/5. The requirement is necessary since RAID 4 scheme cannot tolerate more than two hard errors.
+Example 1: Let n = 7, a [7, 4, 3] Hamming code is used to protect pages in Fig. 2, and a stripe is protected by a [5, 4, 2] RAID 4. Suppose the channel is binary erasure channel, y07 = (111????), y17 = (0101010), y27 = (???1?00), y37 = (1101001), and y47 = (1111111), where ? denotes an erasure. Neither Hamming code nor RAID 4 can recover y07 and y27 independently. The task of a joint decoder is to recover y07 and y27 concurrently with the help of y17 and y37.
+A simple joint decoding scheme is: as x07 + x27 = x17 + x73 + x74, first recover y07 as (1110?00) and y27 as (1001?00), and then recover y07 as (1110000) and y27 as (1001100) with the (7, 4) Hamming decoder.
+B. Joint Decoder of LDPC/RAID 4
+(y0n, y1n, . . . , ydn−1) satisfy two sets of parities: n − k zero parities individually and n joint extra parity bits of RAID 4. The d LDPC codewords and the two sets of parities form a bilayer LDPC codeword [25] (e.g., Fig. 5): the lower layer corresponds to LDPC codewords within d pages (y0n, y1n, . . . , ydn−1) and their LDPC parity constraints; the upper layer corresponds to the d pages (y0n, y1n, . . . , ydn−1) and the RAID 4 constraint xdn + · · · + xm n −1. In this bilayer LDPC code, the variable node degree is dv + 1, that is the dv edges emanating from the lower check node (i.e., n − k zero LDPC parities constraint), one edge emanating from an upper check node (i.e., the RAID 4 constraint), the lower check node degree is du, and the upper check node degree is d.
+The decoding is to do message-passing alternatively with lower/upper bilayer LDPC codes. The bilayer LDPC code is statistically different from the a conventional LDPC code: in the conventional message passing algorithm (see equation (1)), the LLRs from all check nodes at every iteration are the same because the probability that an edge emanating from a check node is connected to a variable node is the same; however, in the bilayer LDPC code, the probability that an edge from an upper check node is connected to a variable node is different from the probability that an edge from a lower check node is connected to a variable node. Therefore, it is necessary to track the LLRs from upper check nodes and lower check nodes for bilayer LDPC code.
+We enumerate the d LDPC components as 0, 1, . . . , d − 1, let u0 denote the LLR from the channel, let vil,k (resp. viu,k) denote the LLR sent from a variable node to a lower (resp. upper) (k + 1)-th (k = 0, 1, . . . , d − 1) LDPC component check
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:55:45 UTC from IEEE Xplore. Restrictions apply.
+
+2402
+TABLE I DENSITY EVOLUTION OF JOINT DECODERS OF LDPC/RAID
+
+IEEE TRANSACTIONS ON SIGNAL PROCESSING, VOL. 67, NO. 9, MAY 1, 2019
+
+node during the i-th (i ∈ N+) message passing iteration, and let
+uli,k (resp. uiu,k) denote the LLR sent from a lower (resp. upper) (k + 1)-th LDPC component check node to a variable node dur-
+
+ing the i-th message passing iteration.
+
+TrhLe ojowinert
+
+decoding algorithm bilayer LDPC
+
+is
+
+presented
+
+in
+
+the
+
+following:
+
+- Variable to check
+
+vil+,k1 = u0 + (dv − 1)uli,k + uui ,k,
+
+(2)
+
+- Check to variable ⎛
+uli,+k1 = 2 tanh−1 ⎝tanh
+
+vil+,k1 2
+
+⎞
+dc −1
+⎠.
+
+where comparing with equation (1), equation (2) adds
+
+dv − 1 incoming LLRs, uli,k, from all lower check nodes except the lower check node that gets the message vil+,k1,
+
+r
+
+and one LLR, uiu,k, from upper check node. Upper bilayer LDPC
+
+- Variable to check
+
+viu+,k1 = u0 + dvuil,k,
+
+(3)
+
+- Check to variable
+
+⎛
+
+⎞
+
+uiu+,k1 = 2 tanh−1 ⎝tanh
+
+viu+,k1 2
+
+d−1
+⎠,
+
+(4)
+
+where equation (3) adds dv incoming LLRs, uli,k, from all lower check nodes, and equation (4) is because the
+
+upper check node degree is d.
+
+The density evolution threshold is
+
+BP r=d
+
+=
+
+inf σ {σ
+
+:
+
+u0
+
++
+
+dvuli,k + uui ,k → ∞}, where σ is the variance of input channel
+
+probability distribution. The threshold is calculated in the sec-
+
+ond, the third and the fourth column of Table I for d = 2, 3, 4,
+
+respectively.
+
+C. Joint Decoding of LDPC/RAID 6
+The idea presented above can be extended to the RAID 6 system. For simplicity, we focus on RDP [4] in the following.
+RDP code is a (p − 1) × (p + 1) two-dimensional array, where p is a prime number greater than 2. Let us denote xi,j ∈ X be the element at the (i + 1)-th (i = 0, 1, . . . , p − 2) row and the (j + 1)-th (j = 0, 1, . . . , p) column of the RDP two-dimensional array for some alphabet X . The first p − 1 columns in the array are information columns and the last two are parity columns, namely, the row parity column and the diagonal parity column, respectively. A row parity symbol is
+
+Fig. 6. A 4 × 6 RDP code example, where the first four columns are information pages, the last two columns are row page parity and diagonal page parity, respectively, and each element is an LDPC codeword. The dotted lines present the diagonal row parity elements and their XOR-summed elements.
+
+the XOR-summing of all the information symbols in that row,
+
+that is xi,p−1 =
+
+p−2 j=0
+
+xi,j
+
+,
+
+and
+
+a
+
+diagonal
+
+parity
+
+symbol
+
+is
+
+the
+
+XOR-summing of all symbols along the same diagonal, that
+
+is xi,p =
+
+p−2 j=0
+
+xj,k ,
+
+where
+
+j
+
++
+
+k
+
+=
+
+i
+
+mod p. An example is
+
+presented in Fig. 6.
+
+Let us consider the following problem: let
+
+⎡ ⎢⎢⎣⎢⎢
+
+xn0,0 x1n,0
+...
+
+xn0,1 . . . xn0,p−1
+
+x1n,1 . . . x1n,p−1
+
+... . . .
+
+...
+
+xn0,p xn1,p
+...
+
+⎤ ⎥⎦⎥⎥⎥
+
+xpn−2,0 xpn−2,1 . . . xpn−2,p−1 xpn−2,p
+
+and
+
+⎡ ⎢⎣⎢⎢⎢
+
+y0n,0 y1n,0
+...
+
+y0n,1 . . . y0n,p−1
+
+y1n,1 . . . y1n,p−1
+
+... . . .
+
+...
+
+y0n,p y1n,p
+...
+
+⎤ ⎥⎥⎦⎥⎥
+
+ypn−2,0 ypn−2,1 . . . ypn−2,p−1 ypn−2,p
+
+be a RDP with LDPC codewords as its elements (i.e., X = {0, 1}n), and the noisy RDP over a storage channel (i.e., each LDPC codeword passes through the channel independently), respectively. Only the first d columns, i.e., y0n,0, y1n,0, . . . , ypn−2,0, . . . , y0n,d−1, y1n,d−1, . . . , ypn−2,0, are hard errors. The objective is to reliably decode all ymn ,0, ymn ,1, . . . , ymn ,d−1 with remaining columns, where 0 ≤ m ≤ p − 2. For simplicity, we assume d = 3 in the following.
+The tricks are the same as before, that is to form a bilayer
+LDPC code and to jointly decode it. For our case, based on how many hard errors there are among the elements to compute xin,p−1 and xin,p (i = 0, 1, . . . , p − 2), there are two bilayer LDPC cases. Case one is the corresponding elements to calculate yin,p−1 and yin,p (i = 0, 1, . . . , p − 2) have four hard errors, and its bilayer LDPC codeword is formed by four individual LDPC codewords
+and related LDPC codeword as shown in Fig. 7. Case two in-
+volves five hard errors. As the decoding methods and analysis
+techniques are similar for both, we only consider the case one
+in the following.
+Case one bilayer LDPC involves four hard errors, of which
+two only involve the row parity, one only involves the diagonal
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:55:45 UTC from IEEE Xplore. Restrictions apply.
+
+LI: JOINT DECODER DESIGN FOR SSDs
+
+2403
+
+Fig. 7. Bilayer LDPC code for LDPC/RDP.
+
+parity, and one involves both parities. For convenience, we de-
+
+note the two pages involving only row parity as right bilayer
+
+LDPC part, the page involving only the diagonal parity as left
+
+bilayer LDPC part, and the page involving both parities as the
+
+middle bilayer LDPC part.
+
+For example, consider decoding (y0n,0, y0n,1, y0n,2) jointly in Fig. 6 with the help of (y0n,3, y0n,4, y0n,5) and y3n,2, where y3n,2 is also a hard error. Thus, (y0n,0, y0n,1, y0n,2) satisfy three sets of parities, k zero parities for each of them, the row parity con-
+
+straint, i.e., y0n,0 + y0n,1 + y0n,2 = y0n,3 + y0n,4, and the diagonal constraint, i.e., y0n,5 = y0n,0 + y1n,4 + y2n,3 + y3n,2. The three sets of constraints form the bilaryer LDPC code shown in Fig. 7:
+
+the lower layer corresponds to a LDPC code with zero parity
+
+constraints, i.e., y0n,0, y0n,1 y0n,2 and y3n,2, and the upper layer corresponds to a LDPC code with the RDP constraint, that is, the
+
+row parity constraint and the diagonal parity constraint, both of
+
+which consist of n bits. (y0n,1, y0n,2), y0n,0 and y3n,2 are the right,
+middle and left of bilayer LDPC parts, respectively. Let vil,l, vil,m,, vil,r denote the LLR sent from an variable node
+to a lower check node within left, middle, and right LDPC part at the i-th iteration decoding, and let uil,l, uil,m, uli,r denote the
+LLR sent from a lower check node to an variable node of left,
+
+middle, and right LDPC part, respectively at the i-th iteration decoding. For the upper layer, similar notations go to viu,l, viu,r and uui ,l, uui ,r. For the middle part, an variable node connects to
+both row and diagonal parity nodes. For convenience, we denote
+
+them as upper left and upper right parity node. The messages
+
+sent to upper left and upper right parity nodes are different, and
+
+so are the messages sent to an variable node of middle LDPC
+
+part from upper left and upper right parity nodes. Therefore, it is necessary to differentiate them. Let viu,m,l and viu,m,r denote
+the message sent to upper left and upper right parity check node
+
+from an variable node of middle LDPC part, respectively, and let uiu,r,m and uiu,l,m denote the message sent to an variable node
+of middle LDPC from an upper left and an upper right parity
+
+node, respectively.
+
+The decoding of case one bilayer LDPC code is similar to
+
+the previous subsection, that is to decode alternatively with
+
+lowrerL/uopwpeerr
+
+bilayer bilayer
+
+LDPC LDPC
+
+codes.
+
+- Variable to check
+
+- Check to variable ⎛
+uil,+l 1 = 2 tanh−1 ⎝tanh ⎛
+uli,+m1 = 2 tanh−1 ⎝tanh ⎛
+uil,+r1 = 2 tanh−1 ⎝tanh
+
+vil+,l 1 2
+vil+,m1 2
+vil+,r1 2
+
+⎞
+dc −1
+⎠,
+⎞
+dc −1
+⎠,
+⎞
+dc −1
+⎠.
+
+r Upper bilayer LDPC
+- Variable to check viu+,l1 = u0 + dvuil,l,
+viu+,m1 ,l = u0 + dvuil,m + uiu,r,m, viu+,m1 ,r = u0 + dvuli,m + uui ,l,m,
+viu+,r1 = u0 + dvuli,r. - Check to variable
+
+uui+,l1 = viu+,m1 ,l,
+
+uui+,l1,m = viu+,l1,
+
+uiu+,r1,m = 2 tanh−1
+
+tanh
+
+viu+,r1 2
+
+2
+
+,
+
+uui+,r1 = 2 tanh−1
+
+tanh
+
+viu+,m1 ,l 2
+
+tanh viu+,m1 ,r
+
+,
+
+2
+
+The threshold is
+
+BP rdp
+
+=
+
+inf σ {σ
+
+:
+
+u0
+
++
+
+dv uil,m
+
++
+
+uiu,l,m
+
++
+
+uui ,r,m → ∞}, and it is calculated in the last column of Table I.
+
+IV. JOINT DECODING OF WRITE-AMPLIFIED CODES
+In this section, we consider the joint decoder to recover possibly existed write-amplified codes. For simplicity, we assume that the LDPC codes are systematic and the write amplification factor is two. However, the ideas presented here can be generalized to other non-systematic and general write amplification case readily. We further assume that two write-amplified codewords are encoded through different ECCs. This assumption is based on the following two facts: 1) joint decoding of identical codewords is one special case of ECC/RAID 4 joint decoding; 2) the possibility of adopting more than one ECC hardwares to improve both performances and reliability is currently actively investigated, e.g., [22], [29].
+
+vil+,l 1 = u0 + (dv − 1)uli,l + uui ,l, vil+,m1 = u0 + (dv − 1)uli,m + uiu,r,m + uui ,l,m, vil+,r1 = u0 + (dv − 1)uil,r + uui ,r,
+
+A. Problem Statement
+Let a message set be M = {0, 1, . . . , 2k − 1} for k ∈ N+, let two encoding functions be f1 : M → {0, 1}n and f2 : M → {0, 1}n, resulting in two [n, k] LDPC codewords xn0 = f1(M )
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:55:45 UTC from IEEE Xplore. Restrictions apply.
+
+2404
+
+IEEE TRANSACTIONS ON SIGNAL PROCESSING, VOL. 67, NO. 9, MAY 1, 2019
+TABLE II DENSITY EVOLUTION OF JOINT DECODERS OF WA CODES
+
+Fig. 8. Bilayer LDPC for different WA codes: the lower layer corresponds to LDPC codes within pages, where the information bits are depicted in black and the parity bits are in green and red; the upper layer corresponds to the k identical information bits constraint.
+
+and x1n = f2(M ), and let y0n, y1n denote the noisy codewords of x0n, x1n through a storage channel independently. The objective is to recover both (x0n, xn0 ) jointly with (y0n, y1n).
+Example 2: Let n = 7, the two [7, 4, 3] Hamming codes with
+
+the following parity check matrices H0 and H1 to protect a page
+
+and its write-amplified page, respectively. Suppose the channel is
+
+binary erasure channel, y07 = (111????) and y17 = (???1?00) are two noisy codewords, thus the Hamming codes can not recover y07 and y17 independently. The task of joint decoder of writeamplified codes is to recover noiseless codewords of y07 and y17 concurrently.
+
+A simple joint decoding scheme is: as the Hamming code
+
+is systematic and y07 and y17 carry the same information bits, assume the bipartite graphs of H0 and H1 corresponds are de-
+
+picted in right and left part of lower bilayer LDPC code in Fig. 8,
+
+respectively, thus x0,i = x1,i+1 for i = 0, 1, 2, 3. Thus we re-
+
+cover y07 first as (1111???), y17 as (?111100), then recover y07 as
+
+(1111111), and y17 as (0111100).
+
+⎡
+
+⎤
+
+1110100
+
+H0 = ⎣ 1 0 1 1 0 1 0 ⎦,
+
+1101001
+
+and
+
+⎡
+
+⎤
+
+1101000
+
+H1 = ⎣ 0 0 1 1 0 1 0 ⎦.
+
+0001101
+
+The decoding is to do message-passing alternatively with
+lower/upper bilayer LDPC codes. In the following, we abuse the notations v0, vil,k (k = 0, 1), uli,k, viu,k and uui ,k of Section III-B to denote the LLR from channel, the LLR sent from a variable node to a lower (k + 1)-th LDPC component
+check node, the LLR sent from a check node to a variable node,
+the LLR sent from a variable node to an upper check node and
+the LLR sent from the upper check node to lower variable node
+of trheLio-wthe(rib∈ilaNye)rmLeDsPsaCge passing iteration, respectively.
+- Variable to check
+
+vil+,k1 = v0 + (dv − 1)uil,k + uiu,k,
+
+- Check to variable ⎛
+uli,+k1 = 2 tanh−1 ⎝tanh
+
+vil+,k1 2
+
+⎞
+dc −1
+⎠.
+
+r Upper bilayer LDPC
+- Variable to check
+
+viu+,k1 = v0 + dvuli,k,
+
+- Check to variable
+
+uui+,k1 = viu+,k1.
+
+The density evolution threshold is
+
+BP dif f
+
+=
+
+inf σ {σ
+
+:
+
+v0 +
+
+dvuli,k + uui ,k → ∞}, and it is calculated in Table II.
+
+B. Joint Decoder of Different WA Codes
+In this part, we present a joint decoder design for different WA codes, that is, the two WA codes are encoded through a generator matrix G1 and G2, respectively, and G1 = G2.
+y0n and y1n satisfy two sets of parities, n − k zero LDPC code parities individually and k joint extra parities enforced by identical information bits across y0n and y1n. Thus, the two sets of constraints form the following bilayer LDPC code: the lower layer corresponds to the (y0n, y1n) and their LDPC parity constraints; the upper layer corresponds to the k identical information bits constraint (see Fig. 8 for an example).
+For bilayer LDPC of different WA codes, the upper layer has only k nodes of degree 2 and they connect to information bits of lower variable nodes; while for bilayer LDPC of LDPC/RAID 4, the upper layer has n nodes of degree 2 and they connect to all lower variable nodes. This difference between bilayer LDPC of LDPC/RAID 4 and bilayer LDPC of different WA codes can be further seen in their theoretical analysis in Appendix A and Appendix B, respectively.
+
+C. Joint Decoder of Coupling WA Codes
+In this part, we extend the joint decoder to the case of coupling
+WA codes, where the two LDPC codes are coupling through a
+third LDPC, i.e., two WA codes are encoded with G1 and G2 and G2 = G3G1. For convenience, let Hi denote the parity check matrix associated with Gi for i = 1, 2, 3.
+Similarly, y0n and y1n satisfy two sets of parities, n − k zero LDPC parities enforced by H1 and H2 and k extra parities enforced by H3. (y0n, y1n) together with the two sets of parities forms the following bilayer LDPC code: the lower layer corresponds to (y0n, y1n) and their parity constraints enforced by H1 and H2; the upper layer corresponds to the parity constraint enforced by H3 (see Fig. 9 for an example).
+The decoding is to do message-passing alternatively with
+lower/upper bilayer LDPC codes. Let the lower layer codes
+be two (dv, dc) LDPC codes, and the upper layer be (dv, 2dv) LDPC code, with the same notations of v0, vil,k(k = 0, 1), uli,k, viu,k and uui ,k as Section III-B, and the joint decoding algorithm is as follows:
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:55:45 UTC from IEEE Xplore. Restrictions apply.
+
+LI: JOINT DECODER DESIGN FOR SSDs
+
+2405
+
+Fig. 9. Illustration of joint decoding of coupling WA codes. (a) The Tanner
+
+grerda;ph(ba)nTdhHe T1afnonreyr1ng,rawphhearendinHfo2rmfoartiyo2nn
+
+bits are , where
+
+black and parity information bits
+
+check bits are are green and
+
+parity check bis are blue; (c) The Tanner graph and H3, where information bits
+
+are black and parity check bits are blue; (d) The bilayer Tanner graph and H for
+
+(y0n, y1n).
+
+r Lower bilayer LDPC
+- Variable to check:
+
+vil+,k1 = v0 + (dv − 1)uli,k + uiu,k,
+
+- Check to variable:
+
+⎛
+
+uli,+k1 = 2 tanh−1 ⎝tanh
+
+vil+,k1 2
+
+⎞
+dc −1
+⎠.
+
+r Upper bilayer LDPC
+- Variable to check
+
+viu+,k1 = v0 + dvuli,k,
+
+- Check to variable ⎛
+
+uiu+,k1 = 2 tanh−1 ⎝tanh
+
+viu+,k1 2
+
+⎞
+2dv −1
+⎠.
+
+The density evolution threshold with (dv, 2dv) coupling
+
+LDPC is
+
+BP dv ,2dv
+
+=
+
+inf σ {σ
+
+:
+
+v0
+
++ dvuil,k
+
++ uiu,k
+
+→
+
+∞},
+
+and
+
+it
+
+is calculated in Table II.
+
+V. SIMULATION RESULTS
+
+Fig. 10. Performance comparison of conventional sum-product decoding and the proposed joint decoding algorithms, where the curves labeled with “con”, “r=2”, “r=3”, “diff”, “coupling”, and “rdp” correspond to conventional sumproduct decoding, the proposed joint decoder of LDPC/RAID 4 with two hard errors, LDPC/RAID 4 with three hard errors, joint decoder of different WA codes, joint decoder of coupling WA codes, and LDPC/RDP with three hard errors, respectively.
+Existing RAID 6 [11] codes require two parity page columns to recover from two catastrophic failures (i.e., the whole columns of pages are hard errors in the RAID system). In addition to the catastrophic failures, the recently proposed Partial MDS (e.g., [1]) devotes even more extra global parity pages to recover unexpected hard errors. However, LDPC/RAID joint decoder achieves the same error-correction ability as RAID 6 or Partial MDS code with high probability without extra columns of pages or global pages. The resulting bilayer LDPC codeword consists of existing page level LDPC codewords, therefore, no extra parity bits are traded for the page level LDPC code to achieve better reliability. However, the decoding complexity, latency, and the hardware resources (e.g., RAM memory, decoding engines, etc) of the bilayer LDPC code are increased for better reliability. We leave the hardware optimization work as our future work.
+
+To further verify advantages of our proposed joint decoding schemes, we conduct experiments to compare the bit error rates (BER) of the conventional LDPC decoding algorithm (e.g., [32]) with our proposed joint decoding schemes. The codes used are (3, 6) LDPC codes, of length 800, and are constructed based on [12]. In all the simulations presented, the maximal decoding iteration is 80.
+Fig. 10 shows the performance comparison over AWGN channels. The results show the performances of the joint decoder are much better than the conventional independent LDPC decoder. Furthermore, it can be seen that gains of 0.6 dB, 0.8 dB, 1.4 dB, 1.6 dB, and 1.8 dB over conventional independent message passing decoding are obtained at BER of 10−3 for joint decoders of different WA codes, joint decoders of coupling WA codes, joint decoders of LDPC/RAID 4 with two hard errors, LDPC/RAID 4 with three hard errors, and LDPC/RDP with three hard errors, respectively.
+
+VI. CONCLUSION
+The main goal of this work is to show how the inherent information within redundant pages can be used in order to improve the reliability of SSDs. We believe that the examples and decoders we gave in this paper are only first ideas for better decoders which use similar ideas and properties from NAND flashbased SSDs to improve the reliability. In particular, these ideas can be used in other error-correction codes as well as other families of erasure codes in order to further improve the reliability.
+APPENDIX A INFORMATION THEORETIC STUDY OF RAID-RELAY
+In this part, we explore how much information can be stored with the help of RAID system in NAND-based SSD. As our system model can be abstracted as one special case of the relay channel coding model, we term it as RAID-relay.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:55:45 UTC from IEEE Xplore. Restrictions apply.
+
+2406
+
+IEEE TRANSACTIONS ON SIGNAL PROCESSING, VOL. 67, NO. 9, MAY 1, 2019
+
+A. System Model
+We model the NAND-based SSD with k RAID parities as
+a relay channel [6], that is, k = 1 for RAID 4/5 and k = 2 for RAID 6. Specifically, let X = (X0, X1, . . . , Xm−1) ∈ X m denote the symbol in m NAND page cells at the source, let Y = (Y0, Y1, . . . , Ym−1) ∈ Ym denote the noisy symbol received at the destination, and let W = (W0, W1, . . . , Wm−1) ∈ Wm denote the noisy symbol of X received at the relay to calculate a RAID parity Z = (Z0, Z1, . . . , Zk−1) ∈ Zk, where X , Y, W, Z represent the source alphabet, the noise alpha-
+bet at the destination, the noise alphabet at the relay, and the
+parity alphabet, respectively. In our setting, the noisy symbol
+of Z is accessible at the destination, which can always re-
+cover Z. Therefore, for simplicity, we assume the channel between the relay and the destination is noiseless. Let Y × Z = (Y0, Y1, . . . , Ym−1) × (Z0, Z1, . . . , Zk−1) ∈ Ym × Zk denote the symbols received at the destination. The aggregate channel among X, Y, W, Z is denoted as RAID-relay channel, (X m × Zk, p(y × z, w|x, z), (Ym × Zk) × Wm), that is (X m × Zk, p(y, w|x, z), (Ym × Zk) × Wm).
+We describe our RAID-relay system as follows. Users j = 0, 1, . . . , m − 1 independently encode messages Mj into xjn. xn = (xn0 , xn1 , . . . , xm n −1) is sent (written) over the channel (i.e., a set of cells). A RAID system receives wn = (w0n, w1n, . . . , wmn −1), reliably decodes xn = (xn0 , x1n, . . . , xm n −1), and sends (writes) relay codeword zn = (z0n, z1n, . . . , zkn−1) to the channel (i.e., a set of another cells). The decoder receives both yn = (y0n, y1n, . . . , ymn −1) and zn = (z0n, z1n, . . . , zkn−1) to assign an estimate Mˆj for j = 0, 1, . . . , m − 1.
+The fact that the relay can reliably recover the stored data
+while a destination can not without the RAID parity implies a
+channel degradation, which we use the following known definition to capture. The relay channel (X m × Zk, p(y, w|x, z), (Ym × Zk) × Wm) is said to be degraded if p(y, w|x, z) can
+be written in the form
+
+Theorem 1: The capacity of the degraded RAID 4-relay channel is C = supp(x) min{I(X; Y |Z), I(X; W |Z)}, where the supremum is over all distribution p(x) on X m.
+Proof:
+
+C = sup min{I(X, Z; Y, Z), I(X; W |Z)},
+
+(5)
+
+p(x,z)
+
+= sup min{I(X, Z; Y, Z), I(X; W |Z)},
+
+(6)
+
+p(x)
+
+= sup min{I(X; Y |Z), I(X; W |Z)},
+
+(7)
+
+p(x)
+
+where
+(5) is due to the general degraded relay channel capacity in
+[6] and that the destination receives Y Z in our case; (6) is due to Z = X0 + X1 + · · · + Xm−1; (7) is due to the chain rule of mutual entropy. In the following, we study I(X; Y |Z) and explore the condition under which the RAID 4-relay channel capacity is greater than that of the direct communication over X and Y . We assume that X = Y = Z = W = {0, 1}, and only consider m = 2. Let X = (X0X1) ∈ X 2, Y = (Y0Y1) ∈ Y2, W = (W0W1) ∈ W2, we assume that the channel between X0 (resp. X1) and W0 (resp. W1) is a binary symmetric channel with flip rate p1, the channel between X0 (resp. X1) and Y0 (resp. Y1) is a binary symmetric channel with flip rate p2, and p2 > p1 to meet the degradation requirement. Therefore, the channel between X and Y is a 4-ary symmetric channel (i.e., an aggregate
+of two independent binary symmetric channels) and its capacity is 2(1 − H(p2)).
+Lemma 1: For our setting, let
+
+C1 = H
+
+1 4
+
+((1
+
+−
+
+p1)2
+
++
+
+p21
+
+,
+
+.
+
+.
+
+.
+
+,
+
+1 4
+
+((1
+
+−
+
+p1)2
+
++
+
+p21),
+
+2p1(1 − p1)) − H((1 − p1)2, p12, 2p1(1 − p1)),
+
+p(y, w|x, z) = p(y|w, z)p(w|x, z).
+
+Wr eandeefinnceodae(r2wnRh,icnh)
+
+RAID-relay code by encodes xn = (x0n(M0),
+
+x1n(M1),
+
+.
+
+.
+
+.
+
+,
+
+xnm−1(Mm−1)) for M = (M0, M1, . . . , Mm−1) ∈ {0, 1,
+
+. . . , 2nR − 1}, where (M0, M1, . . . , Mm−1) is the 2nR/m-
+
+ary representation of M , i.e., M1, M2, . . . , Mm ∈ {0, 1,
+
+. . . , 2nR/m − 1};
+r a RAID-relay encoder that calculates a relay message zn
+
+r
+
+based on the received codeword wn; and a decoder that assigns an estimate (Mˆ 0, Mˆ1, . . . , Mˆm−1)
+
+based on the received codewords yn and zn.
+
+We assume the message is uniform over {0, 1, . . . , 2nR − 1}.
+
+The average probability of error is defined as Pe(n) = P {(Mˆ 0, Mˆ 1, . . . , Mˆ m−1) = (M0, M1, . . . , Mm−1)}. A rate R is said to be achievable if there exists a sequence of (2nR, n) codes such
+
+that limn→∞ Pe(n) = 0. The capacity C of the relay channel is
+
+the supremum of the set of achievable rates.
+
+B. Capacity of RAID 4-Relay Channel In this part, we assume Z = X0 + X1 + · · · + Xm−1.
+
+C2 = H
+
+1 4
+
+((1
+
+−
+
+p2)2
+
++
+
+p22),
+
+.
+
+.
+
+.
+
+,
+
+1 4
+
+((1
+
+−
+
+p1)2
+
++
+
+p21),
+
+2p2(1 − p2) − H((1 − p2)2, p22, 2p2(1 − p2)),
+
+C = min{C1, C2}
+
+Proof: In the above C1, C2 are minp(x)I(X; Y |Z) and minp(x)I(X; W |Z), respectively. Their proofs are similar to each other, thus, we only prove the result for C1. C1 is the channel capacity when Z is known both to the input and the output,
+and the channel is depicted in Fig. 11. For example, in Fig. 11, when X is 00, its output can be either 0, 3 with valid parity, or
+others with invalid parity, which we denote as ‘4’. This chan-
+nel is equivalent to the channel shown below, where the column corresponds to Y ∈ {0, 1, 2, 3, 4}, and the row corresponds to X ∈ {0, 1, 2, 3}.
+
+⎡ (1 − p1)2
+
+0
+
+0
+
+⎣⎢⎢
+
+0 0
+
+(1 − p1)2 p21 p12 (1 − p1)2
+
+p12 0
+0
+
+⎤
+
+2p1(1 − p1)
+
+2p1(1 2p1(1
+
+− −
+
+p1) p1)
+
+⎥⎥⎦
+
+p12
+
+0
+
+0 (1 − p1)2 2p1(1 − p1)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:55:45 UTC from IEEE Xplore. Restrictions apply.
+
+LI: JOINT DECODER DESIGN FOR SSDs
+
+2407
+
+Fig. 11. Illustrate of RAID 4-relay channel.
+
+The marginal distributions of Y are
+
+p(Y = 0) = p00(1 − p1)2 + p11p12, p(Y = 1) = p01(1 − p1)2 + p10p12, p(Y = 2) = p10(1 − p1)2 + p01p21, p(Y = 3) = p11(1 − p1)2 + p00p12,
+
+p(Y = 4) = 2p1(1 − p1),
+
+where p00, p01, p10, p11 denote the input distribution of X ∈
+
+{0, 1, 2, 3}. Let u(Y = 0), . . . , u(Y = 4) denote the distribu-
+
+tion of Y
+
+when
+
+p00
+
+=
+
+p01
+
+=
+
+p10
+
+=
+
+p11
+
+=
+
+1 4
+
+.
+
+Therefore, we have
+
+D(p||u) =
+
+p(Y ) p(Y ) u(Y ) ,
+
+=H
+
+1 4
+
+((1
+
+−
+
+p1)2
+
++
+
+p21),
+
+.
+
+.
+
+.
+
+,
+
+2p1((1
+
+−
+
+p1))
+
+− H(Y ) ≥ 0,
+
+(8)
+
+where D(·) denotes the relative entropy, and (8) is due to the nonnegativity of relative entropy [5]. With the above conclusion,
+
+C1 = min I(Y ; X),
+p(x)
+
+=
+
+min H(Y
+p(x)
+
+) − H((1 − p1)2, p21, 2p1(1 − p1)),
+
+(9)
+
+=H
+
+1 4
+
+((1
+
+−
+
+p1)2
+
++
+
+p21),
+
+.
+
+.
+
+.
+
+,
+
+2p1(1
+
+−
+
+p1)2
+
+−H((1 − p1)2, p12, 2p1(1 − p1)),
+
+(10)
+
+Theorem 2: The capacity of the degraded RAID 6-relay channel is C = supp(x) min{I(X; Y |Z0Z1), I(X; W |Z0Z1)}, where the supremum is over all distribution p(x) on X m.
+In the following, we consider the capacity of case one
+LDPC/RDP model studied in Section III-C. That is, we assume X = Y = Z = W = {0, 1}, m = 4, X = (X0, X1, X2, X3) corresponds to four cells, Z0 = X0 + X1, Z1 = X1 + X2 + X3 correspond to row parity and diagonal parity, respectively. Let X = (X0X1X2X3) ∈ X 4 , Y = (Y0Y1Y2Y3) ∈ Y4, W = (W0W1W2W3) ∈ W4. We assume that the channel between Xi and Wi is a binary symmetric channel with flip rate p1 for i = 0, 1, 2, 3, and the channel between Xi and Yi is a binary symmetric channel with flip rate p2 for i = 0, 1, 2, 3, and p2 > p1. Therefore, the channel capacity between X and Y is 4(1 − H(p2)). We study I(X; Y |Z0Z1) and explore the condition under which the RAID 6-relay channel capacity is greater
+than that of the direct communication over X and Y , and com-
+pare with the RAID 4-relay channel capacity.
+Lemma 2 presents the RAID 6-relay channel capacity. Its
+proof is similar to that of Lemma 1, thus, we skip it. Lemma 2: For our setting, let p0 = 1 − (1 − p1)4 − 2p13
+(1 − p1) − p22(1 − p1)2 and q0 = 1 − (1 − p2)4 − 2p32(1 − p2) − p22(1 − p2)2, let
+
+C1 = H
+
+1 16
+
+((1
+
+−
+
+p1)4
+
++
+
+p31(1
+
+−
+
+p1),
+
++p31(1 − p1) + p21(1 − p1)2), . . . , q0
+
+−H((1 − p1)4, p13(1 − p1), p31(1 − p1),
+
+p12(1 − p1)2, p0),
+
+C2 = H
+
+1 16
+
+((1
+
+−
+
+p2)4
+
++
+
+p32(1
+
+−
+
+p2),
+
++p23(1 − p2) + p22(1 − p2)2), . . . , q0
+−H((1 − p2)4, p32(1 − p2), p32(1 − p2), p22(1 − p2)2, q0), C = min{C1, C2}
+
+We compare the capacity of the above normalized RAID 6relay channel, RAID 4-relay, and capacity of binary symmetric channel in Fig. 12, which shows the capacity of RAID 6-relay channel is always in between that of binary symmetric channel and RAID 4-relay channel.
+
+(9) follows from the row of the transition matrix is a permutation of each other;
+(10) follows from the inequation (8).
+C. Capacity of RAID 6-Relay Channel
+
+APPENDIX B INFORMATION THEORETIC STUDY OF WA-RELAY
+Similarly, we explore how much information can be stored with the help of write-amplified pages in NAND-based SSD in this part, and we term the relay model as WA-relay.
+
+In this part, we focus on the RAID 6-relay channel where Z0, Z1 are RAID 6 parities of X = (X0, X1, . . . , Xm−1), and we write them as Z0 = f (X) and Z1 = g(X) with parity functions f (·) and g(·). By applying the general degraded relay channel
+capacity to our RAID 6 channel, we obtain
+
+A. System Model
+WA-relay is one special case of RAID-relay. That is, the WA-relay codeword is the same length as that of RAID-relay, while the relay codeword length is smaller than the encoded
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:55:45 UTC from IEEE Xplore. Restrictions apply.
+
+2408
+
+IEEE TRANSACTIONS ON SIGNAL PROCESSING, VOL. 67, NO. 9, MAY 1, 2019
+
+We abuse the definition of channel degradation, and notations R and C to denote the rate and the capacity of WA-relay code as that of Appendix A.
+
+B. Capacity of Different WA-Relay Channel
+We focus on the different WA-relay channel where Z1 is a RAID 4 parity of X = (X0, X1), and for simplicity,
+
+Z1 =
+
+X0 + X1, ∗,
+
+with probability 1 − p, with probability p,
+
+Fig. 12. Comparison of the capacity of RAID-relay, WA-relay, and the binary symmetric channel.
+
+codeword length for WA-relay. For example, in Fig. 5, one re-
+
+lay codeword of length n is conveyed from the encoder to the
+
+decoder, while in Fig. 8, one relay codeword of length k con-
+
+taining the relay message of information bits is shared between
+
+the encoder and the decoder.
+
+To ease the analysis, we assume that a relay codeword in WA-
+
+relay is still of length n while a fraction of it, pn (0 < p < 1),
+
+contains dummy information. Specifically, let X , Y, W, Z be the
+
+same as that of Appendix A, and let Z1 = Z {∗}, where ∗ de-
+notes a dummy element. Assume the write amplification factor is 2, let X = (X0, X1) ∈ X 2 denote the symbol in write-amplified NAND flash page cells at the source, and let W = (W0, W1) ∈ W2 denote the noisy symbol of X received at the relay to convey a message Z1 ∈ Z1. Let Y × Z1 = (Y0, Y1) × Z1 ∈ Y2 × Z1
+
+denote the symbols received at the destination. The aggregate
+
+channel among X, Y, W, Z1 is denoted as WA-relay channel, that is (X 2 × Z1, p(y, w|x, z1), (Y2 × Z1) × W2).
+
+We describe our WA-relay system as follows. Two users en-
+
+code a common message M into the corresponding length-
+n codewords x0n, xn1 using different encoding functions. xn = (x0n, x1n) is written over a set of cells. A WA-relay system receives wn = (w0n, w1n), reliably decodes xn = (x0n, xn1 ), and writes relay codeword z1n containing only (1 − p)n useful information and pn dummy information to a set of another cells.
+
+The decoder receives both yn = (y0n, y1n) and z1n to assign an estimate Mˆ .
+
+Wr eandeefinnceoade(r2nxRn,
+
+n, =
+
+p) WA-relay code (x0n(M ), xn1 (M ))
+
+as: for
+
+a
+
+message
+
+M
+
+∈
+
+{0, 1, . . . , 2nR − 1} using two encoding functions;
+
+r a WA-relay encoder that calculates a relay message z1n
+
+based on the received codeword wn, (1 − p)n of z1n con-
+
+tains useful information and pn of z1n has dummy infor-
+
+r
+
+mation; and a decoder that assigns an estimate Mˆ based on the received
+
+codewords yn and z1n.
+
+where 0 < p < 1. The discussed different WA-relay in
+Section IV-B is specialized in that Z1 is zero for information bits of xn1 and x1n and is a dummy element for others of xn0 and x1n. When p = 0, the different WA-relay degenerates to the RAID-relay case.
+By applying the general degraded relay channel capacity to
+our different WA-relay channel, we obtain
+Theorem 3: The capacity C of the degraded different WA-relay channel is given by C = supp(x) min{I(X; Y |Z1), I(X; W |Z1)}, where the supremum is over all distribution p(x) on X 2.
+Let us continue the example discussed in Section IV-B, that is, X = Y = W = {0, 1} and Z1 = {0, 1, ∗}, and we have the following results for this capacity.
+Lemma 3: For our setting, let
+
+C1 = H
+
+1 4
+
+(1
+
+−
+
+2p1(1
+
+−
+
+p1
+
+)(1
+
+−
+
+p)),
+
+.
+
+.
+
+.
+
+,
+
+1 4
+
+(1
+
+−
+
+2p1(1
+
+−
+
+p1
+
+)(1
+
+−
+
+p))
+
+−H((1 − p1)2, (1 − p1)p1p, (1 − p1)p1p,
+
+p12, 2p1(1 − p1)(1 − p)),
+
+C2 = H
+
+1 4
+
+(1
+
+−
+
+2p2(1
+
+−
+
+p2
+
+)(1
+
+−
+
+p)),
+
+.
+
+.
+
+.
+
+,
+
+1 4
+
+(1
+
+−
+
+2p2(1
+
+−
+
+p2
+
+)(1
+
+−
+
+p))
+
+−H((1 − p2)2, (1 − p2)p2p, (1 − p2)p2p,
+
+p22, 2p2(1 − p2)(1 − p)),
+
+C = min{C1, C2}
+
+Proof: C1 is the channel capacity when Z1 is known both to the input and the output, and the channel is depicted in Fig. 13. This channel is equivalent to the channel shown at the top of the next page, where the column corresponds to Y ∈ {0, 1, 2, 3, 4}, and the row corresponds to X ∈ {0, 1, 2, 3}. The remaining parts are similar to that of Lemma 1.
+When p = 0, Lemma 3 is Lemma 1. We compare the different WA-relay capacity with p = 0.5 in Fig. 12.
+Coupling WA-relay channel is a generalized different WArelay channel by defining Z1,
+
+Z1 =
+
+h(X0 + X1), ∗,
+
+with probability 1 − p, with probability p,
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:55:45 UTC from IEEE Xplore. Restrictions apply.
+
+LI: JOINT DECODER DESIGN FOR SSDs
+
+2409
+
+⎡ (1 − p1)2
+
+⎢⎢⎣⎢⎢
+
+(1 (1
+
+− −
+
+p1 p1
+
+)p1 )p1
+
+p p
+
+p12
+
+(1 − p1)p1p (1 − p1)2 p12
+(1 − p1)p1p
+
+(1 − p1)p1p p12
+(1 − p1)2
+(1 − p1)p1p
+
+p12 (1 − p1)p1p (1 − p1)p1p
+(1 − p1)2
+
+⎤
+
+2p1(1 − p1)(1 − p)
+
+2p1(1 2p1(1
+
+− −
+
+p1)(1 p1)(1
+
+− −
+
+p) p)
+
+⎦⎥⎥⎥⎥
+
+2p1(1 − p1)(1 − p).
+
+Fig. 13. Illustrate of different WA-relay channel.
+where h(·) is associated with the third code coupling X0, X1 in Section IV-C. Thus, we skip its capacity result here.
+REFERENCES
+[1] M. Blaum, J. L. Hafner, and S. Hetzler, “Partial-MDS codes and their application to RAID type of architectures,” IEEE Trans. Inf. Theory, vol. 59, no. 7, pp. 4510–4519, Jul. 2013.
+[2] G. Burd, “Implementing RAID in solid state memory,” U.S. Patent 8,402,217, Mar. 19, 2013. [Online]. Available: https://www.google.com/ patents/US8402217
+[3] P. Cappelletti, C. Golla, P. Olivo, and E. Zanoni, Flash Memories. Norwell, MA, USA: Kluwer, 1999.
+[4] P. Corbett et al., “Row-diagonal parity for double disk failure correction,” in Proc. 3rd USENIX Conf. File Storage Technologies, 2004, pp. 1–14.
+[5] T. M. Cover and J. A. Thomas, Elements of Information Theory. Hoboken, NJ, USA: Wiley, 1991.
+[6] T. M. Cover and A. A. E. Gamal, “Capacity theorems for the relay channel,” IEEE Trans. Inf. Theory, vol. 25, no. 5, pp. 572–584, Sep. 1979.
+[7] P. Desnoyers, “Analytic modeling of SSD write performance,” in Proc. 5th Annu. Int. Syst. Storage Conf., Jun. 2012, Art. no. 12.
+[8] M. Fu, “On Gaussian approximation for density evolution of low-density parity-check codes,” in Proc. Int. Conf. Commun., Istanbul, Turkey, May 2006, pp. 1107–1112.
+[9] E. Gal and S. Toledo, “Algorithms and data structures for flash memories,” ACM Comput. Surv., vol. 37, pp. 138–163, 2005.
+[10] S. Guan, H. Kan, J. Wen, and S. Xia, “A new construction of exactrepair MSR codes using linearly dependent vectors,” IEEE Commun. Lett., vol. 21, no. 8, pp. 1691–1694, Aug. 2017.
+[11] Q. Guo and H. Kan, “An efficient interpolation based erasure-only decoder for high-rate reed-solomon codes,” IEICE Trans. Fundam. Electron., Commun. Comput. Sci., vol. 95, no. 5, pp. 978–981, May 2012.
+[12] X.-Y. Hu, E. Eleftheriou, and D. Arnold, “Regular and irregular progressive edge-growth tanner graphs,” IEEE Trans. Inf. Theory, vol. 51, no. 1, pp. 386–398, Jan. 2005.
+[13] J. N. Laneman, D. N. Tse, and G. W. Wornell, “Cooperative diversity in wireless networks: Efficient protocols and outage behavior,” IEEE Trans. Inf. Theory, vol. 50, no. 12, pp. 3062–3080, Dec. 2004.
+[14] Q. Li, H. Chang, A. Jiang, and E. F. Haratsch, “Joint decoder of contentreplication codes for NAND flash memories,” in Proc. 53th Annu. Allerton Conf. Commun., Control Comput., Monticello, IL, USA, Oct. 2015, pp. 712–719.
+
+[15] Q. Li and A. Jiang, “Coding for secure write-efficient memories,” in Proc. 52nd Annu. Allerton Conf. Commun., Control, Comput., Monticello, IL, USA, Oct. 2014, pp. 505–512.
+[16] Q. Li and A. Jiang, “Polar codes for secure write-efficient memories,” in Proc. 53rd Annu. Allerton Conf. Commun., Control, Comput., Monticello, IL, USA, Oct. 2015, pp. 720–727.
+[17] Q. Li, A. Jiang, and E. F. Haratsch, “Noise modeling and capacity analysis for NAND flash memories,” in Proc. IEEE Int. Symp. Inf. Theory, Honolulu, HI, USA, Jun. 2014, pp. 2262–2266.
+[18] Q. Li and A. A. Jiang, “Coding for secure write-efficient memories,” IEEE Trans. Inf. Theory, vol. 63, no. 2, pp. 1130–1145, Feb. 2017.
+[19] Q. Li and N. Zheng, “Joint decoder of RAID-ECC solutions of SSDs,” in Proc. 55th Annu. Allerton Conf. Commun., Control Comput., Monticello, IL, USA, Oct. 2017, pp. 429–436.
+[20] Y. Li, H. Alhussien, E. F. Haratsch, and A. Jiang, “A study of polar codes for MLC NAND flash memories,” in Proc. Int. Conf. Comput., Netw. Commun., Feb. 2015, pp. 608–612.
+[21] S. Liang, C. Yuan, and H. Kan, “Linear exact-repair construction of hybrid MSR codes in distributed storage systems,” IEEE Commun. Lett., vol. 18, no. 7, pp. 1095–1098, Jul. 2014.
+[22] R.-S. Liu, C.-L. Yang, and W. Wu, “Optimizing NAND flash-based SSDs via retention relaxation,” in Proc. 10th USENIX Conf. File Storage Technologies, Berkeley, CA, USA, 2012, pp. 125–138.
+[23] S. Lm and D. Shin, “Flash-aware RAID techniques for dependable and high-performance flash memory SSD,” IEEE Trans. Comput., vol. 60, no. 1, pp. 80–92, Jan. 2011.
+[24] T. Parnell, N. Papandreou, T. Mittelholzer, and H. Pozidis, “Modelling of the threshold voltage distributions of sub-20nm NAND flash memory,” in Proc. IEEE Global Commun. Conf., 2014, pp. 2351–2356.
+[25] R. Razaghi and W. Yu, “Bilayer low-density parity-check codes for decodeand-forward in relay channels,” IEEE Trans. Inf. Theory, vol. 53, no. 10, pp. 3723–3739, Oct. 2007.
+[26] T. J. R. Sae-Yong Chung and R. L. Urbanke, “Analysis of sum-product decoding of low-density parity-check codes using a Gaussian approximation,” IEEE Trans. Inf. Theory, vol. 47, no. 2, pp. 657–670, Feb. 2001.
+[27] A. Sendonaris, E. Erkip, and B. Aazhang, “User cooperation diversity. Part I. System description,” IEEE Trans. Commun., vol. 51, no. 11, pp. 1927– 1938, Nov. 2003.
+[28] V. Taranalli, H. Uchikawa, and P. H. Siegel, “Channel models for multilevel cell flash memories based on empirical error analysis,” IEEE Trans. Commun., vol. 64, no. 8, pp. 3169–3181, Aug. 2016.
+[29] C. Yang, Y. Emre, and C. Chakrabarti, “Product code schemes for error correction in MLC NAND flash memories,” IEEE Trans. Very Large Scale Integration Syst., vol. 20, no. 12, pp. 2302–2314, Dec. 2012.
+[30] Y. Yang and J. Zhu, “Algebraic modeling of write amplification in hotnessaware SSD,” in Proc. 8th ACM Int. Syst. Storage Conf., 2015, Art. no. 4.
+[31] T. Zhang, Z. Wang, and K. K. Parhi, “On finite precision implementation of low density parity check codes decoder,” in Proc. IEEE Int. Symp. Circuits Syst., 2001, vol. 4, pp. 202–205.
+[32] K. Zhao, W. Zhao, H. Sun, T. Zhang, X. Zhang, and N. Zheng, “LDPCin-SSD: Making advanced error correction codes work effectively in solid state drives,” in Proc. USENIX Conf. File Storage Technologies, San Jose, CA, USA, Feb. 2013, pp. 243–256.
+Qing Li received the B.Sc. degree in information security from the University of Science and Technology of China, Hefei, China, in 2010, and the Ph.D. degree in computer science from Texas A&M University, College Station, TX, USA, in 2015. He is working with ScaleFlux, Inc., San Jose, CA, USA on big data storage.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 11:55:45 UTC from IEEE Xplore. Restrictions apply.
+
+

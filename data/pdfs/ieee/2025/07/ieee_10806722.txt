@@ -1,0 +1,1032 @@
+4588
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 73, NO. 7, JULY 2025
+
+Margin Propagation Based XOR-SAT Solvers for Decoding of LDPC Codes
+Ankita Nandi , Graduate Student Member, IEEE, Shantanu Chakrabartty , Senior Member, IEEE, and Chetan Singh Thakur , Senior Member, IEEE
+
+Abstract— Decoding of Low-Density Parity Check (LDPC) codes can be viewed as a special case of XOR-SAT problems, for which low-computational complexity bit-flipping algorithms have been proposed in the literature. However, a performance gap exists between the bit-flipping LDPC decoding algorithms and the benchmark LDPC decoding algorithms, such as the Sum-Product Algorithm (SPA). In this paper, we propose an XOR-SAT solver using log-sum-exponential functions and demonstrate its advantages for LDPC decoding. This is then approximated using the Margin Propagation formulation to attain a low-complexity LDPC decoder. The proposed algorithm uses soft information to decide the bit-flips that maximize the number of parity check constraints satisfied over an optimization function. The proposed solver can achieve results that are within 0.1dB of the Sum-Product Algorithm for the same number of code iterations. It is also at least 10× lower than other Gradient-Descent Bit Flipping decoding algorithms, which are also bit-flipping algorithms based on optimization functions. The approximation using the Margin Propagation formulation does not require any multipliers, resulting in significantly lower computational complexity than other soft-decision Bit-Flipping LDPC decoders.
+Index Terms— Margin propagation, LDPC decoding, bit flipping algorithms, XOR-SAT.
+I. INTRODUCTION
+MINIMUM distance decoding or maximum-likelihood (ML) decoding of linear codes like Low-Density Parity Check (LDPC) codes [1] belong to the class of NP-hard problems [2], [3], [4], [5], [6]. As a result, practical decoding of these codes uses approximate methods such as belief propagation algorithms [7] and bit-flipping algorithms [8]. The decoding is subject to the satisfaction of some parity conditions. Thus at a fundamental level, the formulation and decoding of these codes can be considered as an XOR satisfaction (XOR-SAT) problem.
+Received 8 February 2024; revised 25 August 2024; accepted 12 December 2024. Date of publication 18 December 2024; date of current version 17 July 2035. This research was supported in part by USIEF-IIE Fulbright Fellowship and by the Washington University McDonnell International Scholars Academy. The associate editor coordinating the review of this article and approving it for publication was V. Cadambe. (Corresponding author: Shantanu Chakrabartty.)
+Ankita Nandi and Chetan Singh Thakur are with the NeuRonICS Laboratory, Department of Electronic Systems Engineering, Indian Institute of Science, Bengaluru 560012, India (e-mail: ankitanandi@iisc.ac.in; csthakur@iisc.ac.in).
+Shantanu Chakrabartty is with the Department of Electrical and Systems Engineering, Washington University in St. Louis, St. Louis, MO 63130 USA (e-mail: shantanu@wustl.edu).
+Digital Object Identifier 10.1109/TCOMM.2024.3519519
+
+Fig. 1. XOR-SAT as an equivalent optimization problem illustrated for a 3-bit majority code: (a) The parity check constraints or XOR-clauses C1 and C2 corresponding to Boolean variables u1, u2 and u3; (b) Three-dimensional lattice showing the location of the assignments that satisfy C1 and C2 and hence represent valid codewords; (c) XOR-SAT or decoding as a continuous optimization problem where the global maxima correspond the solution or valid codewords.
+As an example, a 3−variable XOR-SAT corresponding to the majority encoder is shown in Fig. 1a. C1 and C2 represent the parity check constraints over the Boolean variables u1, u2, u3 ∈ {0, 1}. The solution to these XOR clauses can be depicted using a discrete lattice in Fig. 1b where each of the lattice nodes represents a possible assignment to (u1, u2, u3). An XOR-SAT solver produces an assignment that satisfies all the clauses C1 and C2, which in this case are valid codes [000] and [111].
+LDPC decoders are a special case of XOR-SAT solvers where the objective is to reach a valid code that is closest (in some distance metric) to an initial (or received) vector (shown by y in Fig. 1b). For a hard-decision decoding approach, the starting vector is one of the lattice nodes, and a Hamming distance metric is used to evaluate the nearest valid codeword. For a soft decoding approach, the initial vector is real-valued and can lie within the volume of the lattice (denoted by y in Fig. 1b and Fig. 1c). Searching for the nearest valid codeword can be viewed as an optimization problem, as shown in Fig. 1c, where the valid codewords are mapped as the maxima of an objective function and the invalid codewords as the minima [9]. Decoding then proceeds by an iterative
+
+0090-6778 © 2024 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:37:52 UTC from IEEE Xplore. Restrictions apply.
+
+NANDI et al.: MARGIN PROPAGATION BASED XOR-SAT SOLVERS FOR DECODING OF LDPC CODES
+
+4589
+
+Fig. 2. Flow-chart showing key steps involved in the design of the MP-XOR-SAT based LDPC decoder.
+
+procedure that progressively approaches the maximum that function for XOR-SAT using the log-sum-exponential func-
+
+is nearest to the initial starting point. However, when the tion, Hlog(q, H), which eliminates multiplications from the
+
+optimization landscape is non-convex, the number of local objective function. The second step is achieved by deriving
+
+maxima scales exponentially with the number of variables. HLDP C(q, r, d, H) for LDPC decoding. This is done by Therefore, optimal LDPC decoding is equivalent to solving a establishing the extrinsic factor alongside Hlog(q, H), which
+
+global optimization problem with an exponentially large search maintains a close correlation with the a-prior information (or
+
+space.
+
+channel information), thus aiding in achieving better decod-
+
+Practical LDPC decoders resort to a sub-optimal iterative ing performance. The third step computes the gradient of
+
+search algorithm, and in literature, the procedure can mainly the HLDP C(q, r, d, H) function and replaces the probabil-
+
+be classified as a hard decision-based decoding algorithm, ity scores in the gradient with a Margin Propagation based
+
+called the bit-flipping (BF) algorithm, or as soft decision-based probability scores. Additional heuristics are then incorporated
+
+Belief Propagation (BP) decoding, encompassing the Min- in the Margin Propagation based formulation, which leads to
+
+Sum (MS) and the Sum-Product Algorithm (SPA) [8]. The the proposed MP-XOR-SAT based LDPC decoder. Based on
+
+key mechanism for these algorithms is the iterative passing this design flow, the proposed work has the following key
+
+of messages between two types of nodes, which are the contributions:
+
+variable nodes (corresponding to the bit nodes) and the check nodes (corresponding to the parity check clauses) [7]. The bit-flipping algorithms transmit binary message values to fulfill parity check equations and are characterized by their low complexity but limited performance. In contrast, the Belief Propagation-based algorithms, which take into account the reliability of bits, have demonstrated superior performance albeit at the cost of increased complexity [8]. All other decoders can be considered as a combination of these two approaches.
+SAT solvers also use different variants of the bit-flipping algorithm [10]. However, the key difference here is that XOR-SAT solvers seek to find any solution that satisfies all
+
+• The proposed framework, called MP-XOR-SAT, uses a piece-wise linear approximation called Margin Propagation to implement XOR-SAT solvers.
+• The resulting MP-XOR-SAT decoders do not require multiplications, leading to a much lower computational and hardware implementation complexity compared to the Sum Product Algorithm (SPA).
+• MP-based XORSAT (MP-XOR-SAT) algorithm, when used for LDPC decoding, takes 10× fewer code iterations than state-of-the-art Gradient Descent Bit Flipping algorithms and the same code iterations as that of Sum-Product Algorithm (SPA), with the error rates being within at least 0.1dB of Sum-Product Algorithm (SPA).
+
+the parity constraints, whereas an LDPC decoder seeks to find the nearest codeword to a received input vector. Note that in a standard LDPC code construction, an all-zero vector is a
+
+• The proposed MP-based XORSAT (MP-XOR-SAT) algorithm has lower computational and hardware complexity than the Sum-Product Algorithm (SPA).
+
+valid codeword, hence it constitutes a trivial solution to the XOR-SAT problem. However, the objective of this work is to explore the optimization dynamics of XOR-SAT solvers to approximate minimum distance decoding.
+The optimization framework for decoding leads to a class of bit-flipping algorithms that exploit optimization landscape gradients to guide the iterative procedure. These are popularly called the Gradient Descent Bit Flipping (GDBF) algorithms. While most GDBF algorithms use hard decisions for a Binary Symmetric Channel (BSC), very few exploit the soft infor-
+
+The paper is organized as follows. A literature survey of the state-of-the-art Gradient Descent Bit Flipping algorithms and prior work on Margin Propagation algorithms for LDPC decoding is presented in Section II. Section III defined the XOR-SAT problem using log-sum-exponential functions, and in Section IV, the XOR-SAT problem is tailored to suit LDPC decoding followed by its MP approximation. The results and discussion are in Section V and Section VI, respectively. Finally, the paper is concluded in Section VII.
+
+mation that is available at the output of the communication channel.
+In this paper, we present a low-complexity LDPC decoder based on a Margin-Propagation (MP) based XOR-SAT solver that can achieve results within 0.1dB of the Sum-Product Algorithm (SPA) for an Additive White Gaussian Noise (AWGN) channel. We call this the MP-XOR-SAT solver,
+
+II. RELATED WORKS
+It is worth noting that both Gradient Descent Bit Flipping (GDBF) algorithms and Margin Propagation (MP) have been previously used to implement LDPC decoders. Thus, the contributions and challenges faced by these techniques have been discussed in this section.
+
+where we first propose an MP based XOR-SAT solver and then modify it to perform LDPC decoding. The approach we A. Gradient Descent Bit Flipping (GDBF) for LDPC Codes
+
+take for designing the MP-XOR-SAT solver is illustrated in Bit-flipping algorithms as an optimization problem were
+
+Fig. 2. The first step in the process is designing an objective first considered in [9], where Gradient Descent Bit Flipping
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:37:52 UTC from IEEE Xplore. Restrictions apply.
+
+4590
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 73, NO. 7, JULY 2025
+
+(GDBF) was proposed. Their objective function included two terms, one being the constraint satisfaction and the other to check for the word bearing maximum correlation with the Maximum Likelihood decoding. Both the single-bit and multi-bit flipping mechanisms were proposed, including an escape mechanism to release the function from local optima points. There were various spin-offs [11], [12] that caused the Gradient Descent Bit Flipping algorithm to become a separate class of decoding algorithms. However, the results showed that the Min-Sum algorithm performed better than the proposed Gradient Descent Bit Flipping for both single and multi-bit flip versions.
+In [13], a low-complexity solution is proposed by introducing random perturbations. The objective function not only includes terms for the constraint satisfaction check and maximum correlation to the received but also adds random noise. However, these random perturbations are introduced based on the noise in the channel (with variance No/2). Both single-bit and multi-bit variations were demonstrated on the Additive White Gaussian Noise channel. This algorithm comes within 0.5dB of the Belief Propagation algorithm.
+The Probabilistic Gradient Descent Bit Flipping (PGDBF) [14] models the problem to a Binary Symmetric Channel (BSC). In this decoder, a randomly chosen fraction of bits is flipped, leading to a large performance improvement. The authors in [15] present a Flash Memory-adapted PGDBF decoder and show the results of each of them using BSC. A variant of PGDBF, which keeps track of the trapping sets for the flipping, was proposed in [16]. The Information Storage Bit Flipping (ISBF) [17] is mainly focused on optimizing the critical path in finding the global maxima in order to improve throughput.
+The Gradient Descent Bit Flipping algorithms with Momentum (GDBFwM) [18] memorizes the update of the bits at every iteration, thus providing inertia to the direction of the update. The results depict a striking resemblance in performance with respect to the Belief Propagation. The AD-GDBF decoders proposed in [19] show that for LDPC codes and a Binary Symmetric Channel, the frame error rates are better than the Belief Propagation without the knowledge of trapping sets. A very recent syndrome bit flipping (SBF) algorithm is proposed [20], which only takes into account the syndrome and is used together with the NGDBF algorithm to yield results almost 0.5dB better than belief propagation but with 300 iterations for NGDBF and 100 iterations for SBF. A generalized ADGDBF (gAD-GDBF) decoder proposed in [21] shows that LDPC codes for an Additive White Gaussian Noise (AWGN) channel can outperform the Neural Offset Min-Sum decoder (NOMS) when provided with a large number of iterations.
+However, most of the earlier works have a similar form of objective function and can be generalized as a single function, which will be shown in Section VI. In this work, we propose an objective function that is not equivalent to any of the other represented functions. Further, the candidate objective function will be approximated using the Margin Propagation algorithm to reduce computational and hardware complexity. A brief overview of the Margin Propagation algorithm and its LDPC-related works is discussed in the next section.
+
+TABLE I NOTATIONS
+B. Margin Propagation Based LDPC Decoders The Margin Propagation (MP) principle was first intro-
+duced as a mechanism to approximate different variants of log-sum-exponential functions using only piecewise-linear functions [22]. The resulting circuits and systems obviated the use of multipliers and could be easily mapped onto different hardware substrates [23]. The approach has since been used to implement analog classifiers [24], [25], LDPC decoders [26], digital accelerators [27], analog correlators [28] and field-programmable machine learning processors [29], [30].
+Gu and Chakrabartty in [31] have demonstrated a Margin Propagation based (32, 8) regular LDPC decoder design. The formulation was essentially differential, which became more complex as the sizes of the codeword and the degrees of the check nodes and the variable nodes increased. A probabilistic XOR-based check node implementation that uses the Generalized Margin Propagation [29] circuit was proposed for the Sum-Product Algorithm in [32], but it requires the translation of the Sum-Product Algorithm into the probabilistic domain.
+In this work, we first propose a log-sum-exponential based XOR-SAT solver, which is then used for LDPC decoding.
+III. XOR-SAT OPTIMIZATION We first formulate XOR-SAT as an optimization problem using log-sum-exponential functions. Our mathematical exposition will use the notations summarized in Table I, and all the operators will be defined as they are introduced. Since our goal is to use the MP-XOR-SAT solver for LDPC decoding, we will conform to the notations used in the LDPC literature to describe the XOR-SAT clauses and constraints. Let N be the number of Boolean variables u1, u2, . . . , uN ∈ F2 and M be the number of XOR clauses or parity check clauses. The XOR clauses C = {C1, C2 · · · , CM } can be compactly expressed using a parity check matrix H ∈ F2M × F2N as C = Hu with u = (u1, u2, · · · , uN ) being a column vector comprising of all the Boolean variables. Here, the clause Ci is defined as Ci = ⊕ uj, which denotes an XOR
+j:hij =1
+operation of all participating Boolean variables. The (i, j)th element of H, i.e., hi,j = 1 indicates if uj is participating in the clause Ci, while hi,j = 0 indicates it is not participating.
+A general approach to solving XOR-SAT problems is using a bit-flipping procedure, which is summarized by the pseudo-code in Algorithm 1. The algorithm iteratively
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:37:52 UTC from IEEE Xplore. Restrictions apply.
+
+NANDI et al.: MARGIN PROPAGATION BASED XOR-SAT SOLVERS FOR DECODING OF LDPC CODES
+
+4591
+
+Algorithm 1 General Bit Flipping Approach
+1: Constraint Clauses
+2: C1: ⊕ uj = 0
+j:h1j =1
+3: C2: ⊕ uj = 0
+j:h2j =1
+4: ...
+5: CM : ⊕ uj = 0
+j:hMj =1 6:
+7: Conditions 8: P+: Set of satisfied clauses i.e., Ci : ⊕ uj = 0
+j:hi,j =1
+9: P−: Set of unsatisfied clauses i.e., Ci : ⊕ uj ̸= 0
+j:hi,j =1 10:
+11: Pseudo Code 12: Find the variable uj that most influences P− 13: Flip the state of uj 14: Continue until all clauses are in P+ or maximum itera-
+tions (Imax) have reached
+15:
+16: Output: Decision when |P−| = 0 or I = (Imax) where I refers to the current iteration
+
+identifies the variable that influences most of the unsatisfied clauses and then flips the state of that variable. The uniqueness of a bit-flipping algorithm is the procedure to identify the variables to flip. The proposed design of MP-XOR-SAT is one such procedure, which will be described next. To achieve this, we first map discrete XOR-SAT formulation into the real domain. In literature, such real mapping has led to efficient interior-point methods for solving NP-hard problems [33]. We define a continuous variable xj ∈ [−1, +1] associated with the variable uj, such that
+
+N
+
+⊕ uj = 0
+j:hij =1
+
+=⇒
+
+max
+xj
+
+xhi,j
+j
+
+j=1
+
+=1
+
+(1)
+
+when the clause Ci is satisfied whereas
+
+N
+
+⊕ uj = 1
+j:hij =1
+
+=⇒
+
+min
+xj
+
+xhi,j
+j
+
+j=1
+
+= −1
+
+(2)
+
+when the clause Ci is not satisfied. Thus, uj = 1 =⇒ xj = 1 and uj = 0 =⇒ xj = −1. After the mapping to real variables, XOR-SAT optimization becomes an interior point method whereby the goal is to traverse through the interior of the discrete points to find the optimum solution. One may visualize it as traversing within the hyper-cube in Fig. 1b to find one of its vertices as the solution point.
+For a total of M clauses, all XOR-clauses are satisfied if and only if
+
+MN
+
+max
+xi
+
+xhi,j
+j
+
+=
+
+M
+
+(3)
+
+i=1 j=1
+
+which can be written as:
+
+
+MN
+
+
+N
+
+max
+
+ sign(xj )hi,j |xj |hi,j  = M (4)
+
+|xj |∈[0,1] i=1 j=1
+
+j=1
+
+The above equation is true if all the XOR-clauses are satis-
+N
+fied i.e. for all the clauses Ci the condition sign(xj)hi,j =
+j=1
+1 is satisfied and |xj| = 1. Let us now denote the set P+ as the set of clauses Ci for
+N
+which sign(xj)hi,j = 1 and P− as the set of clauses Ci
+j=1
+N
+that are not satisfied i.e., sign(xj)hi,j = −1. Using these
+j=1
+notations, the equation (4) can be simplified as in (5):
+
+
+
+
+
+N
+
+max
+
+ |xj |hi,j  = M
+
+(5)
+
+P+,|xj |∈[0,1] i:Ci∈P+ j=1
+
+It may be noted that the sets P+ and P− are disjoint
+sets because any clause Ci can be part of either one of
+the two sets. Thus, maximizing the membership of the set of satisfied clauses P+ implies that the membership of the set of unsatisfied clauses P− approaches an empty set i.e., P− = {ϕ}. Thus, we can utilize this to frame equation (5) as
+a solution to the following combinatorial optimization problem that also includes the set of unsatisfied clauses P−:
+
+N
+
+|xj |hi,j
+
+max
+
+i:Ci∈P+ j=1
+
+(6)
+
+P+,P−,|xj |∈[0,1]
+
+N
+|xj |hi,j
+
+i:Ci∈P− j=1
+
+Here, the optimization in equation (6) achieves its maximum only when all the clauses are satisfied or P− = {ϕ}.
+Using the monotonic property of the log(.) function, the
+optimization in equation (6) is equivalent to
+
+N
+
+max log
+
+|xj |hi,j . . .
+
+(7)
+
+P+,P−,|xj |∈[0,1]
+
+i:Ci∈P+ j=1
+
+− log
+
+N
+|xj |hi,j
+
+i:Ci∈P− j=1
+
+Expressing equation (7) using qj = log |xj| in equation (8), we have
+
+
+
+
+
+
+
+N
+
+max log 
+
+exp  hi,jqj . . .
+
+P+,P−,qj ∈[−∞,0]
+
+i:Ci ∈P +
+
+j=1
+
+
+
+
+
+
+
+N
+
+− log 
+
+exp  hi,j qj 
+
+(8)
+
+i:Ci ∈P −
+
+j=1
+
+Introducing a small number ϵ > 0 to ensure numerical stability for the conditions when either |P+| = 0, or |P−| = 0,
+equation (8) is written as
+
+max
+
+Hlog(q, H)
+
+(9)
+
+P+,P−,qj ∈[−∞,0]
+
+where
+
+
+
+
+
+
+
+N
+
+Hlog = log 
+
+exp  hi,jqj + ϵ . . .
+
+i:Ci ∈P +
+
+j=1
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:37:52 UTC from IEEE Xplore. Restrictions apply.
+
+4592
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 73, NO. 7, JULY 2025
+
+
+
+
+
+
+
+N
+
+− log 
+
+exp  hi,jqj + ϵ (10)
+
+i:Ci ∈P −
+
+j=1
+
+This is one candidate function for solving XOR-SAT problems. We will now use this function denoted by Hlog(q, H) in equation (10) to design LDPC decoders.
+
+IV. MP-XOR-SAT BASED LDPC DECODER
+
+To apply the formulation in Hlog(q, H) for decoding LDPC codes, it is imperative to not only receive a solution that
+satisfies all the clauses but to ensure that the decoded codeword
+matches the transmitted codeword. The number of code bits in
+the codeword is the number of XOR-SAT Boolean variables N , and M is the number of XOR clauses described by the parity-check matrix H. In LDPC parlance, the parity check matrix H consists of M check nodes and N variable nodes.
+Let us denote a column vector c = (c1, c2, . . . , cN ) to be the transmitted codeword such that {ci ∈ F2N : Hc = 0}. By convention, the codeword c is mapped onto a BPSK (Binary Phase
+Shift Keying) signal constellation before transmission such that ˆc = (cˆ1, cˆ2, . . . , cˆN ), cˆi = −(2ci − 1). If the symbols ˆc are transmitted over an Additive White Gaussian Noise (AWGN) channel then r = (r1, r2, . . . , rN ), ri ∈ R is the channel output vector such that r = cˆ + n, where n ∈ RN is a random noise vector drawn from a Gaussian distribution [7].
+The information that is received from the channel can now
+be used to guide the dynamics of the MP-XOR-SAT solver
+such that it seeks a valid codeword that is close to the received channel vector r.
+To ensure this, we augment the Hlog(q, H) function
+N
+in equation (11) to include a term rjdjqj (where
+j=1
+dj = sign(rj)) that captures the correlation between the decoded bits and the channel information. We call this the extrinsic factor throughout the text. The procedure is sim-
+ilar to the maximum correlation decoding rule described
+in [9], [13], and [18]. The augmented optimization function HLDP C (q, r, d, H) is given by:
+
+N
+
+HLDP C = Hlog(q, H) + rj dj qj
+
+(11)
+
+j=1
+
+The importance of the extrinsic term in HLDP C (q, r, d, H) is to break the symmetry between the codewords such that the global maximum of HLDP C (q, r, d, H) corresponds to the codeword closest to the channel output. The extrinsic information is the one that biases the solution to the closest codeword based on the channel output, otherwise, it can approach towards any solution that satisfies the clauses. Thus, different types of LDPC decoders can be designed by maximizing HLDP C(q,r,d,H) according to:
+
+max
+
+HLDP C (q, r, d, H)
+
+P+,P−,qj ∈[−∞,0]
+
+(12)
+
+Next, we use a gradient ascent bit flipping approach to solve equation (12) and to design a decoder.
+
+A. MP-Based Gradient Computation
+It may be noted that the function HLDP C (q, r, d, H) comprises both continuous variables q and discrete variables d that determine the membership of the sets P+, P−. Therefore, the gradient of HLDP C (q, r, d, H) is only defined when the memberships of the sets P+, P− do not change. Hence, the proposed decoding algorithm will proceed as follows:
+At every iteration, the clauses are categorized into the sets P+ and P− based on the state of the discrete variables d. The continuous variables q are updated at each iteration according to a gradient ascent update rule
+
+∆q = η ∇qHLDP C (q, r, d, H)|P+,P−=const
+
+(13)
+
+where η > 0 is the learning-rate parameter while the membership of the sets P+ and P− remain unchanged.
+N
+If zi = hijqj, then based on the update equation (13)
+i=1
+and equation (11), the gradient can be written as
+
+
+
+
+
+∂HLDP C ∂qj
+
+=
+
+i:Ci ∈P +
+
+hi,j
+
+ 
+
+i:Ci ∈P +
+
+exp(zi) exp(zi) + exp(qmin)
+
+ 
+
+.
+
+.
+
+.
+
+
+
+
+
+−
+
+i:Ci ∈P −
+
+hi,j
+
+ 
+
+i:Ci ∈P −
+
+exp(zi) exp(zi) +
+
+ exp(qmin) 
+
++ rj dj
+
+(14)
+
+where qmin = log(ϵ). Note that the multinomial logistic
+
+function
+
+exp(yi ) exp(yi )
+
+in
+
+equation
+
+(14),
+
+represents
+
+a
+
+probability
+
+i
+
+score that arises due to the log-sum-exponential logistic cost
+
+function in equation (10). In our previous work [34], we have
+
+shown that other forms of cost functions and associated
+
+probability scores could be used as a replacement for the
+
+logistic cost function. These probability scores exhibit attrac-
+
+tive properties, which include sparsity, faster convergence, and
+
+robustness [35]. Here, we will replace the logistic function by
+
+the Margin Propagation based probability score [36], which
+
+was introduced in [34].
+
+Given an input vector y = {yi}, i = 1, .., M , the MP based
+
+probability score is given by
+
+1
+
+Pi = τ [yi − ζ]+
+
+(15)
+
+where [.]+ is a ReLU function, τ > 0 is a hyper-parameter and ζ = M P (y, τ ) is an MP function that is computed to satisfy the normalization criterion
+
+M
+
+Pi = 1
+
+(16)
+
+i=1
+
+From (15) and (16), we can define the M P (·) as:
+
+ζ = M P (y, τ )
+
+(17)
+
+M1
+
+≡ τ [yi − ζ]+ = 1
+
+(18)
+
+i=1
+
+The key advantage of using the Margin Propagation function and Margin Propagation probability scores is that it uses
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:37:52 UTC from IEEE Xplore. Restrictions apply.
+
+NANDI et al.: MARGIN PROPAGATION BASED XOR-SAT SOLVERS FOR DECODING OF LDPC CODES
+
+4593
+
+Fig. 3. An example is illustrated using the 3-bit majority code. The evolution of the bits is explained over 5 iterations, with dj being the decision bit and qj being the soft information. (a) Dynamics of d1, corresponding to the changes in q1; (b) Dynamics of d2 due to the changes in q2, which do not change because they do not satisfy the threshold condition; (c) Dynamics of d3 corresponding to the updates in q3. (d) The number of constraints satisfied over each iteration. The 0th iteration refers to the initial condition before the iterative algorithm is initiated.
+
+simple operations like ReLU and subtractions (rather than
+exponentiations and multiplications), and equation (18) can
+be easily implemented using analog and digital circuits [25].
+To apply the Margin Propagation based probability scores, we define zi+ = zi · I(Ci ∈ P+) and zi− = zi · I(Ci ∈ P−) for form vectors z+, z−.
+We then estimate the MP functions ζ+ = M P (z+, τ ) and ζ− = M P (z−, τ ). These approximations are used to replace
+the probability scores in equation (14), which leads to
+
+∂HLDP C ∂qj
+
+=
+
+M
+
+hij [zi+
+
+−
+
+ζ + ]+
+
+− [zi− τ
+
+−
+
+ζ − ]+
+
++
+
+rj dj
+
+i=1
+
+(19)
+
+The dynamics of the algorithm can be improved by introducing a scaling term Aj > 0, j = 1, .., N , which controls the influence of the extrinsic factor rjdj to the gradient update. Incorporating this heuristic, equation (19) becomes
+
+∂HLDP C ∂qj
+
+=
+
+M i=1
+
+hij [zi+
+
+−
+
+ζ+]+ − [zi− τ × Aj
+
+−
+
+ζ − ]+
+
++
+
+rj dj
+
+(20)
+
+As a heuristic we chose the value of Aj as,
+
+M
+
+Aj =
+
+hi,j I(zi+ > ζ+) + I(zi− > ζ−) which measures
+
+i=1
+
+the number of instances the variable qj is significant amongst
+
+clauses that appear in both the sets P+, P−. Thus, Aj being
+
+large implies the ambiguity in the influence qj, in which
+
+case the gradient weighs the extrinsic information more.
+
+In the extreme case, when Aj = 1, the variable qj appears
+
+significant only for one clause, in which case the gradient
+
+weighs the extrinsic information less.
+
+both the updated membership sets P+, P−, and the updated qj values are crucial.
+The procedure of gradient updates and bit-flipping is repeated iteratively till all clauses are satisfied (i.e., the set P− is empty) or the maximum allowable iterations (Imax) is reached. At the end of the decoding procedure, we receive a binary output u, which is the decoded codeword. The iterative procedure and the selection heuristics are summarized in Algorithm 2, which describes the implementation of the MP-XOR-SAT based LDPC decoder.
+Fig. 3 illustrates the dynamics of the MP-XOR-SAT based decoding of the 3−bit majority code described in Fig. 1a. The evolution of the bits is explained, with dj being the decision bit varying between −1 and 1 and qj being the soft information. The threshold is θ = −2.1, and the bit flips only if the value qj < θ. The value τ = M , the learning rate is η = 0.5 and the received information is r = [0.1236, −1.376, 0.105]. Fig. 3a describes the first bit, j = 1. The initial value of the bit was high, but in the 2nd iteration, it satisfies the threshold condition and flips. This continues for the next two iterations, and the bit keeps flipping in iterations 3 and 4. It is only in the 5th and last iteration when it settles. Fig. 3b describes the second bit, j = 2. The q value settles to zero, with the decision being unchanged through the iterations. In Fig. 3c, the final bit changes in the first and second iteration itself. In the third iteration, since the threshold condition is not satisfied, the bit maintains its state. It eventually settles to a low value of the decision. Fig. 3d shows the number of constraints that are satisfied in each constraint as the result of changing dj. Before the iterative decoding procedure started, no constraints were satisfied, as referred to by iteration index 0.
+
+B. Gradient-Ascent Update and Bit-Flips
+
+For a given iteration I, if the magnitude of any variable qj
+
+obtained from iteration I − 1 becomes lower than a threshold
+
+θ, then the sign of the binary variable dj is flipped. The
+
+bit-flip of dj in iteration I, in turn, updates the membership sets P+, P−, which governs the gradient computation in the
+
+successive iteration, i.e., iteration I + 1.
+
+Following the bit-flip in iteration I, the value obtained from
+
+the MP gradient ∆qj
+
+= η ∂HLDP C
+∂qj
+
+is used to update the qj
+
+values in the same iteration I. This updated qj is again used
+
+in the successive iteration I + 1 for the next bit flip. Hence,
+
+V. RESULTS
+The first set of experiments was designed to evaluate the dynamical properties of the MP-XOR-SAT-based LDPC decoder described by Algorithm 2 due to the extrinsic factor, choice of flipping scheme, and the different hyper-parameters. The second set of experiments was then designed to evaluate the Bit-Error-Rates (BER) for the proposed decoder with different codes for the Bose–Chaudhuri–Hocquenghem codes, i.e., BCH (63,45), BCH (127,106), and the BCH (255,215) codes with respect to Self Corrected Min Sum (SC-MS) [37], Neural Offset Min-sum (NOMS) [38], the
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:37:52 UTC from IEEE Xplore. Restrictions apply.
+
+4594
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 73, NO. 7, JULY 2025
+
+Algorithm 2 MP-XOR-SAT LDPC Decoding Algorithm
+
+1: Inputs:
+
+2: Channel Output: rj ∈ R, ∀j = 1, 2, · · · , N 3: Parity Check Matrix: H = [hi,j] ∀i = 1, .., M, j = 1, .., N 4: Maximum Iterations: Imax
+
+5:
+
+6: Output: 7: Decision: u ∈ {0, 1}N
+
+8:
+
+9: Hyper-parameters:
+
+10: τ : MP constraint constant
+
+11: θ: Decision Threshold
+
+12: η: Learning rate
+
+13:
+
+14: Initialization:
+
+15: dj ← sign(rj) 16: qj ← dj log (|tanh(rj)|)
+
+# ∵ |tanh(rj)| ∈ [0, 1]
+
+17:
+
+18: Algorithm:
+
+19: while (I ≤ Imax)
+
+20:
+
+P+ = {Ci :
+
+N
+
+dhi,j
+j
+
+=
+
+1}
+
+j=1
+
+#Set of satisfied clause
+
+21:
+
+P− = {Ci :
+
+N
+
+dhi,j
+j
+
+=
+
+−1}
+
+#Set
+
+of
+
+unsatisfied
+
+clause
+
+j=1
+
+22:
+
+23: if (|P−| = 0)
+
+#Terminate iterations
+
+24:
+
+break;
+
+25: end
+
+26:
+
+27: for i = 1 : M
+N
+
+28:
+
+zi = hi,j qj
+
+j=1
+
+29:
+
+if (Ci ∈ P+)
+
+30:
+
+zi+ = zi
+
+31:
+
+zi− = qmin
+
+32:
+
+else
+
+33:
+
+zi− = zi
+
+34:
+
+zi+ = qmin
+
+35:
+
+end-if
+
+#Determine Ci ∈ P+ #Determine Ci ∈ P−
+
+36: end-for
+
+37:
+38: ζ+ = M P (z+, τ ) 39: ζ− = M P (z−, τ )
+
+40: for j = 1 : N
+
+41:
+
+if qj < θ,
+
+42:
+
+dj ← −dj
+
+43:
+
+end-if
+
+#Bit flip
+
+44:
+
+45:
+
+#Gradient Update
+
+M
+
+46:
+
+Aj ← hi,j I(zi+ > ζ+) + I(zi− > ζ−)
+
+i=1
+
+47:
+
+qj ← qj + η
+
+h M
+i=1
+
+[zi+ −ζ + ]+ −[zi− −ζ − ]+
+
+ij
+
+τ ×Aj
+
++ rj dj
+
+48: end-for
+
+49: I = I+1
+
+50: end-while
+
+51: Decoded Output: uj = dj > 0 ∀j = 1, 2, · · · , N
+
+generalized Adaptive Diversity Gradient-Descent Bit-Flipping (gAD-GDBF) [21] and the Sum-Product Algorithm (SPA), for floating-point operations. We then also design experiments to evaluate the effect of quantization on the BCH (63,45) and BCH (127,106) codes. Finally, the Bit-ErrorRates (BER) and Frame-Error-Rates (FER) for the proposed decoder in comparison to the benchmark LDPC decoding Sum-Product Algorithm (SPA) for different kinds of LDPC codes is reported.
+A. Effect of the Extrinsic Factor
+We perform an experiment to consider 10 different codewords from a regular (32, 8) LDPC code with 24 clauses. We pass these codewords through an AWGN channel and use the vector from the channel as the input to Algorithm 2. Fig. 4a shows the number of constraints satisfied by these ten words over the number of iterations when the extrinsic factor is not augmented with the cost function. Fig. 4b is presented with the extrinsic factor over the same ten noisy codewords. It is clearly observed that some cases may fail to converge to a solution point without the extrinsic factor. We also run an experiment where we pass the codewords through an AWGN channel and send them as inputs to Algorithm 2 without the extrinsic factor with Imax set to 50, with the extrinsic factor with Imax = 10 and the Sum-Product algorithm Imax = 10, where Imax denotes the maximum allowable iterations. It can be seen from Fig. 4c that the extrinsic factor improves the performance of the decoder as compared to the case without the extrinsic factor.
+We also note the number of decoded words that were valid for the given code but did not match the transmitted codeword. In reference to this, we classify three different outcomes, which are the percentages of correct decoding, i.e., the match between transmitted and decoded (denoted by ‘match’ in the plots), the fraction that was wrongly decoded, but all the constraints were satisfied (denoted by ‘valid-mismatch’), and the fraction when it went down completely different trajectory (labeled ‘invalid’). Fig. 4d and Fig. 4e show the percentages of the match, valid-mismatch, and invalid codewords with and without the extrinsic factor, respectively, when Imax = 50. It can be clearly observed that the percentage of matches is much higher with the extrinsic factor, and the ‘validmismatches’ and ‘invalid’ are lower. In Fig. 4f, Imax was set to 1000 code iterations. The results have not shown any significant improvement with respect to Fig. 4e, which is shown for only Imax = 50. This shows that iterations play a negligible role as compared to the extrinsic factor in improving the percentage of valid mismatches.
+B. Effect of Multi-Bit-Flips and State Update
+We observe the number of constraints satisfied for ten noisy (AWGN) codewords from a (32, 8) regular LDPC code, where, in one case, we flip only one bit amongst the ones that satisfy the threshold condition, while in the other case, we flip all the bits that satisfy the threshold condition in Algorithm 2.
+It can be observed from Fig. 5a that the trajectory of the constraints satisfied for single bit-flips with progressing
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:37:52 UTC from IEEE Xplore. Restrictions apply.
+
+NANDI et al.: MARGIN PROPAGATION BASED XOR-SAT SOLVERS FOR DECODING OF LDPC CODES
+
+4595
+
+Fig. 4. An illustration depicting the effect of the extrinsic factor for a (32, 8) regular LDPC code for different cases with and without the extrinsic factor: (a) The number of constraints satisfied with respect to the iterations without extrinsic information for 10 random codewords at 1dB Eb/N0; (b) The number of constraints satisfied with respect to the iterations, with the extrinsic factor for the same 10 noisy words in Fig. 4(a); (c) Bit Error Rate (BER) and Frame Error Rate (FER) with and without the extrinsic factor. Percentage of ‘match’, ‘valid-mismatch’ and ‘invalid’ cases for different noise values: (d) with the extrinsic factor and Imax = 50; (e) without the extrinsic factor and Imax = 50 iterations; (f) without the extrinsic factor and Imax = 1000.
+
+Fig. 5. An illustration showing the effect of single and multi-state bit flipping algorithm: (a) A case with a single state being flipped for 10 random codewords
+at 1dB Eb/N0; (b) A case with multiple states being flipped for the same 10 noisy words in Fig. 5a; (c) Bit Error Rate (BER) and Frame Error Rate (FER) with single bit flip (Imax = 500) and multiple flips per iteration (Imax = 10).
+
+iterations has very tiny hops, unlike the multi-bit flipping. The multi-bit flipping scheme hops higher, as seen in Fig. 5b, and converges faster. Fig. 5c shows the influence of the bit-flipping strategy on the convergence speed. The single-bit flipping error rate waterfall curves are far away from the Sum-Product Algorithm despite having 500 iterations. Thus, the multi-bit flipping strategy is favorable for faster decoding.
+C. Effect of MP Hyper-Parameters
+We compute the function’s gradient using the MP gradient, which depends on the choice of τ . We illustrate the bit and frame error rates for different values of the MP hyperparameter τ for the Eb/N0 (dB) values spanning from 1dB to 7dB in Fig. 6a and Fig. 6d for a (32, 8) regular LDPC code. It is seen
+
+that when the τ values are close to the number of clauses, lower error rates are achieved throughout the spectrum. Thus, we chose τ = M for all our simulations.
+Similar to the choice of τ , the choice of the flipping threshold θ and learning parameter η are equally important for accuracy. Fig. 6b and Fig. 6e show that the flipping threshold, when close to 0, results in better BER and FER. If θ > 0 is chosen, the results are catastrophic. Similarly, for better BER and FER, the learning rate η must be defined between 0.01 to 0.001 as seen in Fig. 6c and Fig. 6f.
+D. BER and FER Performance
+To evaluate the performance of the proposed algorithm, an experiment considering float-point operation for the Self
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:37:52 UTC from IEEE Xplore. Restrictions apply.
+
+4596
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 73, NO. 7, JULY 2025
+
+Fig. 6. An illustration showing the effect of the different hyper-parameters on the Bit Error Rate (BER) and the Frame Error Rate (FER) for different noise (Eb/No dB) level on a (32,8) regular LDPC code. (a) Represents the effect of the MP hyper-parameter τ on the BER; (b) Represents the optimum value of the flipping threshold θ on the BER; (c) Represents the optimum value of the learning rate η on the BER; (d) Represents the effect of the MP hyper-parameter τ on the FER; (e) Represents the optimum value of the flipping threshold θ on the FER; (f) Represents the optimum value of the learning rate η on the FER.
+
+Fig. 7. Simulation plots for an AWGN Channel with float-point operations with respect to Self-Corrected Min-Sum (SCMS) [37], Neural Offset Min-Sum (NOMS) [38], generalized Adaptive Diversity Gradient Descent Bit Flipping (gAD-GDBF) [21], [39] and the Sum-Product Algorithm (SPA) for (a) BCH (63,45); (b) BCH (127,106); and (c) BCH (255,215).
+
+Corrected Min Sum (SC-MS) [37], Neural Offset Min-sum (NOMS) [38], the generalized Adaptive Diversity GradientDescent Bit-Flipping (gAD-GDBF) [21] and the Sum-Product Algorithm (SPA) using the Bose–Chaudhuri–Hocquenghem codes i.e. BCH (63, 45), BCH (127, 106), and the BCH (255, 215) codes was performed on an Additive White Gaussian Noise (AWGN) channel. From the results in Fig. 7, it can be concluded that the MP-XOR-SAT algorithm provides 0.5dB gain as compared to the other algorithms. Further, a performance evaluation based on quantized inputs was also performed for the above-mentioned algorithms, the results of which are reported in Fig. 8.
+Fig. 9 shows the results of the LDPC decoding using Algorithm 2 on an AWGN channel for various other codes,
+
+namely Hamming (7, 4), Regular (32, 8) [31], EG-LDPC (1023, 781) [7], PEG (1008, 508) [40], and IEEE803.an [19] standards for Bit Error Rate (BER) in Fig. 9a and Frame Error Rate (FER) in Fig. 9b. Each code is run until 100 erroneous codewords are listed for both the proposed algorithm and the Belief Propagation (Sum-Product Algorithm [8]) for only code iterations. It can be clearly observed from the plots that the bit and frame error plots are within at least 0.1dB of the Belief Propagation algorithm, which is, by far and, to the best of our knowledge, the fastest formulation among soft decision Gradient-Descent Bit Flipping family of algorithms. If more iterations are provided, the decoding gap would increase, and the performance can be made to improve, as was seen in the case of the BCH codes, which have more code iterations.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:37:52 UTC from IEEE Xplore. Restrictions apply.
+
+NANDI et al.: MARGIN PROPAGATION BASED XOR-SAT SOLVERS FOR DECODING OF LDPC CODES
+
+4597
+
+Fig. 8. Simulation plots of the proposed algorithm for an AWGN Channel with fixed-point operations with respect to Self-Corrected Min-Sum (SCMS) [37], Neural Offset Min-Sum (NOMS) [38], generalized Adaptive Diversity Gradient Descent Bit Flipping (gAD-GDBF) [21] and the Sum-Product Algorithm (SPA) for (a) BCH (63, 45) using a fixed point representation having 12 out of 16 bits for fractional (Q4.12); (b) BCH (63, 45) using a fixed point representation having 4 out of 8 bits for fractional (Q4.4); (c) BCH (63, 45) using a fixed point representation having 2 out of 4 bits for fractional (Q2.2); (d) Effect of different levels of quantization on the proposed MP-XOR-SAT algorithm on BCH (63, 45); (e) BCH (127, 106) using a fixed point representation having 12 out of 16 bits for fractional (Q4.12); (f) BCH (127, 106) using a fixed point representation having 4 out of 8 bits for fractional (Q4.4); (g) BCH (127, 106) using a fixed point representation having 2 out of 4 bits for fractional (Q2.2); and (h) Effect of different levels of quantization on the proposed MP-XOR-SAT algorithm on BCH (127, 106).
+
+Fig. 9. Simulation plots for an AWGN Channel for (32, 8) regular LDPC, (7, 4) Hamming, (1023, 781) EG-LDPC, (1008, 504) PEG, (2048, 1723) IEEE 802.3 an codes using the proposed MP-XOR-SAT algorithm; (a) Bit Error Rate (BER) and (b) Frame Error Rate (FER).
+
+VI. DISCUSSION A. Algorithm Performance
+1) The Role of Extrinsic Factor: As has been discussed earlier, the extrinsic factor helps to maintain close proximity with the initial assumption, similar to the Maximum Likelihood decoding algorithm. Without the extrinsic factor, the bit flips tend to dissatisfy more constraints, causing the dynamics to take a different trajectory. Extrinsic information ensures fewer valid mismatches in the decoding as they are more difficult to recover than invalid words. Literature suggests the usage of variety decoders (adaptive with varying hyper-parameters for a batch of code iterations, or with belief propagation decoders, etc.) in cascade to improve the decoding performance [19],
+
+[20], [21]. The same can be employed to treat the invalid output to improve the decoding performance further.
+2) The Role of Single and Multi State Bit Flipping: The investigation of single-state bit flipping and multi-state bit flipping strategies has been explored in numerous literature sources, with the majority suggesting the expedited convergence of multi-bit flipping strategy. Our findings align consistently with the conclusions drawn in prior studies.
+3) The Role of Different Hyperparameters: The hyperparameters are important in attaining good decoding performance. The hyper-parameter τ is associated with the MP function given in (18). The MP function at the core is a non-linear constraint satisfaction problem. Thus, when τ is
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:37:52 UTC from IEEE Xplore. Restrictions apply.
+
+4598
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 73, NO. 7, JULY 2025
+TABLE II COMPARISON OF INVERSION FUNCTIONS OF GRADIENT DESCENT BIT FLIPPING ALGORITHMS
+
+a very small value, the MP equation behaves like a winnertake-all formulation where only one (i.e., the largest) term contributes to the non-linear constraint satisfaction problem [29], [31]. In the context of LDPC decoding using Algorithm 2, the value of τ was kept significantly large so that the gradient of just one variable is not overbearing on the apriori information. Hence, the value of τ must be sufficiently large to attain a good coding performance. As a result of this conclusion, τ = M was maintained in most simulations. The effect of various choices of τ , was seen in Fig. 6a and Fig. 6d.
+The term η dictates the step size taken during the update of the gradient ascent by the qj variable. If too large, the gradient can deviate from the optimum solution; if taken too small can require a large number of iterations. The choice of θ was done using a brute-force grid search to find reasonable values.
+4) Overall Performance Analysis: To the best of our knowledge, the proposed MP-XOR-SAT solver is the fastest bit-flipping formulation in terms of code iterations and error rates compared to the Sum-Product algorithm. However, it must be noted that NOMS is a much faster algorithm in terms of the number of code iterations if we consider the plethora of non-bit-flipping algorithms as well. Our survey is restricted to the bit-flipping type and summarizes the number of code iterations taken by different GDBF decoders in Table II along with an indicator if the decoder performs better than Belief Propagation (BP). AD-GDBF [19] and gAD-GDBF [21] do better than BP in 300 − 1000 iterations for the Binary Symmetric Channel and the AWGN channel, respectively.
+The simulations have also been performed for the quantization of the floating point operations to fixed point values. It can be concluded from Fig. 8 that the performance superiority of the proposed algorithm over state-of-the-art bit-flipping and belief propagation algorithms holds despite the quantization.
+
+B. Objective Function
+
+As has been mentioned earlier, the nature of the proposed algorithm based on XOR-SAT solvers has a close resemblance with Gradient Descent Bit Flipping algorithms. Gradient Descent Bit Flipping (GDBF) algorithms have been under exploration for almost two decades, and quite naturally, there are multiple variations while trying to achieve better performance with reduced complexities. In general, the entire plethora of these algorithms can be generalized. For the energy associated with the jth variable, we write a generalized equation (21), where α is a scaling weight and ξ(·) is a function as in [9], [11], [13], [18], and [19] or form of the received signal xj [17]. The term λj can be a random variable [13] or function (momentum in [18]).
+
+E(xj) = αxjrj +
+
+ξ(·) + λj
+
+(21)
+
+i∈M(j)
+
+When the parameters α, ξ(·), and λj take various values, we get different variations of GDBF. For the basic GDBF [9], α = 1, ξ(·) = j∈N(i) xj and λj = 0. Here, the notation N (i) ≜ {j ∈ [1, N ] : hij = 1} denotes the parity-check neighborhood, i.e., the set of variable nodes associated with the ith check node. Table II summarizes the literature on Gradient Descent Bit Flipping algorithms. It can be clearly observed that works dealing with the AWGN channel output have to solve the product of the output channel, while the ones using BSC take the summation of the hard decision output, clearly indicating the complexity increase in the case of AWGN decoders.
+The scaling factor α is chosen differently in different works and cannot be generalized. The term λj has a large diversity ranging from random samples to momentum functions. The energy function of this work, however, cannot be directly analyzed by the above form. It can be visualized to be
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:37:52 UTC from IEEE Xplore. Restrictions apply.
+
+NANDI et al.: MARGIN PROPAGATION BASED XOR-SAT SOLVERS FOR DECODING OF LDPC CODES TABLE III
+WORST-CASE ALGORITHMIC COMPLEXITY ANALYSIS PER ITERATION
+TABLE IV HARDWARE COMPLEXITY ANALYSIS PER ITERATION
+
+4599
+
+the maximization of the difference between the logarithm of energy functions of satisfying clauses and the dissatisfied ones, as seen from the form of Hlog(q, H). The functions of both these complimentary clauses are of the form mentioned in equation (21). The appropriate parameters for these functions are mentioned in Table II.
+
+C. Computational Complexity Analysis
+Algorithm 2 is iterative, as is the Sum-Product and the MinSum algorithm. The maximum number of iterations in these algorithms is bounded by a pre-determined constant value Imax. Thus, we report the computational complexity of the segment within the iterative process in Table III. We analyze Algorithm 2 as follows: Classifying clauses in lines 20−21 has a complexity of O(ρ) because ρ scalar multiplications are needed. Here ρ < N is the row weight of the H matrix.
+The code segment from lines 27 − 36 is an iterative process running for M iterations. Each iteration presents an accumulation operation having ρ additions. The remaining lines in this code snippet have O(1) complexity. Hence, the complexity of this segment is O(ρM ).
+The MP function works on the principles of the reverse water-filling algorithm. Thus, the complexity of the MP function is dominated by a sorting function with maximum M inputs. Hence, the complexity is given by O(M logM ).
+The complexity of line 46 is given by O(γ), where γ is the column weight. This statement lies within an iterative block that runs N times. Thus, the complexity of the segment between lines 40 − 47 is O(γN ).
+The MP function thus dominates the algorithm’s complexity. Hence the complexity of the proposed algorithm is O(M logM ).
+The Sum-Product algorithm has a complexity of O(ρ2M ) + O(γN ) + O(γ2N ), as per the algorithm reported in [8]. The check node processing contributes O(2ρ2M ); the variable node processing contributes O(γ2N ), and the decision is given by O(γN ). As for a Min-Sum algorithm, the check node processing computes a min(·) operation, which has a complexity of O(n) for n entries. The SC-MS [37] algorithm is a slight modification of the traditional Min-Sum algorithm with operations having an order of complexity O(1). Thus, the
+
+Fig. 10. The computational complexity plot with respect to Average Number of Iterations for PEG code having N γ = 6048, EG-LDPC code having N γ = 32736 and the IEEE 802.3 code having N γ = 65536.
+SC-MS has a complexity O(2ρ2M ) + O(γN ) + O(γ2N ). We report the complexity of the NOMS algorithm with reference to [41], and that of gAD-GDBF from the algorithm reported in [21].
+The order of complexity of some state-of-the-art algorithms is reported in Table III. The order of complexity is O(.)NOMS > O(.)SC−MS ≥ O(.)SP A > O(.)MP −XOR−SAT > O(.)gAD−GDBF .
+The average number of iterations for the Sum-Product algorithm, SC-MS, and the proposed algorithm are reported in Fig. 10 for the (1008, 504) PEG, (1023, 781) EG-LDPC and the (2048, 1723) IEEE 802.3 codes. The average number of iterations follows the theoretical complexity i.e. O(.)SC−MS ≥ O(.)SP A ≥ O(.)MP −XOR−SAT .
+It may be noted that the O(·) notation is used for asymptotic analysis. For all these examples, the code lengths N , the number of clauses M , and their sparsity denoted by ρ and γ highly influence their computational complexity. For instance, the degree of variable node γ = 3 in the PEG code having N = 1008, while in the case of an EG-LDPC code N = 1023 and γ = 32. Thus, even though the code lengths of both these codes are of the same order, the degree of the node greatly influences the runtime, as can be seen from Fig. 10.
+D. Hardware Complexity Analysis
+There are many different Gradient Descent Bit Flipping algorithms as described in Table II. However, we limit our analysis to recent Gradient Descent Bit Flipping algorithms
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:37:52 UTC from IEEE Xplore. Restrictions apply.
+
+4600
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 73, NO. 7, JULY 2025
+
+and those that have considered soft decision decoding with the AWGN channel in the past and summarize it in Table IV. It is clear from Table II that the algorithms dealing with AWGN channels are far more complex due to their multiplicative nature than the ones dealing with BSC channels, as seen for [17], [19].
+The proposed objective function is modeled to function on the logarithmic values of the channel output, thus eliminating the use of complex computations like multiplication and division, unlike the others. However, there is an added overhead of the number of additions, which is much simpler than multiplication. There is also a drastic decrease in the number of comparators as compared to the others. Given that the proposed formulation computes the variable bits using summation, the XOR gates are only required to identify which check clauses satisfy and which check clauses dissatisfy the constraints. Thus, M (ρ − 1) 2−input XOR gates are required.
+The other overhead is of the MP function, which, however, is a two-transistor block for a single input [25]. The output is analog and, if designed in the current domain, can eliminate the need for any circuit to implement the additions. This analysis shows that implementing this in the analog or mixed signal domain can yield tremendous advantages in power and area of the circuit; however, this will be addressed in future.
+VII. CONCLUSION
+In summary, this paper introduces a novel low-complexity soft decision Margin Propagation-based XOR-SAT solver, which can be used for LDPC decoding. The algorithm, sharing similarities with Gradient Descent Bit Flipping methods, is thoroughly examined regarding its objective function, which maximizes the clauses satisfying the constraints. After extensive analysis, it can be observed that most of the earlier decoding algorithms were one or the other form of the original GDBF algorithm proposed by Wadayama et al. in [9]. However, the objective function of the proposed work has a different form and leads to faster convergence of the code words, i.e., 10× lesser code iterations than the GDBF decoders in literature. Results from decoding performance simulations on an AWGN channel demonstrate the algorithm’s competitiveness with the Sum-Product Algorithm, with Bit and Frame Error rates within 0.1dB while taking the same number of code iterations. Despite quantization of the input, the proposed algorithm’s performance stands superior to the performance of the state-of-the-art bit flipping and the different flavours of the BP algorithm. The order of complexity of the proposed algorithm is lesser than the belief propagation but higher than the state-of-the-art gradient descent bit-flipping algorithm, but can be optimized by an equivalent analog hardware implementation. The hardware complexity analysis highlights the algorithm’s efficiency, especially in terms of reduced multiplication operations and comparators, suggesting its potential for implementation in the analog or mixed-signal domain. In conclusion, the XOR-SAT solver-based decoding algorithm presents a promising hardware-aware solution for efficient LDPC decoding. Future work will focus on practical implementations in the analog domain and further optimizations to enhance its feasibility for chip design.
+
+ACKNOWLEDGMENT
+The authors would like to acknowledge the joint memoran-
+dum of understanding (MoU) between IISc and WashU which
+facilitated faculty and student collaboration between the two
+institutions.
+REFERENCES
+[1] R. G. Gallager, “Low-density parity-check codes,” IRE Trans. Inf. Theory, vol. 8, no. 1, pp. 21–28, Jan. 1962.
+[2] A. McGregor and O. Milenkovic, “On the hardness of approximating stopping and trapping sets,” IEEE Trans. Inf. Theory, vol. 56, no. 4, pp. 1640–1650, Apr. 2010.
+[3] K. M. Krishnan and P. Shankar, “Computing the stopping distance of a Tanner graph is NP-hard,” IEEE Trans. Inf. Theory, vol. 53, no. 6, pp. 2278–2280, Jun. 2007.
+[4] I. Dumer, D. Micciancio, and M. Sudan, “Hardness of approximating the minimum distance of a linear code,” IEEE Trans. Inf. Theory, vol. 49, no. 1, pp. 22–37, Jan. 2003.
+[5] A. Vardy, “Algorithmic complexity in coding theory and the minimum distance problem,” in Proc. 29th Annu. ACM Symp. Theory Comput. (STOC), May 1997, pp. 92–109.
+[6] W. Xu and B. Hassibi, “On the complexity of exact maximum-likelihood decoding for asymptotically good low density parity check codes: A new perspective,” in Proc. IEEE Inf. Theory Workshop, Sep. 2007, pp. 150–155.
+[7] L. Shu, Error Control Coding. India: Pearson Education, 2011. [8] S. J. Johnson, Iterative Error Correction: Turbo, Low-Density Parity-
+Check and Repeat-Accumulate Codes. Cambridge, U.K.: Cambridge Univ. Press, 2009. [9] T. Wadayama, K. Nakamura, M. Yagita, Y. Funahashi, S. Usami, and I. Takumi, “Gradient descent bit flipping algorithms for decoding LDPC codes,” IEEE Trans. Commun., vol. 58, no. 6, pp. 1610–1614, Jun. 2010. [10] H. Mostafa, L. K. Müller, and G. Indiveri, “An event-based architecture for solving constraint satisfaction problems,” Nature Commun., vol. 6, no. 1, pp. 1–10, Dec. 2015, Art. no. 8941, doi: 10.1038/ncomms9941. [11] R. Haga and S. Usami, “Multi-bit flip type gradient descent bit flipping decoding using no thresholds,” in Proc. Int. Symp. Inf. Theory Appl., Oct. 2012, pp. 6–10. [12] T. Phromsa-Ard et al., “Improved gradient descent bit flipping algorithms for LDPC decoding,” in Proc. 2nd Int. Conf. Digit. Inf. Commun. Technol. Appl. (DICTAP), May 2012, pp. 324–328. [13] G. Sundararajan, C. Winstead, and E. Boutillon, “Noisy gradient descent bit-flip decoding for LDPC codes,” IEEE Trans. Commun., vol. 62, no. 10, pp. 3385–3400, Oct. 2014. [14] O. A. Rasheed, P. Ivaniš, and B. Vasic´, “Fault-tolerant probabilistic gradient-descent bit flipping decoder,” IEEE Commun. Lett., vol. 18, no. 9, pp. 1487–1490, Sep. 2014. [15] F. Ghaffari and B. Vasic, “Probabilistic gradient descent bit-flipping decoders for flash memory channels,” in Proc. IEEE Int. Symp. Circuits Syst. (ISCAS), May 2018, pp. 1–5. [16] H. Cui, J. Lin, S. Song, and Z. Wang, “A new probabilistic gradient descent bit flipping decoder for LDPC codes,” in Proc. IEEE Int. Symp. Circuits Syst. (ISCAS), May 2019, pp. 1–5. [17] H. Cui, J. Lin, and Z. Wang, “Information storage bit-flipping decoder for LDPC codes,” IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 28, no. 11, pp. 2464–2468, Nov. 2020. [18] V. Savin, “Gradient descent bit-flipping decoding with momentum,” in Proc. 11th Int. Symp. Topics Coding (ISTC), Aug. 2021, pp. 1–5. [19] S. Brkic, P. Ivaniš, and B. Vasic, “Adaptive gradient descent bitflipping diversity decoding,” IEEE Commun. Lett., vol. 26, no. 10, pp. 2257–2261, Oct. 2022. [20] E. Boutillon, C. Winstead, and F. Ghaffari, “The syndrome bit flipping algorithm for LDPC codes,” IEEE Commun. Lett., vol. 27, no. 7, pp. 1684–1688, Jul. 2023. [21] J. Milojkovic´, S. Brkic, P. Ivaniš, and B. Vasic´, “Learning to decode linear block codes using adaptive gradient-descent bit-flipping,” in Proc. 12th Int. Symp. Topics Coding (ISTC), Sep. 2023, pp. 1–5. [22] S. Chakrabartty, “Design and implementation of ultra-low power pattern and sequence decoders,” Ph.D. dissertation, Dept. Elect. Comput. Eng., Johns Hopkins Univ., Baltimore, MD, USA, 2004. [23] M. Gu, “Theory, synthesis and implementation of current-mode CMOS piecewise-linear circuits using margin propagation,” Ph.D. dissertation, Dept. Elect. Eng., Michigan State Univ., East Lansing, MI, USA, 2012.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:37:52 UTC from IEEE Xplore. Restrictions apply.
+
+NANDI et al.: MARGIN PROPAGATION BASED XOR-SAT SOLVERS FOR DECODING OF LDPC CODES
+
+4601
+
+[24] P. Kucher and S. Chakrabartty, “An energy-scalable margin propagationbased analog VLSI support vector machine,” in Proc. IEEE Int. Symp. Circuits Syst., May 2007, pp. 1289–1292.
+[25] M. Gu and S. Chakrabartty, “Synthesis of bias-scalable CMOS analog computational circuits using margin propagation,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 59, no. 2, pp. 243–254, Feb. 2012.
+[26] M. Gu and S. Chakrabartty, “An adaptive analog low-density paritycheck decoder based on margin propagation,” in Proc. IEEE Int. Symp. Circuits Syst. (ISCAS), May 2011, pp. 1315–1318.
+[27] A. R. Nair, P. K. Nath, S. Chakrabartty, and C. S. Thakur, “Multiplierless MP-kernel machine for energy-efficient edge devices,” IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 30, no. 11, pp. 1601–1614, Nov. 2022.
+[28] K. Rashed, A. Undavalli, S. Chakrabartty, A. Nagulu, and A. Natarajan, “12.3 a scalable and instantaneously wideband 5GS/s RF correlator based on charge thresholding achieving 8-bit ENOB and 152 TOPS/W compute efficiency,” in Proc. IEEE Int. Solid-State Circuits Conf. (ISSCC), Feb. 2024, pp. 222–224.
+[29] P. Kumar, A. Nandi, S. Chakrabartty, and C. S. Thakur, “Process, bias, and temperature scalable CMOS analog computing circuits for machine learning,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 70, no. 1, pp. 128–141, Jan. 2023.
+[30] P. Kumar, A. Nandi, S. Chakrabartty, and C. S. Thakur, “Bias-scalable near-memory CMOS analog processor for machine learning,” IEEE J. Emerg. Sel. Topics Circuits Syst., vol. 13, no. 1, pp. 312–322, Mar. 2023.
+[31] M. Gu and S. Chakrabartty, “A 100 pJ/bit, (32,8) CMOS analog lowdensity parity-check decoder based on margin propagation,” IEEE J. Solid-State Circuits, vol. 46, no. 6, pp. 1433–1442, Jun. 2011.
+[32] A. Nandi, P. Kumar, S. Chakrabartty, and C. S. Thakur, “Margin propagation based analog soft-gates for probabilistic computing,” in Proc. 37th Int. Conf. VLSI Design 23rd Int. Conf. Embedded Syst. (VLSID), Jan. 2024, pp. 378–383.
+[33] B. Molnár, F. Molnár, M. Varga, Z. Toroczkai, and M. Ercsey-Ravasz, “A continuous-time MaxSAT solver with high analog performance,” Nature Commun., vol. 9, no. 1, p. 4864, Nov. 2018.
+[34] S. Chakrabartty and G. Cauwenberghs, “Gini support vector machine: Quadratic entropy based robust multi-class probability regression,” J. Mach. Learn. Res., vol. 8, no. 30, pp. 813–839, May 2007.
+[35] O. Chatterjee and S. Chakrabartty, “Decentralized global optimization based on a growth transform dynamical system model,” IEEE Trans. Neural Netw. Learn. Syst., vol. 29, no. 12, pp. 6052–6061, Dec. 2018.
+[36] M. Gu, K. Misra, H. Radha, and S. Chakrabartty, “Sparse decoding of low density parity check codes using margin propagation,” in Proc. IEEE Glob. Telecommun. Conf., Aug. 2009, pp. 1–6.
+[37] V. Savin, “Self-corrected min-sum decoding of LDPC codes,” in Proc. IEEE Int. Symp. Inf. Theory, Jul. 2008, pp. 146–150.
+[38] L. Lugosch and W. J. Gross, “Neural offset min-sum decoding,” in Proc. IEEE Int. Symp. Inf. Theory (ISIT), Jun. 2017, pp. 1361–1365.
+[39] GAD-GDBF/gAD-GDBF BCH 63 45 Matrix Decoders.txt At Main · Milojko94/gAD-GDBF—github.com. Accessed: Aug. 22, 2024. [Online]. Available: https://github.com/milojko94/gAD-GDBF/blob/main/gADGDBF_BCH_63_45_matrix_decoders.txt
+[40] D. MacKay. (2005). Encyclopedia of Sparse Graph Codes. [Online]. Available: http://www.inference.phy.cam.ac.uk/mackay/codes/ data.html
+
+[41] Neural-Min-Sum-Decoding/Main.py at Master · Lorenlugosch/NeuralMin-Sum-Decoding—github.com. Accessed: Aug. 22, 2024. [Online]. Available: https://github.com/lorenlugosch/neural-min-sum-decoding/ blob/master/main.py
+Ankita Nandi (Graduate Student Member, IEEE) received the B.Tech. degree from the National Institute of Technology (NIT) Meghalaya, India, in 2018, and the M.Tech. degree from Indian Institute of Technology (IIT) Gandhinagar, India, in 2020. She is currently pursuing the Ph.D. degree with the Department of Electronic Systems Engineering, Indian Institute of Science (IISc), Bengaluru, India. She was awarded the President’s Gold Medal and the Institute Gold Medal for her outstanding performance during the B.Tech. degree at NIT Meghalaya in 2018. She was a recipient of the Fulbright Nehru Doctoral Research Fellowship (2022–2023) and the Prime Minister’s Research Fellowship (2021).
+Shantanu Chakrabartty (Senior Member, IEEE) received the B.Tech. degree from Indian Institute of Technology, Delhi, in 1996, and the M.S. and Ph.D. degrees in electrical engineering from Johns Hopkins University, Baltimore, MD, USA, in 2002 and 2004, respectively. From 1996 to 1999, he was with Qualcomm Inc., San Diego, CA, USA. From 2004 to 2015, he was an Associate Professor with the Department of Electrical and Computer Engineering, Michigan State University (MSU), East Lansing, MI, USA. He is currently a Clifford W. Murphy Professor and the Vice-Dean of the Research and Graduate Education, McKelvey School of Engineering, Washington University in St. Louis, St. Louis, MO, USA. He was a Catalyst Foundation Fellow from 1999 to 2004 and a recipient of the National Science Foundation’s CAREER Award, the University Teacher-Scholar Award from MSU, and the 2012 Technology of the Year Award from MSU Technologies. He is a fellow of American Institute of Medical and he has previously served as the Associate Editor for IEEE TRANSACTIONS ON BIOMEDICAL CIRCUITS AND SYSTEMS.
+Chetan Singh Thakur (Senior Member, IEEE) received the M.Tech. degree from IIT Bombay, India, in 2007, and the Ph.D. degree in neuromorphic engineering from the MARCS Research Institute, Western Sydney University, in 2016. He was a Post-Doctoral Researcher with Johns Hopkins University, Baltimore, MD, USA, and a Senior IC Design Engineer with TI Singapore. In 2017, he joined IISc Bengaluru, and is currently an Associate Professor. His research interests include the computing principles of the brain and apply them to build intelligent VLSI systems. He received several awards, including the Pratiksha Trust Young Investigator Award, the Abdul Kalam Innovation Award from the INAE, and the Inspire Faculty Award for brain-inspired computing from DST, India.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:37:52 UTC from IEEE Xplore. Restrictions apply.
+
+

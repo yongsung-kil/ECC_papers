@@ -1,0 +1,2180 @@
+IEEE TRANSACTIONS ON SIGNAL PROCESSING, VOL. 59, NO. 6, JUNE 2011
+
+2943
+
+Construction and Hardware-Efficient Decoding of Raptor Codes
+Hady Zeineddine, Mohammad M. Mansour, Senior Member, IEEE, and Ranjit Puri
+
+Abstract—Raptor codes are a class of concatenated codes
+
+composed of a fixed-rate precode and a Luby-transform (LT)
+
+code that can be used as rateless error-correcting codes over
+
+communication channels. These codes have the atypical features
+
+of dynamic code-rate, highly irregular Tanner graph check-degree
+
+distribution, random LT-code structure, and LT-precode concate-
+
+nation, which render a hardware-efficient decoder implementation
+
+achieving good error-correcting performance a challenging task.
+
+In this paper, the design of hardware-efficient Raptor decoders
+
+with good performance is addressed through joint optimizations
+
+targeting 1) the code construction, 2) decoding schedule, and
+
+3) decoder architecture. First, random encoding is decoupled by
+
+developing a two-stage LT-code construction scheme that embeds
+
+structural features in the LT-graph that are amenable to effi-
+
+cient implementation while guaranteeing good performance. An
+
+LT-aware LDPC precode construction methodology that ensures
+
+architectural-compatibility with the structured LT code is also
+
+proposed. Second, a decoding schedule is optimized to reduce
+
+memory cost and account for processing workload-variability
+
+caused by the varying code rate. Third, to address the problems of
+
+check-degree irregularity and hardware underutilization, a novel
+
+reconfigurable check unit that attains a constant throughput while
+
+processing a varying number of LT and LDPC nodes is presented.
+
+These design steps collectively are employed to generate serial and
+
+partially-parallel decoder architectures. A Raptor code instance
+
+constructed using the proposed method having LT data-block
+
+length of 1210 is shown to outperform or closely match the per-
+
+formance of conventional LDPC codes over the code-rate range
+
+[0 4
+
+2 3
+
+].
+
+The
+
+corresponding
+
+hardware
+
+serial
+
+decoder
+
+is
+
+synthe-
+
+sized using 65-nm CMOS technology and achieves a throughput
+
+of 22 Mb/s at rate 0.4 for power of 222 mW at 1.2 V,
+
+a BER of 10 and occupies
+
+6, an
+
+adriesasiopfa1te.7s7amn mav2e.rage
+
+Index Terms—Algorithms, code construction, decoder architecture, iterative decoding, low-density parity-check codes, raptor codes, rate-less.
+
+I. INTRODUCTION
+A Raptor code is constructed by concatenating a fixed-rate precode to a rateless LT-code [1], [2]. The code is therefore rateless and its “rate” is determined on a frame-by-frame
+Manuscript received June 23, 2010; revised December 15, 2010; accepted February 02, 2011. Date of publication February 14, 2011; date of current version May 18, 2011. The associate editor coordinating the review of this manuscript and approving it for publication was Prof. Warren J. Gross.
+H. Zeineddine and M. M. Mansour are with the Department of Electrical and Computer Engineering, American University of Beirut, Beirut 1107 2020, Lebanon (e-mail: hma41@aub.edu.lb; mmansour@aub.edu.lb).
+R. Puri is with the Microsoft Corporation, Redmond, WA 98052 USA (e-mail: rpuri@microsoft.com; website: http://www.aub.edu.lb/~mm14/).
+Color versions of one or more of the figures in this paper are available online at http://ieeexplore.ieee.org.
+Digital Object Identifier 10.1109/TSP.2011.2114655
+
+basis or even changed for the same frame, upon a decoding failure. Similar to other rateless codes, Raptor codes were initially designed to operate on binary erasure channels (BECs). In a BEC [3], a code symbol is either erased with an erasure probability or received correctly by the receiver. This behavior is an adequate model for packet transmission over computer networks, where a corrupted or un-received packet is considered an erased symbol. Through coding, the erased packets in the frame can be recovered by applying erasure-correcting decoding on its received/unerased symbols. Thus, coding is advantageous when compared to the acknowledgement-based protocols, especially under poor channel conditions or upon transmission from one server to multiple recipients. By using rateless codes over the varying channels, the common problem of over- or underestimating the channel loss rate, in fixed-rate erasure coding, is avoided [2].
+LT-codes [1] constitute a class of rateless codes, in which ( being potentially any value ) output symbols are produced randomly and independently according to a degree distribution. A decoding algorithm is then applied at the receiver side to recover the input symbols from the output symbols. The LT-decoder is efficient in terms of the block-size required to have a decoding success with high probability. The main drawback of LT codes is that, for vanishing error probability over erasure channels, the average degree of the output symbols grows logarithmically with the number of input symbols (when is close to ). This makes it hard to design a linear-time encoder and decoder for LT codes [2], [4].
+Raptor codes [2] are an extension of LT-codes specifically targeted to solve the problem of nonlinear-time encoding and decoding. In Raptor codes, the input symbols are encoded using a fixed-rate code prior to LT encoding. Raptor codes solve the transmission problem over an unknown erasure channel in an almost optimal manner [2].
+The application of LT/Raptor codes over binary-input memoryless symmetric channels was studied in [4] and [5], with emphasis on the theoretical behavior and the design and analysis of check-degree distributions in [4]. In these codes, the symbols are bits not packets. The rateless nature of Raptor codes leads to a dynamic coding performance which can be viewed as an application metric rather than simply as a design parameter. It provides flexibility in making time-dependent optimal tradeoffs among transmission time, bandwidth, and power. In addition, it allows the development of efficient methods/protocols to deal with a decoding failure, where overcoming such a failure is simply achieved by sending additional bits (i.e., by instantaneously decreasing the rate). These characteristics can be advantageous in the case of rapidly changing environments, such as ad hoc networks, multiuser communication channels and channels
+
+1053-587X/$26.00 © 2011 IEEE Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:02:14 UTC from IEEE Xplore. Restrictions apply.
+
+2944
+
+IEEE TRANSACTIONS ON SIGNAL PROCESSING, VOL. 59, NO. 6, JUNE 2011
+
+where noise levels are not known a priori to the sender. The precode is needed to attain high code minimum distance and thus avoid error floors at relatively high bit-error rates (BERs).
+LT codes can be efficiently decoded using the iterative two-phase message-passing algorithm (TPMP), typically used in LDPC decoding [6]. If the fixed-rate precode is an LDPC code, applying the TPMP algorithm on the concatenated code (LT and LDPC) yields significantly better decoding performance than applying a two-stage decoding process [7]. In addition, joint coding results in lesser average number of LT-decoding iterations due to better stopping criteria and enables utilizing the same hardware resources for LT and LDPC decoding. This motivates the need for a hardware-efficient decoder architecture for Raptor codes, having LDPC as precode.
+The peculiar features of Raptor codes impose serious challenges when it comes to a hardware efficient decoder implementation. These features include varying code rate, random LT-encoding, variable check-degree distribution, and joint decoding of the LT code and LDPC precode. These irregularity and randomness features lead to low resource utilization, high control overhead, complex data movement patterns, in addition to stringent memory requirements, thus resulting in a highly inefficient decoder implementation.
+In this paper, a class of decoders for Raptor codes that are efficient in terms of both hardware complexity and algorithmic error-correcting performance is proposed. To address the problems of random encoding, indeterministic rate, variable degree distribution and LDPC-LT architectural compatibility, the proposed method involves decoder design and optimizations at three different levels, namely, code construction, decoding procedure and decoder architecture. First, a two-stage LT-code construction method that yields short-cycle free LT codes, decouples code structuring from random encoding and allows LT-LDPC-compatible design is proposed. Moreover, a replication technique to construct girth-8 structured LT-graphs is developed. A method to construct a class of 4-cycle-free LDPC codes that are LT-compatible is also presented and a subset of this class, obtained by row merging, is shown to yield 4-cycle-free Raptor codes. Second, serial and partially parallel memory-aware decoding schedules to jointly decode both LDPC and LT codes are proposed along with the corresponding architectures. Third, three novel reconfigurable check-node unit designs, corresponding to three different message update algorithms, are developed to process messages corresponding to irregular check-degrees at a constant throughput.
+Making use of the above optimizations, the decoding procedure can then mapped into row processing of a regular matrix. The decoding schedule hence is made simple, regular and identical across both LT and LDPC codes. The problems related to hardware utilization, stringent memory requirements and interconnect complexity, are largely resolved. The constructed codes preserve a good error-correcting performance over low to medium rates. An instance code constructed using the proposed method, outperforms randomly-built rate-0.4 (3,5) LDPC codes and closely matches with LDPC codes defined in IEEE 802.16 PHY-layer [8] at rates and , for BERs as low as . Hardware simulations show that at BERs as low as , the serial decoder implementation achieves a throughput of 20 Mb/s, has an area of 1.7 mm and dissipates average power of 222 mW at 1.2-V supply voltage.
+
+The remainder of the paper is organized as follows. Section II describes Raptor codes and their decoding algorithm. Moreover, it presents an overview of the challenges for hardware efficient decoder implementations and the proposed solutions to tackle them. Architecture-aware LT-code and LDPC precode construction techniques are presented in Section III. In Section IV, serial and partially-parallel decoder architectures, in addition to the reconfigurable check function unit design, are proposed. Section V presents hardware simulation results for the resulting serial architecture, and Section VI concludes the paper.
+
+II. RAPTOR CODES
+A Raptor code is composed of a fixed rate precode concatenated with a rateless LT-code [2]. The LT-code has a minimum distance that is bounded by the minimum bit-node degree and hence, exhibits an error floor at relatively high BERs. The precode is, thus, needed to attain high code minimum distance and avoid high-BER error floors.
+
+A. Encoding
+
+Given a frame of data bits, the encoding process is done
+
+in two stages. First, the frame is encoded using a fixed precode
+
+into a new frame of bits. Next, the -bit encoded frame is
+
+re-encoded with an LT-code to generate
+
+output bits,
+
+for some dynamically determined code rate . Each output bit
+
+in the LT-code frame is generated independently as follows. A
+
+predesigned distribution on the integers
+
+, is sam-
+
+pled to obtain an integer , called the output degree, then bits
+
+of the -bit frame are chosen at random and their modulo-2
+
+sum (XOR) is transmitted. The design of the distribution is
+
+crucial for the resulting code to yield good error-correcting per-
+
+formance.
+
+Similar to LDPC codes [6], an LT-code can be represented
+
+by a bipartite (Tanner) graph [9] with variable (or bit) nodes
+
+representing the input bits on one side and check nodes rep-
+
+resenting the output bits on the other (see Fig. 1). An edge exists
+
+between check-node and bit-node if bit is an input to the
+
+XOR whose output is check-node . In this case, nodes and
+
+are said to be neighbors. The degree of a node , denoted by
+
+, is the number of edges connected to it. If all nodes in both
+
+partitions of the graph have the same degree, the graph (code)
+
+is called regular, otherwise it is irregular. The girth is defined
+
+to be the minimum cycle-length in the graph.
+
+An LT-code can be equivalently represented by an
+
+matrix
+
+, where
+
+if bit-node is connected
+
+to check-node and 0 otherwise. The Hamming weight of a
+
+row or column vector in is defined as the number of nonzero
+
+entries in the vector. If the precode is an LDPC code, the Raptor
+
+code can be represented by a bipartite graph with the check-node
+
+partition composed of LT and LDPC check nodes as shown in
+
+Fig. 1.
+
+B. Decoding
+A Raptor code can be decoded using Gallager’s TPMP algorithm used for LDPC codes [6], where two types of messages are exchanged between bit-nodes and check-nodes in an iterative manner. Let be the intrinsic channel reliability value of the tdh check-node, CTB the check-to-bit message from check-node to bit-node at iteration and BTC the bit-tocheck message from bit-node to check-node at iteration .
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:02:14 UTC from IEEE Xplore. Restrictions apply.
+
+ZEINEDDINE et al.: CONSTRUCTION AND HARDWARE-EFFICIENT DECODING OF RAPTOR CODES
+
+2945
+
+G H G H Fig. 1. Bipartite graph and parity-check matrix of a Raptor code. A length-4 cycle is highlighted on and .
+
+We denote by the index set of the check-node neighbors of
+
+bit-node (so
+
+and by the index set of the
+
+bit-node neighbors of check-node (so
+
+). We use
+
+the notation
+
+to denote the
+
+vector of check
+
+messages to bit-node at iteration and
+
+to denote all
+
+vectors
+
+of check messages at iteration .
+
+and
+
+are similarly defined. For simplicity, we drop the
+
+subscripts and iteration index when the context is clear or
+
+when arbitrary nodes are considered. The decoding algorithm is
+
+described as follows:
+
+1) At iteration
+
+:
+
+Phase 1 Compute for each bit-node the message
+
+BTC to every check-node
+
+according to
+
+BTC
+
+CTB
+
+(1)
+
+with initial conditions BTC
+
+for
+
+and
+
+.
+
+Phase 2 Compute for each check-node , the message
+
+CTB to every bit-node
+
+:
+
+• If node is an LT check-node, then [see (2), shown
+
+at the bottom of the page].
+
+• If node is an LDPC check-node, then
+
+CTB
+
+BTC
+
+BTC
+
+(3)
+
+where
+
+and
+
+is the sign
+
+of .
+
+2) Decision phase: At the final iteration , bit is set to 0 or
+
+1 according to the sign of
+
+CTB .
+
+Decoding is terminated when either the maximum number of decoding iterations is reached or when the decoded bits satisfy all the check-constraints of the LDPC precode. Using the latter stopping criterion in joint decoding results in a lesser average number of iterations per frame than in the case of two-stage decoding where the LT-decoding stage needs a constant number of iterations.
+The code construction method, from a coding point of view, must generate codes that have high girth and minimum distance, or more generally minimize the number of short cycles and low-weight codewords. Short cycles in a bipartite graph create high correlations between supposedly independent messages, which prevent suboptimal iterative decoding from converging to maximum likelihood decoding (MLD) or near-MLD performance. The existence of low-weight codewords on the other hand degrades the code’s algorithmic performance and causes error floors at relatively high signal-to-noise ratios (SNRs).
+C. Overview of Decoder Architectures
+In principle, LT and LDPC codes have similar decoding algorithms and hence their decoders share many similarities. The iterative decoder architecture, shown in Fig. 2, is composed of three main components: 1) A check-node processor composed of a number of check function units (CFUs) that compute check-to-bit messages (serially or in parallel), 2) a bit-node processor composed of a number of bit function units (BFUs) that compute bit-to-check messages, and 3) a network that communicates messages between the check and bit-node processors. Message communication can be done through a complex interconnect that mimics the graph topology in a parallel architecture and/or through memory in a serial or partially-parallel architecture.
+The design and implementation of LDPC decoders have been studied extensively in the literature (e.g., [10]–[17]). Several challenges were resolved to obtain efficient decoders. One of
+
+CTB
+
+BTC
+
+;
+
+BTC
+
+.
+
+(2)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:02:14 UTC from IEEE Xplore. Restrictions apply.
+
+2946
+
+IEEE TRANSACTIONS ON SIGNAL PROCESSING, VOL. 59, NO. 6, JUNE 2011
+
+Fig. 2. An iterative decoder architecture overview. The interconnect network communicates t messages per clock cycle in either direction.
+these challenges is the randomness of the LDPC code structure leading to very complex interconnect in case of parallel architecture and high memory overhead in serial and partially parallel architectures. Other challenges include the high complexity of the check-to-bit message update, the performance degradation due to quantization and the decoding convergence speed. To solve the code randomness problem, several classes of structured codes, such as quasi-cyclic (QC) [18] and AA- [10] codes, were introduced. In general, the parity-check matrices of such codes are composed of zero and permutation matrices. While these codes have their algorithmic performance comparable to that of randomly built codes for short to moderate block lengths, their structure simplifies memory partitioning and access and significantly reduces the interconnect complexity. Consequently, instances of quasi-cyclic codes were deployed in several systems, including IEEE standard 802.16e [8]. A convergence speedup by a factor of nearly 2, in addition to significant memory savings, were obtained by applying a turbo-decoding message-passing (TDMP) algorithm [19]. In the TDMP algorithm, the neighboring bit posterior probabilities are updated upon the processing of each check node and the updated values are used in the following check-to-bit message computations of the same iteration. The layered structure of the deployed AA and QC codes makes the application of TDMP hardware-efficient. Two main check-message update algorithms were proposed to simplify the check-node unit and avoid the need of computation. One is based on a simplified form of the BCJR algorithm [20] tailored to the trellis of a single parity-check code [10]. Another is the Min-Sum algorithm [21], [22], which degrades the performance but reduces substantially the check-node memory requirements [13], [14]. Collectively, these optimizations allowed for efficient high-throughput multi-mode/rate LDPC decoder implementations (e.g., [13]–[15], [23], and [24]).
+While similar to LDPC codes, Raptor codes have inherent features that render a direct application of the aforementioned optimizations for LDPC codes a nontrivial task and ultimately prohibit an efficient decoder implementation. These features and the proposed steps to tackle them are listed below.
+1. Dynamic code rate: The hardware resources of a parallel architecture will be highly underutilized when the code rate exceeds the minimum rate. This fact favors the implementation of serial or partially-parallel decoder architectures. The proposed decoding procedure stores only the check-to-bit messages and implements (1) in a serial manner similar to [19] and [25], cutting down memory cost and eliminating complications associated with irregular and variable bit-node degrees, caused nonexclusively by the code rateless nature.
+
+2. Input-bits random selection: This means that ( being the number of bit-to-check messages communicated each cycle) random locations of the bit-node memory are simultaneously accessed. Such stringent requirement would lead to prohibitively complex memory design and read/write networks. Similar to LDPC codes, irregular quasi-cyclic LT codes can be constructed to resolve the problem. Three issues, however, must be resolved to make this solution plausible. First, a design-related issue, is that the LT-matrix has to be redesigned with the variation of the rate and check degree distribution, possibly occurring in real time. Second, a storage-related issue, is that the shift-offsets and the locations of the nonzero submatrices of the LT-matrix must be stored for every code instance. In addition, due to the code structure, the degree distribution polynomial coefficients are quantized and the quantization step is set equal to the ratio of the permutation submatrix size to the block length. The proposed code construction method utilizes one quasi-cyclic source-matrix to pseudo-randomly generate all code instances via row-splitting, according to any given check-set distribution, as will be explained in Section III. This resolves, to a great extent, the design-related and storage issues. In the proposed method, the optimal check degree distribution is approximated to a check-set distribution; such an approximation does not have the same dependency on the permutation matrix size as is the case in the custom quasi-cycle code.
+3. Check-degree randomness and variable check-degree distribution: To attain a constant message-throughput, , under variable check degrees, reconfigurable CFUs capable of processing constant number of messages per cycle are utilized in the Raptor decoder architecture. Serial CFUs [13], [14], [23] are more power-efficient, since they involve less data movement and multiplexing and possess the appropriate flexibility to process variable-degree check nodes. However, their latency is proportional to the corresponding check-node degree, which is considerably high in the high-rate LDPC precode. In addition, the row-splitting transformation involves pseudorandom permutation of the communicated messages, which, in serial CFU processing, is either constrained or has extra latency and complexity compared to the case of parallel CFU processing. In partially parallel decoder architectures, this high latency results in idle time between subsequent iterations that is comparable to the decoding time. Therefore, reconfigurable parallel CFUs are utilized in the architecture, and three novel designs of CFUs implementing the conventional, BCJR, and Min-Sum algorithms are developed.
+4. LT-code and LDPC-precode architectural compatibility: Hardware reuse (i.e., memory, function units and interconnect) in both LT and LDPC decoding is made possible in this work by constructing high-rate LDPC codes that share the same structure with the LT-generating source matrix and have check nodes whose degrees are multiple of the maximum possible LT-node degree and whose bit-neighbors are evenly distributed as discussed in Section III. The reconfigurable CFUs are designed to process the LDPC check nodes in a quasi-serial manner, attaining a throughput of messages per cycle.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:02:14 UTC from IEEE Xplore. Restrictions apply.
+
+ZEINEDDINE et al.: CONSTRUCTION AND HARDWARE-EFFICIENT DECODING OF RAPTOR CODES
+
+2947
+
+Fig. 3. Random splitting of a row is done in two steps: 1) Random permutation of the nonzero entries and 2) sampling from the partition set to obtain the resulting row weights. For simplicity, sampling is performed here by reading the partition set in a circular fashion.
+
+The design steps mentioned above, targeted to resolve the
+
+3. For every row of , random sampling from
+
+challenges facing efficient Raptor decoder implementation, are
+
+is done according to . Denote the chosen set by
+
+discussed in the subsequent sections.
+
+. The row vector is then split
+
+III. ARCHITECTURE-AWARE RAPTOR CODE CONSTRUCTION
+
+The proposed method to construct architecture-aware Raptor
+
+codes is summarized by the following three steps:
+
+1) A structured source matrix is constructed to have high
+
+girth. This embeds favorable regularity features and guar-
+
+antees good girth properties in the LT-code formed by the
+
+random encoding process in Step 2.
+
+2) Pseudo-random row-splitting is applied on yielding the
+
+matrix . A rate LT-code, represented by the
+
+matrix , is obtained by selecting the first
+
+rows
+
+of .
+
+3) A code-construction methodology is applied to form a
+
+class of
+
+matrices which are struc-
+
+into rows, ,
+
+, such that
+
+and the Hamming weight of ,
+
+. Let the resulting matrix be . is
+
+formed by selecting the first rows of .
+
+Step 1 is beyond the scope of this work. One way to per-
+
+form the approximation in Step 2 is to minimize the weighted
+
+quadratic distance between
+
+and the check degree dis-
+
+tribution resulting from . Let
+
+be a
+
+ma-
+
+trix such that is the number of elements of value in di-
+
+vided by ( is th element of ). Then, the check degree
+
+distribution resulting from is . Finding the -vector
+
+can be formulated as the following quadratic opti-
+
+mization problem:
+
+turally identical to and describe 4-cycle-free LDPC
+
+graphs. A regular code from this class can be obtained by
+
+applying row-merging on . The resulting Raptor graph
+
+is 4-cycle-free and has rate
+
+.
+
+and
+
+The following subsections describe the above three steps and
+
+present BER simulation curves to demonstrate the effectiveness of the proposed codes.
+A. Row Splitting Transformation
+
+where
+
+is the diagonal matrix of weights such that
+
+is set proportional to the sensitivity of the preselected metric in
+
+Step 1 to a change in . This minimizes the deviation of this
+
+Random row splitting transforms a bipartite graph having metric from the optimal one due to the difference
+
+.
+
+constant check-degree into an LT-graph having a check-degree Steps 1 and 2 can involve an iterative co-design of and to
+
+distribution that is close to optimal, while still preserving the reach the best approximation, while having the quantization of
+
+underlying structure and girth properties of the initial graph. It distribution parameters compatible with the number of split
+
+is described by the following procedure:
+
+rows.
+
+Input: A matrix having uniform row weight of .
+
+One possible simple way to do the sampling in Step 3 is to
+
+Output: A
+
+matrix describing an LT-code. read sequentially a circular array of sets. These sets are chosen
+
+Procedure:
+
+to approximate the ideal distribution and thus can be easily
+
+1. Design an LT-check degree distribution , with reconfigured in hardware for arbitrary . The technique of row
+
+, that is optimal with respect to a prese- splitting is illustrated in Fig. 3.
+
+lected metric such as error correcting performance or Row-splitting is implemented in hardware by randomly per-
+
+convergence speed.
+
+muting the bit-to-check messages then applying check-node
+
+2. Approximate the check-degree distribution with a dis- processing by reconfiguring the CFU, having a constant
+
+tribution over the space of sets , having the prop- throughput of , according to the chosen set . Random
+
+erty that the elements of each set are positive integers sampling of the bit-node neighbors of a check node is now
+
+that sum to .
+
+distributed over two phases: the construction phase of and
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:02:14 UTC from IEEE Xplore. Restrictions apply.
+
+2948
+
+IEEE TRANSACTIONS ON SIGNAL PROCESSING, VOL. 59, NO. 6, JUNE 2011
+
+the row-splitting phase. The bit-node stringent memory require-
+
+ments can be relaxed, thus, by imposing a desired structure on
+
+. At the algorithmic level, the girth of the graph described
+
+by is preserved after row-splitting, as Lemma 1 states.
+
+Lemma 1: If the graph obtained by row splitting has a cycle
+
+of length , then the graph, prior to row splitting, has a cycle of
+
+length .
+
+Proof: Let
+
+be a cycle in the graph
+
+described by . Let
+
+be the node in the graph , de-
+
+scribed by , which gives node after row-splitting. If the
+
+edge
+
+exists in , then the edge
+
+exists in
+
+. Therefore,
+
+,
+
+is a path
+
+in and
+
+contains a cycle whose length is less than the
+
+length of path .
+
+B. Construction of the Source Matrix
+
+The structure and girth properties of the LT-graph are de-
+
+termined by constructing a graph described by . Matrix
+
+is constructed to have a quasi-cyclic structure composed of
+
+zero and shifted identity matrices. As is the case with LDPC de-
+
+coders, this allows for partitioning of the bit-node memory into
+
+one or two-port memory arrays where, in serial decoding, one
+
+message is read/written from each memory array per cycle and
+
+simplifies memory address generation. An example of such a
+
+matrix is the
+
+regular matrix
+
+, with
+
+(4)
+
+where is a design parameter and is the identity matrix
+
+cyclically shifted to the right by positions. When is prime,
+
+describes a 4-cycle-free graph. Similar to the case of quasi-
+
+cyclic codes, can be equivalently represented by using a
+
+smaller
+
+base matrix, where a zero submatrix in is
+
+replaced by a entry and a shifted identity matrix in is
+
+replaced by its shift value.
+
+The graph described by above is regular since both check
+
+and bit-nodes have degree . Irregular graphs, designated by
+
+irregular bit-degrees and constant check-degree , can be de-
+
+signed using the following procedure:
+
+1) Choose a set of pair-wise prime integers
+
+and set
+
+.
+
+2) For
+
+, construct a
+
+matrix by
+
+vertically stacking identity matrices of size .
+
+3) Form a
+
+matrix by horizontally appending the
+
+matrices
+
+and then retaining only the
+
+first rows from the resulting matrix.
+
+Fig. 4 illustrates an example of an irregular constructed
+
+using the above procedure for
+
+,
+
+,
+
+.
+
+Lemma 2: The resulting has regular check-node degree
+
+of and irregular bit-node degrees of
+
+or
+
+for
+
+. Moreover, describes a 4-cycle-free bipartite graph.
+
+Proof: Suppose a 4-cycle exists in and let and
+
+be the row indexes in corresponding to the check-nodes in
+
+the cycle. Then
+
+, such that
+
+,
+
+and
+
+, which is impossible by
+
+the pair-wise primality of and .
+
+1) Girth-Oriented Replication/Girth-8 LT-Code Construc-
+
+tion: The idea is to apply an additional replication step to a
+
+4-cycle free quasi-cyclic matrix, targeted to avoid length-6 cy-
+
+cles. Each node of the base graph is replicated into nodes,
+
+H Fig. 4. Irregular matrix for p = 3, p = 4, p = 5.
+
+forming a new “child” graph and each edge between
+
+bit-node and check-node in is replaced by edges be-
+
+tween the children nodes of and in , respectively. For-
+
+mally, the matrix , describing , is constructed using the
+
+following procedure.
+
+Input: A prime and a regular
+
+matrix
+
+identical to the matrix described in (4).
+
+Output: A
+
+matrix describing a girth-8 graph.
+
+Procedure: Replace every scalar entry in by a
+
+shifted identity matrix where
+
+; ,
+
+for
+
+. The resulting LT source matrix
+
+is given by
+
+.
+
+Theorem 1: The graph obtained from the graph replica-
+
+tion method has girth .
+
+Proof: See Appendix I.
+
+Replicating the number of block rows and columns allows
+
+for flexible construction of LT-aware LDPC codes having high
+
+check-degrees while still being 4-cycle-free. The choice of the
+
+shift offsets of , is targeted, along with avoiding 6-cycle, to
+
+allow constructing a subclass of 4-cycle free Raptor codes. Par-
+
+tially parallel decoding can be applied by processing rows of
+
+simultaneously, while incurring no extra control or sched-
+
+uling overhead. In the rest of this paper, matrix described
+
+here is used as a source matrix for LT-code construction.
+
+C. LT-Compatible Precode Construction
+
+The constructed LT-code has a minimum distance that, being
+
+upper bounded by the minimum bit-node degree, is . The
+
+concatenation of a precode with an LT code has an approxi-
+
+mately multiplicative effect on the codeword weights; a code-
+
+word in the precode of weight
+
+is mapped, with high
+
+probability, to a codeword of weight
+
+, with being
+
+the bit-node degree in the LT code.
+
+From an algorithmic performance perspective, the LDPC pre-
+
+code design is motivated by the need to avoid minimum cycles
+
+and low-weight codewords. At the architectural level, both LT
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:02:14 UTC from IEEE Xplore. Restrictions apply.
+
+ZEINEDDINE et al.: CONSTRUCTION AND HARDWARE-EFFICIENT DECODING OF RAPTOR CODES
+
+2949
+
+= 11 H 0 2 Fig. 5. Row merging for p
+
+.
+
+base is the p p base matrix of the matrix defined in (4).
+
+The Hamming weight of each row of is a multiple of
+
+, say and the 1-entries of the row are distributed evenly
+
+between the , -wide, blocks of the bit-node side. Hence,
+
+the 1-entries of each row can be partitioned into sets, each
+
+of size , having exactly one element in every bit-node block.
+
+The bit-to-check messages corresponding to each of the sets
+
+can then be accessed from bit-node memory in one clock cycle.
+
+Therefore, bit-memory access corresponding to one LDPC
+
+check-node will take clock cycles. Thus, no overhead exists
+
+0 = Fig. 6. Regular-to-irregular graph transformation in submatrix Q , for
+
+f0 1 3g = 7 = 0 ; ; , d
+
+and g . The nonzero entries corresponding to I in the
+
+first three rows are replaced by nonzero entries corresponding to I . Note that
+
+the column weight remains unchanged.
+
+in terms of the bit-node memory organization, being partitioned into blocks corresponding to the bit-node blocks and the interconnect network. The reconfigurable CFU is designed to process messages having check-degree in a quasi-serial
+
+manner, with a throughput of messages per cycle. Since both
+
+and are composed of -size submatrices, this scheme
+
+and LDPC decoding utilize the same hardware resources. There-
+
+fore, the LT-compatible precode is formed by the replication of
+
+a
+
+base matrix, using -sized submatrices, as follows:
+
+Input: A vector
+
+of values, where
+
+.
+
+Output: A
+
+matrix described by the base matrix
+
+, where row in has weight
+
+.
+
+Procedure: Graph-Replication Construction Technique
+
+Step 1: For
+
+:
+
+i. Construct a
+
+matrix
+
+such that
+
+1) describes a 4-cycle-free bipartite graph
+
+(with vertices on each side), 2) the weight of
+
+row in equals and 3) the code described
+
+by has no very-low-weight codewords (e.g.,
+
+).
+
+can be easily generalized to the partially-parallel decoding case.
+
+The LDPC code generated by the graph-replication technique
+
+is 4-cycle-free, but the resulting Raptor graph formed from the
+
+LT and LDPC graphs need not be. A subclass of these LDPC
+
+codes that yields a 4-cycle-free Raptor graph can be obtained
+
+directly from via a row-merging transformation, illustrated
+
+in Fig. 5, as follows:
+
+Procedure: Row Merging Transformation
+
+Step 1: Form a set of integers with maximum cardinality
+
+such that:
+
+i.
+
+.
+
+ii.
+
+, if
+
+, then the
+
+pair of elements
+
+is identical to the pair
+
+.
+
+Step 2: For
+
+:
+
+i. Form the matrix
+
+by adding modulo 2
+
+ii. Replace every 0-entry in with and
+
+the shifted identity matrices
+
+, for
+
+every 1-entry with the value
+
+, for
+
+, where is the th element of .
+
+.
+
+ii. Replace every 0-entry of with and every
+
+Step 2: Form a
+
+base matrix by vertically
+
+1-entry with the quantity
+
+, for
+
+.
+
+concatenating the matrices, for
+
+.
+
+Step 3: Form a
+
+LDPC base-matrix by
+
+Step 3: Return to Step 1.i and permute the rows of
+
+concatenating the matrices , for
+
+.
+
+, to avoid very-low minimum
+
+Step 4:
+
+, omit the rows from whose indexes
+
+distances in the code described by .
+
+are
+
+to form a
+
+Theorem 2: The graph , described by , is 4-cycle-free.
+
+matrix. Then omit the first columns. The
+
+Proof: See Appendix II.
+
+resulting matrix describes an LT source matrix.
+
+Besides being composed of -size submatrices, the con- Theorem 3: The graph , described by
+
+,
+
+structed precodes have another architecture-aware property. is 4-cycle-free.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:02:14 UTC from IEEE Xplore. Restrictions apply.
+
+2950
+
+IEEE TRANSACTIONS ON SIGNAL PROCESSING, VOL. 59, NO. 6, JUNE 2011
+
+Fig. 7. FER and BER versus SNR curves for rate-0.4 LDPC (LDPC ) and Raptor (RAP ) codes.
+
+Proof: See Appendix III.
+
+figurable CFU operation is needed to have the architecture suit-
+
+The Raptor code designed above has the following properties. able, as well, to irregular LDPC decoding. In addition, will
+
+Its precode has rate , check-degree . Its LT code has maximum check-degree
+
+and bit-degree be assumed to have
+
+columns, i.e., the first columns
+
+and maximum are omitted as indicated in the row merging transformation.
+
+bit-degree .
+
+1) Regular-to-Irregular Graph Transformation: The base D. Code Design Examples and Simulation Results matrix of the regular LDPC code obtained by row merging
+
+can be used as a starting point to design the base subma- In this section, the coding performance of Raptor codes con-
+
+trices of irregular 4-cycle-free LDPC precodes. This can structed using the proposed techniques is compared to that of
+
+be done by simply omitting positive-entries from the reg- conventional LDPC codes at rates 0.4, 0.5, and 0.66. An LT
+
+ular base matrix. However, if is small, the effect on the code instance with
+
+and
+
+is
+
+code’s minimum distance will be significant. Alternatively, the first constructed. For each rate, LT codes obtained by several
+
+row-weights of the submatrices , obtained from Step 2.i of partition-set arrays are compared and the array yielding the best
+
+the row merging method, can be changed via 1-entry substi- error-correcting performance is chosen. Table I shows the de-
+
+tutions across the matrix. This is done by picking an integer tails of the codes used. Both the regular and irregular LDPC
+
+that satisfies the following property:
+
+such precodes are 4-cycle-free and have a minimum distance of 6.
+
+that
+
+with
+
+, Only Raptor codes RAP and RAP containing regular precodes
+
+and
+
+:
+
+. Then, in subma- are 4-cycle-free. The irregular precode outperforms the regular
+
+trix
+
+, the 1-entries corresponding to
+
+precode at rate 0.66 and therefore was used there. Three met-
+
+can be interchangeably replaced by those of
+
+in a rics were used to evaluate the code performance: the bit-error
+
+column-per-column or row-per-row fashion. The result is an rate (BER), frame error rate (FER) and average number of it-
+
+irregular 4-cycle-free LDPC graph. This procedure is illustrated erations required for successful decoding, with a maximum of
+
+in Fig. 6. By applying identical row shuffling in and in the 100 iterations. The results are plotted in Figs. 7–9.
+
+submatrices of matrix [Section III-B-2)] that share The Raptor code outperforms the rate-0.4 LDPC code, com-
+
+the same bit-nodes with , a 4-cycle-free Raptor graph with pares favorably to the rate-0.5 LDPC code and unfavorably to
+
+irregular LDPC subgraph is obtained. However, the resulting the rate- LDPC codes. However, the relatively low minimum
+
+LT graph is not 6-cycle-free anymore.
+
+distance of the precode implies that an error floor would appear
+
+Only regular LDPC precodes are considered in the decoder at low error rates (at FER of
+
+or lower, or equivalently
+
+architecture discussed in the next section. However, minor mod- BER of ). To get error floors at lower rates, the precode
+
+ifications in the control, memory address generation and recon- has to be redesigned, or alternatively, is set to 13 (i.e., the next
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:02:14 UTC from IEEE Xplore. Restrictions apply.
+
+ZEINEDDINE et al.: CONSTRUCTION AND HARDWARE-EFFICIENT DECODING OF RAPTOR CODES
+
+2951
+
+Fig. 8. FER and BER versus SNR curves for rate-0.5 and rate-2=3 LDPC (LDPC ; LDPC ; LDPC ) and Raptor (RAP ; RAP ) codes.
+
+Fig. 9. Average number of iterations required until decoding convergence versus SNR for all codes in Table I. Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:02:14 UTC from IEEE Xplore. Restrictions apply.
+
+2952
+
+IEEE TRANSACTIONS ON SIGNAL PROCESSING, VOL. 59, NO. 6, JUNE 2011
+TABLE I PARAMETERS OF THE SIMULATED RAPTOR CODES AND LDPC CODES
+
+TABLE II NUMBER OF EDGES IN THE MATCHING RAPTOR AND LDPC TANNER GRAPHS
+
+prime after 11), therefore increasing the block length so that
+
+regular codes of minimum distance 8 can be obtained.
+
+The code structure affects the decoding throughput through
+
+two metrics, namely, the number of decoding iterations to con-
+
+verge to a valid codeword and the message processing workload
+
+required per iteration. The latter metric is directly related to the
+
+number of edges in the code graph (i.e., to the matrix sparsity).
+
+While comparable for rates 0.4 and 0.5, the average number
+
+of iterations in Raptor decoding is significantly higher than in
+
+LDPC decoding
+
+at rate . This is due to the nature of
+
+the LT code where the transmitted bits are modulo-2 sums of the
+
+bit values instead of the bit values themselves. For rate , the
+
+designed Raptor code requires 9 iterations to converge even in
+
+favorable channel conditions. The number of edges in the cor-
+
+responding LDPC and Raptor graphs, compared in Table II, in-
+
+dicate that the LDPC graphs are sparser by a factor of than
+
+their Raptor counterparts.
+IV. RAPTOR DECODER ARCHITECTURES Matrix can be viewed as a concatenation of
+
+, -deep
+
+0 Fig. 10. A serial Raptor decoder architecture. Parameter f in the intrinsic
+memory is < 1 and is chosen so that f p (p 1) is the maximum block-size (N ), or equivalently is the minimum achievable LT-code rate.
+
+layers; the precode, likewise, consists of -deep layers. The underlying layered structure of the code is convenient for applying vant in partially-parallel decoding. The proposed architectures the turbo decoding algorithm. If two layers are connected via in this paper, therefore, apply the TPMP decoding scheduling.
+
+a nonzero entry to a bit-node , the posterior reliability value of has to be updated upon processing the former of the two A. Serial Decoder Architecture
+
+layers, before being forwarded to the latter layer for processing. Fig. 10 illustrates the architecture of a serial decoder for
+
+An idle time is caused by this scheduling order, which sig- Raptor codes. The decoder processes the check-to-bit or
+
+nificantly affects the decoder throughput and constraints the bit-to-check messages corresponding to one row of per
+
+pipelining of the interconnect and computational units. This cycle. For a Raptor code composed of an LDPC precode of
+
+inconvenience is resolved, in LDPC decoding, by reordering check-degree and an LT code formed by row-splitting
+
+layers, block-columns or messages within the layers [26], or by rows of (or equivalently ), the serial decoder performs
+
+processing all layers, serially within each layer, in parallel and
+
+subiterations (one decoding iteration), as described
+
+adding offsets to submatrices shift values [15]. For serial LT de- next. For clarity of exposition, let
+
+be a submatrix of
+
+coding, layer reordering in , considered in row merging, can
+
+composed of the rows used to generate the LT graph,
+
+be done efficiently without affecting the bit-node degree distri- horizontally concatenated with the rows corresponding to
+
+bution, assuming the latency time is less than . The problem is the LDPC precode. The rows corresponding to each LDPC
+
+more involved in the precode decoding due to the small depth check-node are grouped into one block row.
+
+of the layers (e.g.,
+
+) compared to the latency time and The operation of the serial decoder proceeds as follows. At
+
+the high number of nonzero matrices within each layer. The al- subiteration of iteration , for
+
+, the
+
+gorithmic modification needed in the precode construction and decoder performs the following steps (refer to Fig. 10):
+
+its hardware cost as opposed to the performance degradation 1) Forwarding: A
+
+-dimensional message vector
+
+caused by ignoring the adjacent layers interdependence, is be-
+
+is read from bit-node memory. Assuming
+
+yond the scope of this work. The problem becomes more rele-
+
+, is the edge corresponding to th
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:02:14 UTC from IEEE Xplore. Restrictions apply.
+
+ZEINEDDINE et al.: CONSTRUCTION AND HARDWARE-EFFICIENT DECODING OF RAPTOR CODES
+
+2953
+
+nonzero entry of row of , then
+
+denotes possible permutations. It can be implemented using linear finite
+
+the posterior extrinsic reliability value of the bit-node shift registers to generate the permutation coefficients pseudo-
+
+connected to obtained at the end of iteration .
+
+randomly,
+
+-wide cyclic shifter and
+
+,
+
+,
+
+2) Permuting:
+
+is sent to a pseudo-random permuter -bit multiplexers. The subtractor blocks form the bit-to-check
+
+to generate the
+
+.
+
+messages [Step 3)], while the adders accumulate the posterior
+
+3)
+
+operation: The
+
+-dimensional vector extrinsic reliability values [Step 6)].
+
+is read from the check-node memory Check-Node Block: The check-node block is composed of
+
+and
+
+new bit-to-check messages,
+
+, are four main components.
+
+computed as
+
+. 1) Check-Node Memory: It consists of
+
+banks, each
+
+4)
+
+operation:
+
+new check-to-bit messages,
+
+storing up to words and performing 1-read and 1-write
+
+, are generated by performing LT decoding
+
+per cycle. The memory banks are accessed sequentially.
+
+using (2) if
+
+, or LDPC decoding using (3) if 2) Partition Table: It is a buffer that stores the check-node de-
+
+.
+
+grees that result from the different row-splitting scenarios
+
+5) Inverse permuting and check-memory write-back: The
+
+(i.e., partition set in Fig. 3). In the simplest case, it can be
+
+vector
+
+is written back to check-node memory
+
+accessed sequentially as a circular buffer. For each split-
+
+and simultaneously inverse-permuted using the -block
+
+ting scenario, a
+
+-bit partition vector showing the de-
+
+to generate
+
+.
+
+grees of the formed check nodes is stored. For example, if
+
+6) Posterior reliability update: The extrinsic posterior mes-
+
+a row with Hamming weight of
+
+is split into four
+
+sages
+
+are updated as follows:
+
+check nodes of degrees 3, 2, 4, 1, then the partition vector
+
+is 0001100001 (i.e.,
+
+).
+
+Equality of bits and of the vector indicates that mes-
+
+;
+
+sages and belong to the same check-node.
+
+.
+
+3) Intrinsic Values Memory (IVM): It stores the intrinsic
+
+7) Accumulation:
+
+is written back to the bit-node
+
+memory.
+
+Steps 3), 6), and 7) compute the bit-to-check messages in a se-
+
+rial manner, therefore avoiding the underutilization and sched-
+
+uling problems that may arise due to the bit-node degree vari-
+
+ability, which, in turn, is caused by the rate and check degrees
+
+variability. This allows the bit-node block to store a constant
+
+number of messages
+
+regardless of the code rate,
+
+thus saving memory.
+
+The main components of the serial decoder are described in
+
+detail below.
+
+Bit-Node Blocks 1 and 2: These blocks independently
+
+perform the forwarding (Step 1)) and accumulation [Step 7)].
+
+The blocks interchange their roles every iteration. Using two
+
+blocks instead of one allows simultaneous communication of
+
+check-to-bit and bit-to-check messages, hence doubling the
+
+throughput.
+
+Each memory block is composed of
+
+banks, where each
+
+bank holds -bit words and has one read and one write ports.
+
+The banks are accessed using the address
+
+, where
+
+. The intermediate value
+
+channel reliability values of the check-nodes. Since the
+
+number of words read every subiteration is variable, but is
+
+at most , the IVM block is divided into
+
+banks.
+
+The reliability value of check-node is written at location
+
+in bank
+
+. For correct operation, the
+
+values read from the
+
+memory banks are
+
+reorganized before being forwarded to the reconfigurable
+
+CFU, in a way such that if bits and
+
+of the partition
+
+vector differ, the th value of the IVM output vector must
+
+equal the intrinsic reliability value of the check-node
+
+whose message index starts with . This is done through a
+
+decompressor network, similar to that shown in Fig. 12(a),
+
+that is composed of
+
+-wide -bit cyclic shifter, to
+
+apply shifting
+
+, followed by
+
+muxes to obtain the correct distribution of the intrinsic
+
+values over
+
+locations.
+
+4) Reconfigurable CFU: It receives
+
+bit-to-check mes-
+
+sages from the subtractor block,
+
+messages from the
+
+IVM and the partition vector. It computes the check-to-bit-
+
+messages corresponding to one row in . The detailed
+
+design of the CFU is presented in Section IV-C.
+
+, updated every cycles, corresponds to index of the ac-
+
+cessed bit-node in matrix [see Section III-B-2)];
+
+, up-
+
+B. Partially-Parallel Decoder Architecture
+
+dated per cycle, corresponds to the bit index in the child ma- To increase throughput by a factor of , the messages corre-
+
+trix resulting from the girth-oriented replication. Since is sponding to rows of , or equivalently one row of , are
+
+composed solely of shifted identity matrices, the computation processed simultaneously. The resulting partially-parallel archi-
+
+of both
+
+and
+
+, during LT decoding, is done by either tecture has the same organization of the serial architecture. The
+
+computing the shift-offset of the corresponding matrix or in- required modifications are the following. The bit node mem-
+
+crementing
+
+the previous value. During LDPC decoding, ories have their banks organized as
+
+-bit partitions and
+
+is alternated between different values, which are up- access is done row-wise. The check-node (and IVM) memory
+
+dated every cycles. The update of
+
+is similar to that in are partitioned into blocks, each sized down by a factor
+
+LT-decoding but is done every cycles.
+
+but retaining the access rate and pattern of its counterpart in the
+
+Communication Network: It consists mainly of a permuter serial architecture. For permutation, each -message output of
+
+and inverse permuter, as well as adders and subtractors. In the memory bank is cyclically shifted by
+
+, prior to
+
+permuter design, a tradeoff exists between the number of pos- applying independent random permutations on the
+
+-
+
+sible permutations and hardware complexity. One possible per- message vectors, corresponding to the processed rows of .
+
+muter applies a
+
+linear permutation generating
+
+The number of CFUs and adders/subtractors is replicated by
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:02:14 UTC from IEEE Xplore. Restrictions apply.
+
+2954
+
+IEEE TRANSACTIONS ON SIGNAL PROCESSING, VOL. 59, NO. 6, JUNE 2011
+
+TABLE III HARDWARE RESOURCES AND THROUGHPUT OF SERIAL AND PARTIALLY PARALLEL ARCHITECTURES. THROUGHPUT IS MEASURED AS THE NUMBER OF
+COMPLETED ITERATIONS/s; f req IS THE CLOCK FREQUENCY. THE MEMORY ADDRESS DECODERS ARE NOT INCLUDED
+
+. The hardware resources and throughput for serial and par-
+
+tially architectures are summarized in Table III, given per mes-
+
+sage bit-precision. In total, processing one cycle of , requires
+
+reading
+
+values from memory ( is the average
+
+number of nodes formed by one row-split), writing
+
+values and applying one CFU operation and
+
+addi-
+
+tions/subtractions.
+
+C. Reconfigurable Check Function Unit Design
+
+The design of the reconfigurable CFUs presented in this sec-
+
+tion is based on their fixed-degree counterpart implementations.
+
+Three basic algorithms for the CFU operation exist, namely, the
+
+conventional one implementing equations (2) and (3), BCJR-
+
+based [10], [19] and Min-Sum [21], [27] algorithms. The latter
+
+two give a reduced complexity approximation of the check-up-
+
+date equations and thus, need no LUTs to compute the func-
+
+tion. The Min-Sum algorithm, in particular, reduces the check
+
+memory requirements. However this comes at the expense of
+
+varying degradation in performance for the Min-Sum update
+
+and an increase in the complexity of computational units and
+
+latency in the CFU, for the BCJR-based update. In this section,
+
+indicates the message of index corresponding
+
+to processed row and corresponds to the intrinsic relia-
+
+bility value of the check node derived from row and to which
+
+edge is connected.
+
+1) Accumulator-Based CFU Architecture: The function
+
+and its inverse in (2) and (3) are implemented using LUTs. The
+
+operation is also applied on the intrinsic reliability values only
+
+once and the generated values are stored in IVM. The proposed
+
+reconfigurable CFU is based on the design of a
+
+-degree
+
+CFU that implements the following transformed equation:
+
+the sum of the operations on messages that 1) belong to the same partition as message at level and 2) have their corresponding LT-graph edges connected to the check node that the th edge is connected to. The algorithm for updating is shown below and the corresponding architecture is shown in Fig. 11(a).
+Algorithm 1: Accumulator-Based Reconfigurable CFU Algorithm
+BTC
+
+for
+
+to
+
+do
+
+for all s.t. an adder in fixed-rate mode adds output
+
+values of
+
+and
+
+at stage with
+
+do
+
+if right boundary of
+
+and left boundary of
+
+correspond to same check-node then
+
+else
+
+end if
+then
+then end for end for
+
+, if
+
+share same check-node,
+
+, if and share same check-node,
+
+CTB
+
+BTC
+
+BTC
+
+In LDPC decoding mode, the
+
+bit-to-check messages
+
+corresponding to one check-node are fed to the CFU in con-
+
+secutive cycles. By using an extra accumulator to add the
+
+This equation can be implemented using a tree of adders of output values into
+
+BTC
+
+, where
+
+depth
+
+to compute BCT , followed by
+
+is the index of the first row in corresponding to the cur-
+
+subtractors to extract the individual messages BTC from rent check-node and delaying subtraction for an extra cycles
+
+the total sum. At level of the adder tree, the bit-to-check required to obtain the latter sum, the CFU attains a constant
+
+messages are partitioned into sets,
+
+, such that throughput of
+
+messages/cycle. The registers for storing
+
+1) set
+
+, includes messages with consecutive the intermediate vector during LT-processing are now re-used
+
+indices, 2) the sum of the operations on the messages in set to store the vector
+
+for the additional cycles. The
+
+is computed in a stage (call it output value of the set), extra latency of cycles is due to the quasi-serial mode of CFU
+
+and 3) the output values of these sets are fed to the adder operation in LDPC decoding. This is unlike the LT-decoding
+
+subtree starting from stage which, in turn, computes their latency caused by pipelining targeted to enhance the operating
+
+sum. The left (right) boundary
+
+of a set is defined frequency.
+
+as the minimum (maximum) index of the messages in the set.
+
+2) Forward–Backward BCJR-Based CFU Architecture:
+
+In LT-decoding mode, intermediate values, , are main- In [10] and [19], a SISO message-processing unit (MPU)
+
+tained at level of the adder tree. The th value of , , stores was proposed to implement check-message processing. The
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:02:14 UTC from IEEE Xplore. Restrictions apply.
+
+ZEINEDDINE et al.: CONSTRUCTION AND HARDWARE-EFFICIENT DECODING OF RAPTOR CODES
+
+2955
+
+check-to-bit messages are computed using a simplified form for every edge per level. These are the minimum and second
+
+of the BCJR algorithm [20]. Let denote an operator which minimum values of the messages that 1) belong to the same par-
+
+performs the operation
+
+. tition as message at level and 2) have their corresponding
+
+Then the message from a degree- check-node to bit-node LT-graph edges connected to the check node that the th edge
+
+at iteration , where
+
+, is computed as [10] is connected to. To reduce the number of intermediate values
+
+CTB
+
+BTC . Moreover, the following simple per edge to approximately one, the intermediate value of each
+
+yet fairly accurate approximation of was proposed:
+
+degree-1 LT-node edge is set to the corresponding intrinsic
+
+channel reliability value. For a degree-2 LT-node edge , the
+
+intermediate value holds the corresponding minimum value if
+
+is odd or the second minimum value if is even. The in-
+
+dexes of the minimum values, corresponding to the row check
+
+The unit implementing this approximation is called the
+
+Max-Quartet MPU. The resulting CFU implements the BCJR
+
+algorithm on the syndrome trellis of an
+
+-SPC
+
+code, where intermediate forward and backward metrics are
+
+propagated each cycle. At stage
+
+, two metrics
+
+(forward) and (backward) are computed according to
+
+the recursions
+
+BTC
+
+BTC and
+
+BTC
+
+BTC , respectively.
+
+Then starting from stage
+
+, the check-to-bit messages
+
+CTB are generated as CTB
+
+.
+
+A reconfigurable version of the SISO MPU is proposed in
+
+Fig. 11(b). LT-node processing capability is achieved by mul-
+
+tiplexing the inputs to the Max-Quartet units implementing the
+
+- and -recursions. The computation of the forward and back-
+
+ward metrics is done as follows:
+
+nodes, are tracked across the CFU by updating a
+
+-bit
+
+minimum-index vector after each stage. In the final stage, the
+
+correction step is applied on the
+
+intermediate values and
+
+the CTB messages are generated using the partition and min-
+
+imum-index vectors. In LDPC-decoding mode, the minimum
+
+index-vector and two odd- and even-indexed outputs of the cor-
+
+rection step are forwarded to an additional partial-sorter. The
+
+minimum, second minimum and the minimum index over the
+
+rows of every corresponding check node are thus computed with
+
+an extra latency of cycles and forwarded to the CTB block.
+
+The Min-Sum algorithm changes the check-node memory
+
+requirements since up to three values are sufficient to regen-
+
+erate the absolute values of the messages corresponding to one
+
+node. This results in significant savings in the LDPC memory.
+
+Three LT-memory organization schemes are considered: 1) the
+
+LT-memory retains its conventional organization, 2) the LT
+
+BTC BTC
+
+if
+
+have same check node;
+
+otherwise.
+
+if check node; otherwise.
+
+have same
+
+memory stores two values per node (the minimum and second
+
+minimum values) and a
+
+-bit minimum-index vector per
+
+row and 3) the LT-memory stores three values per LT-node.
+
+In the two latter schemes, the LT-memory storing the absolute
+
+values of the CTB messages is composed of two blocks, one of
+
+which stores the odd/even-indexed values output by the correc-
+
+In LDPC-decoding mode, the metric
+
+BTC
+
+corresponding to
+
+row in (one of the rows merged to form the check-node ) is computed and then forwarded to a degree- serial CFU.
+
+tion step, prior to the CTB generation. The odd/even-indexed memory block has similar access patterns and thus, organiza-
+
+tion to those of the IVM memory, but contains
+
+, instead
+
+of
+
+, memory banks. A
+
+-wide compressor is needed
+
+The CFU output
+
+is then forwarded to
+
+Max-Quartet units to compute
+
+.
+
+3) Min-Sum CFU Architecture: A reduced complexity ap-
+
+proximation of the check-to-bit message computation is given
+
+in [21] as
+
+to store the CFU output in memory and a -wide decompressor is needed to regenerate the corresponding messages in the next iteration. Fig. 12(a) shows the CFU interconnect under this scheme. Fig. 12(b) compares the reduction in check-node memory size in the three respective schemes versus the average
+
+LT-node degree. As the average LT-node degree increases, the
+
+CTB
+
+BTC
+
+BTC
+
+(5)
+
+memory size reduction brought by the Min-Sum algorithm becomes more significant.
+
+Table IV compares the hardware complexity of the fixed-de-
+
+The Min-Sum approximation results in a degradation in the error correcting performance. To reduce the performance gap, a correction step, consisting of subtracting an offset or multiplying by a normalization factor [27], is applied on the resulting minimum value.
+The reconfigurable CFU implementing the Min-Sum approximation is based on the constant-degree implementation given in [16]. The architecture has a tree structure similar to the ac-
+
+gree and reconfigurable implementations of the three message-
+
+update algorithms. The main advantage of the BCJR-based and
+
+Min-Sum implementations is the elimination of lookup tables.
+
+In the BCJR-based CFU, the numbers of the registers and rela-
+
+tively complex function units increase by
+
+and are higher
+
+than in the other two algorithms. On the other hand, the accu-
+
+mulator-based and Min-Sum implementations involve intensive
+
+multiplexing and have their register count replicated.
+
+cumulator-based CFU, where the addition operation is substituted by a 4-input 2-output partial-sorting function that com- V. PERFORMANCE EVALUATIONS AND SIMULATION RESULTS
+
+putes the minimum and the second minimum of two sorted input 1) Quantization Analysis: A bit-accurate C++ simulator of
+
+pairs. The final outputs of the tree are the minimum-value, its the serial Raptor decoder was developed to analyze the quantiza-
+
+index and the second minimum value of the input values. During tion effect on the coding performance. The decoding procedure
+
+LT-decoding, two intermediate values instead of one are needed of the rate-0.4 Raptor code (RAP in Table I) was simulated
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:02:14 UTC from IEEE Xplore. Restrictions apply.
+
+2956
+
+IEEE TRANSACTIONS ON SIGNAL PROCESSING, VOL. 59, NO. 6, JUNE 2011
+
+BT C Fig. 11. (a) Accumulator-based CFU architecture. The gray-shaded muxes are needed for LDPC-decoding. Registers used to propagate f accumulator to the subtractor are omitted. (b) BCJR-based CFU. Blocks labeled perform the Max-Quartet operation.
+
+messages from the
+
+for message quantization of 5, 6, 7, and 28 (almost-ideal) bits, which account for 40% of the overall memory accesses, dis-
+
+assuming a white Gaussian noise channel with BPSK modula- sipate 49% of the total power. This is due to the large size of
+
+tion. Three check message update equations were considered: check-node memory which occupies 70% of the total decoder
+
+the conventional [using (2) and (3)], BCJR-based and Min-Sum area. This motivates the need to optimize check-node memory
+
+with offset [22]. In the latter algorithm, the offset was obtained, through partitioning and making use of the fact that check-node
+
+per check node, by reading from a lookup table, according to the memory is accessed sequentially. Regarding area, 92% of the
+
+corresponding check degree and the average bit posterior relia- area is occupied by memory, mainly due to the low message pro-
+
+bility value resulting from the previous iteration.
+
+cessing throughput of the decoder ( messages per cycle) and
+
+As illustrated in Fig. 13, quantization results in less steep consequently, the low area of the combinational components.
+
+curves compared to the almost-ideal case. The performance However, in partially-parallel architectures, the area ratio of the
+
+gap between the conventional and BCJR-based, already small interconnect and combinational function units to memory in-
+
+in the near ideal case, disappears for the other quantization creases by a factor as Table III suggests. The throughput of
+
+levels. The Min-Sum algorithm incurs a performance loss in the synthesized serial decoder is plotted versus SNR in Fig. 14.
+
+the
+
+-dB range, for message widths greater than 5. In Unlike the case for LDPC codes, no throughput advantage is
+
+all algorithms, a large performance loss results from going to achieved when the code rate increases. This is due to the in-
+
+5-bit messages, therefore, the message quantization, , is set to crease in the number of iterations required for convergence that
+
+6 in the synthesis step discussed next.
+
+is accompanied with the rate increase.
+
+2) Synthesis Results: The serial decoder datapath was mod-
+
+eled in Verilog and its datapath bit-width was set to
+
+and
+
+VI. CONCLUSION
+
+then synthesized using a 65–nm, 1.2-V customized CMOS li- Hardware-efficient Raptor decoders have been developed
+
+brary. The Design Compiler tool from Synopsys [28] was used through a methodology that encompasses code construction,
+
+to synthesize the logic components. Area and power estimates of decoding scheduling and architectural optimizations in a
+
+the various memory blocks of the decoder were computed using single design cycle. The proposed method decouples the code
+
+CACTI software tool [29], after some customizations to fit the structure from the random encoding process and utilizes a
+
+decoder requirements. The resulting area and power figures of memory-and-variability aware decoding procedure and recon-
+
+the basic decoder components are summarized in Table V. The figurable check processing. The decoding procedure is hence
+
+critical path of the decoder was estimated to be 3.26 ns; hence, mapped to row-processing of a regular matrix. The resulting
+
+the clock frequency was set at 300 MHz.
+
+Raptor codes can be employed in wireless communication
+
+The decoder occupies an area of mm and dissipates 222 channels, where the code rate becomes a real-time parameter.
+
+mW when operating at 1.2 V and 300 MHz. Memory accesses The rateless nature of a Raptor code, added to the simple LT-en-
+
+dissipate 85% of the total power, partially due to having
+
+coding process, can be exploited to enhance communication
+
+memory accesses per cycle. The check-node memory accesses, under varying and poor channel conditions such as multiuser
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:02:14 UTC from IEEE Xplore. Restrictions apply.
+
+ZEINEDDINE et al.: CONSTRUCTION AND HARDWARE-EFFICIENT DECODING OF RAPTOR CODES
+
+2957
+
+= 11 Fig. 12. (a) CFU operation and interconnect of the Min-Sum implementation. Only LT-decoding mode is shown for clarity. (b) Check-node memory size of the
+
+three schemes in Min-Sum implementation, relative to the memory organization discussed in Section IV-A. p
+
+.
+
+TABLE IV HARDWARE RESOURCES OF FIXED-DEGREE AND RECONFIGURABLE ARCHITECTURES, OF THE THREE ALGORITHMS. THE MIN-SUM
+CORRECTION STEP AND THE SIGN-PRODUCING LOGIC ARE NOT INCLUDED
+
+channels and ad hoc networks. Future work includes, designing Raptor codes at higher rates, applying the turbo decoding approach and investigating the possibility of enhancing the decoding convergence speed relative to LDPC codes.
+
+from one edge replication method.
+We next prove that length-6 cycle
+
+APPENDIX I PROOF OF THEOREM 1
+
+and alently
+
+in , which is impossible by the
+is 6-cycle free. Assume has a . By construction of , then ,
+. Therefore, , or equiv-
+
+Let be a node of graph . By abuse of notation, let also
+
+be the index of the corresponding node in matrix . is
+
+the node in the graph , from which is formed by graph
+
+replication. Node can be described by three quantities
+
+, where
+
+,
+
+and
+
+.
+
+We first show that is 4-cycle free. Assume has a
+
+length-4 cycle
+
+, where ’s are bit-nodes and ’s are
+
+By the replication method, then ,
+and
+or equivalently
+
+(6)
+. Therefore, ,
+
+check-nodes. Two cases exist. Case 1: If
+
+and
+
+, then a length-4 cycle
+
+(7)
+
+exists in , which is impossible by construction of . Case Similarly, by construction of , then
+
+2: If
+
+, then edges
+
+and
+
+result
+
+,
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:02:14 UTC from IEEE Xplore. Restrictions apply.
+
+2958
+
+IEEE TRANSACTIONS ON SIGNAL PROCESSING, VOL. 59, NO. 6, JUNE 2011
+
+Fig. 13. (a) Almost-ideal performance of the 3 algorithms considered. Performance of (b) conventional, (c) BCJR-based, and (d) Min-Sum algorithms for various quantization levels. Since the max-quartet approximation involves a constant, the internal datapath width of the BCJR-based CFU is chosen so that the corresponding quantization step is multiple of .
+
+and (7) yields
+
+. Substituting in
+
+(8)
+
+Solving (6) and (8) gives
+
+or
+
+or
+
+,
+
+which are impossible by construction of .
+
+TABLE V POWER AND AREA ESTIMATES OF THE BASIC COMPONENTS OF THE SYNTHESIZED SERIAL DECODER. THE ACCUMULATOR-BASED CFU IS
+0 USED IN THE ARCHITECTURE. IVM MEMORY CAN PERFORM
+(p 1) READS PER CYCLE. THE INTERCONNECT NETWORK CONSISTS OF THE PERMUTER/DEPRMUTER, IVM INTERCONNECT,
+ADDERS AND OTHER AUXILIARY LOGIC
+
+APPENDIX II PROOF OF THEOREM 2
+Assume , described by matrix , has a length-4 cycle , where ’s are bit-nodes and ’s are check-nodes.
+Two cases exist.
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:02:14 UTC from IEEE Xplore. Restrictions apply.
+
+ZEINEDDINE et al.: CONSTRUCTION AND HARDWARE-EFFICIENT DECODING OF RAPTOR CODES
+
+2959
+
+Fig. 14. Synthesized decoder throughput (in number of decoded information bits/sec) versus SNR for Raptor codes RAP , RAP , RAP .
+
+Case 1) If
+
+, then a length-4 cycle
+
+exists
+
+in the graph described by , which is impossible
+
+by Step 1.i of the construction method.
+
+Case 2) If
+
+, then is connected to , in the
+
+4-cycle which implies that
+
+. Similarly, is connected to , in
+
+the 4-cycle, hence
+
+. Therefore,
+
+, which implies that
+
+by construction.
+
+APPENDIX III PROOF OF THEOREM 3
+
+Assume , described by matrix , has a length-4 cycle
+
+where ’s are bit-nodes and ’s are check-nodes.
+
+Three cases exist.
+
+Case 1) Both and are LT-check nodes. By Theorem 1,
+
+this case is impossible.
+
+Case 2) Both , are LDPC-check nodes. If
+
+,
+
+then
+
+such that
+
+and
+
+, which is impossible by
+
+condition 1.ii) of the row merging transformation.
+
+On the other hand, if
+
+, then this case
+
+is impossible using a similar argument used in the
+
+proof of case 2 in Theorem 2.
+
+Case 3) is an LT check-node and is an LDPC check-
+
+node. is connected to , in the 4-cycle implies
+
+that
+
+and
+
+.
+
+Also, is connected to , implies that
+
+. Therefore,
+
+. Hence, in the
+
+matrix
+
+constructed by graph replication, bit-node , where
+
+(i.e., does not correspond to any of the first columns),
+
+is connected to two check nodes having different -coordinates
+
+but equal -coordinates, which is impossible by the graph repli-
+
+cation method.
+
+REFERENCES
+[1] M. Luby, “LT codes,” in Proc. 43rd Annu. IEEE Symp. Foundations Comput. Sci., Vancouver, BC, Canada, Nov. 2002, pp. 271–280.
+
+[2] A. Shokrollahi, “Raptor codes,” IEEE Trans. Inf. Theory, vol. 52, no. 6, pp. 2551–2567, Jun. 2006.
+[3] P. Elias, “Coding for two noisy channels,” in Proc. 3rd London Symp. Inf. Theory, Sep. 1955, pp. 61–76.
+[4] O. Etesami and A. Shokrollahi, “Raptor codes on binary memoryless symmetric channels,” IEEE Trans. Inf. Theory, vol. 52, no. 5, pp. 2033–2051, May 2006.
+[5] R. Palanki and J. S. Yedidia, “Rateless codes on noisy channels,” in Proc. Int. Symp. Inf. Theory, Chicago, IL, Jul. 2004, p. 37.
+[6] R. G. Gallager, Low-Density Parity-Check Codes. Cambridge, MA: MIT Press, 1963.
+[7] G. D. Forney, Concatenated Codes. Cambridge, MA: MIT Press, 1966.
+[8] IEEE 802.16-2009, IEEE Stand. For Local and Metropolitan Area Networks—Part 16: Air Interface For Broadband Wireless Access Systems, IEEE 802.16, May 2009 [Online]. Available: http://www.ieee802.org/16
+[9] R. M. Tanner, “A recursive approach to low complexity codes,” IEEE Trans. Inf. Theory, vol. IT-27, pp. 533–547, Sep. 1981.
+[10] M. M. Mansour and N. R. Shanbhag, “High-throughput LDPC decoders,” IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 11, no. 6, pp. 976–996, Dec. 2003.
+[11] X. Y. Hu et al., “Efficient implementations of the sum-product algorithm for decoding LDPC codes,” in Proc. IEEE Int. Global Commun. Conf., San Antonio, TX, Nov. 2001, pp. 1036–1036E.
+[12] C. Howland and A. Blanksby, “Parallel decoding architectures for low density parity check codes,” in Proc. IEEE Int. Symp. Circuits Syst., Sydney, Australia, May 2001, pp. 742–745.
+[13] K. Gunnam et al., “VLSI architectures for layered decoding for irregular LDPC codes of WIMAX,” in Proc. IEEE Int. Conf. Commun., Glasgow, Scotland, Jun. 2007, pp. 4542–4547.
+[14] B. Xiang et al., “An area-efficient and low-power multirate decoder for quasi-cyclic low-density parity-check codes,” IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 18, no. 10, pp. 1447–1460, Oct. 2010.
+[15] K. Zhang, X. Huang, and Z. Wang, “High-throughput layered decoder implementation for quasi-cyclic LDPC codes,” IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 27, no. 6, pp. 985–994, Aug. 2009.
+[16] N. Jiang et al., “High-Throughput QC-LDPC decoders,” IEEE Trans. Broadcast., vol. 55, no. 2, pp. 251–259, Jun. 2009.
+[17] J.-B. Doré, M.-H. Hamon, and P. Pénard, “On flexible design and implementation of structured LDPC codes,” in Proc. 18th Annu. IEEE Int. Symp. Personal, Indoor Mobile Radio Commun., Athens, Sep. 2007, pp. 1–5.
+[18] R. Townsend and E. Weldon, “Self-orthogonal quasi-cyclic codes,” IEEE Trans. Inf. Theory, vol. IT-13, no. 2, pp. 183–195, Apr. 1967.
+[19] M. M. Mansour, “A turbo-decoding message-passing algorithm for sparse parity-check matrix codes,” IEEE Trans. Signal Process., vol. 54, no. 11, pp. 4376–4392, Nov. 2006.
+[20] L. R. Bahl, J. Cocke, F. Jelinek, and J. Raviv, “Optimal decoding of linear codes for minimizing symbol error rate,” IEEE Trans. Inf. Theory, vol. IT-20, pp. 284–287, Mar. 1974.
+[21] M. Fossorier, M. Mihaljevic, and H. Imai, “Reduced complexity iterative decoding of low-density parity check codes based on belief propagation,” IEEE Trans. Commun., vol. 47, no. 5, pp. 673–680, May 1999.
+[22] J. Chen et al., “Reduced-complexity decoding of LDPC codes,” IEEE Trans. Commun., vol. 53, no. 8, pp. 1288–1299, Aug. 2005.
+[23] M. M. Mansour and N. R. Shanbhag, “A 640-mb/s 2048-bit programmable LDPC decoder chip,” IEEE J. Solid-State Circuits, vol. 41, no. 3, pp. 684–698, Mar. 2006.
+[24] C.-H. Liu et al., “An LDPC decoder chip based on self-routing network for IEEE 802.16e applications,” IEEE J. Solid-State Circuits, vol. 43, pp. 684–694, Mar. 2008.
+[25] S. Kim, G. E. Sobelman, and H. Lee, “A reduced-complexity architecture for LDPC layered decoding schemes,” IEEE Trans. VLSI Syst., pp. 1–5, 2010, DOI: 10.1109/TVLSI.2010.2043965, preprint.
+[26] M. Rovini, G. Gentile, F. Rossi, and L. Fanucci, “A minimum-latency block-serial architecture of a decoder for IEEE 802.11n LDPC codes,” in Proc. IFIP Int. Conf. Very Large Scale Integr., Atlanta, GA, Oct. 2007, pp. 236–241.
+[27] J. Chen and M. Fossorier, “Density evolution for two improved bp-based decoding algorithms of LDPC codes,” IEEE Commun. Lett., vol. 6, no. 5, pp. 208–210, May 2002.
+[28] Synopsys Design Compiler [Online]. Available: http://www.synopsys.com
+[29] N. Muralimanohar, R. Balasubramonian, and N. Jouppi, “CACTI 6.0: A tool to model large caches,” in Proc. Int. Symp. Microarchitecture, Chicago, IL, Dec. 2007, pp. 3–14.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:02:14 UTC from IEEE Xplore. Restrictions apply.
+
+2960
+
+IEEE TRANSACTIONS ON SIGNAL PROCESSING, VOL. 59, NO. 6, JUNE 2011
+
+Hady Zeineddine received the B.E. degree from the American University of Beirut (AUB), Beirut, Lebanon, in 2006 and the M.S. degree from the University of Texas at Austin in 2009, all in electrical and computer engineering. He is currently working toward the Ph.D. degree at AUB.
+His research interests are in the design of algorithms and architectures for efficient IC implementation of communication and digital signal processing applications.
+Mohammad M. Mansour (S’98–M’03–SM’08) received the B.E. degree with distinction and the M.E. degree both in computer and communications engineering from the American University of Beirut (AUB), Beirut, Lebanon, in 1996 and 1998, respectively, and the M.S. degree in mathematics and the Ph.D. degree in electrical engineering from the University of Illinois at Urbana-Champaign (UIUC), Urbana, IL, in 2002 and 2003, respectively.
+In 1996, he was a Teaching Assistant at the same department. In 1997, he was a Research Assistant at the ECE Department at AUB. From 1998 to 2003, he was a research assistant at the Coordinated Science Laboratory (CSL) at UIUC. During summer 2000, he worked at National Semiconductor Corporation, San Francisco, CA, with the wireless research group. From December 2006 to August 2008, he was on research leave with QUALCOMM Flarion Technologies, Bridgewater, NJ, where he worked on modem design and implementation for 3GPP-LTE, 3GPP-UMB, and peer-to-peer wireless networking PHY layer standards. He is currently an Associate Professor of electrical and computer engineering with the Electrical
+
+and Computer Engineering (ECE) Department at AUB, Beirut, Lebanon. His research interests are VLSI design and implementation for embedded signal processing and wireless communications systems, coding theory and its applications, digital signal processing systems, and general purpose computing systems.
+Prof. Mansour is a member of the Design and Implementation of Signal Processing Systems Technical Committee of the IEEE Signal Processing Society. He has been serving as an Associate Editor for the IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS II (TCAS-II) since April 2008, Associate Editor for ISRN Applied Mathematics since December 2010 and Associate Editor for the IEEE TRANSACTIONS ON VLSI SYSTEMS since January 2011. He is the Technical Co-Chair of the IEEE SiPS 2011 workshop. He is the recipient of the Phi Kappa Phi Honor Society Award twice in 2000 and 2001 and the recipient of the Hewlett Foundation Fellowship Award in March 2006. He joined the faculty at AUB in October 2003.
+Ranjit Puri received the B.E. degree with distinction from the Electronics and Telecommunication Department, University of Mumbai, India, in 2007 and the M.S. degree in electrical engineering from the University of Texas at Austin in 2009.
+He currently works as a Software Engineer in the Windows division with Microsoft Corporation, Redmond, WA. His current research interests include systems software for virtual machine management and embedded systems.
+Mr. Puri was awarded the J. N. Tata and Dorabji Tata Trust Scholarship in 2007 and is a member of Phi Kappa Phi and Gamma Beta Phi.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 02:02:14 UTC from IEEE Xplore. Restrictions apply.
+
+

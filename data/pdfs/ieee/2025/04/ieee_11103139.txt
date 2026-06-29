@@ -1,0 +1,163 @@
+2025 6th International Conference on Computer Engineering and Application (ICCEA)
+Hardware Acceleration of LDPC Encoding Based on CGRA
+
+2025 6th International Conference on Computer Engineering and Application (ICCEA) | 979-8-3315-4330-3/25/$31.00 ©2025 IEEE | DOI: 10.1109/ICCEA65460.2025.11103139
+
+Zitong Zhou School of Microelectronics South China University of Technology
+Guangzhou, China 202264681203@mail.scut.edu.cn
+
+Abstract—Low-Density Parity-Check (LDPC) codes, as a class of capacity-approaching forward error correction codes, have been adopted as the encoding strategy for 5G New Radio data channels. With the exponential increase in data throughput requirements for 5G communications, conventional FPGA-based architectures have demonstrated notable limitations in terms of computational efficiency and scalability. This paper introduces CGRA as a hardware acceleration approach for LDPC encoding. To address the issues of low memory utilization and low computing efficiency in CGRA, we employ data preprocessing, heterogenous memory architecture, and optimized dataflow to enhance hardware acceleration performance. Experimental results based on a 5×5 Processing Element Array (PEA) demonstrate that our approaches achieve significant performance improvements, including 80% reduction in data access latency and 43% decrease in computational processing time compared to baseline implementations.
+Keywords—CGRA, LDPC, DFG optimization, Heterogeneous Memory, Hardware-Software Co-Design
+I. INTRODUCTION
+Low-density parity-check (LDPC) codes are a type of forward error correction code based on sparse matrices, which exhibit remarkable performance, approaching the Shannon limit. Compared to Turbo codes, LDPC codes can be implemented through a relatively simple algorithm, indicating that LDPC has greater potential for highly parallel computing in hardware design [1]. Due to their high performance and hardware-friendly characteristics, LDPC codes have been chosen as the encoding strategy for 5G new radio (NR) data channels in the 3GPP Standard. As a revolutionary communication paradigm, 5G networks demand significant improvements in channel coding throughput, urgently requiring optimized architectures with enhanced flexibility and computational efficiency to accommodate contemporary requirements for massive data transmission and high-speed communication.
+The operation of LDPC codes can be divided into the encoding process and the decoding process. The encoding process has a more complex structure compared with the decoding process, which leads to challenges for hardware acceleration. To cope with the encoding of LDPC code, Field-Programmable Gate Arrays (FPGAs) are widely employed in modern 5G communication devices due to their flexibility and reconfigurability. Despite the growing interest in FPGAs for LDPC encoding, several persistent challenges continue to hinder their full potential, including low resource utilization rates, low compilation efficiency, and relatively lower operating frequencies [2–3]. For instance, researches have shown that traditional programmable
+
+cores can only utilize 5% to 10% of the energy for practical computational work, exhibiting notably low efficiency in the context of embedded systems [4–8]. The low computational speed and poor energy efficiency have significantly constrained the further development of FPGAs in 5G communication systems.
+To overcome the limitations of FPGAs, coarse-grained reconfigurable arrays (CGRAs) have gradually gained attention as an emerging reconfigurable computing architecture. CGRAs are a class of reconfigurable computing systems characterized by their coarser granularity of computational units, which allows for the construction of larger and more specialized functional units. The CGRA architecture consists of a network of SRAM and Processing Element Arrays (PEAs), where PEs at the edge are interfaced with SRAM for data read/write operations. CGRAs feature a dataflow paradigm that streamlines control logic and optimizes data transmission via localized interconnects. Once the configuration of PEAs is completed, the PEs autonomously execute their designated tasks, with data being directly transferred between PEs without memory access. This operational paradigm resembles a pipelined processing flow, enabling efficient data movement and computation. By sacrificing a certain degree of flexibility, CGRAs achieve higher operational frequency and theoretical computational performance while significantly reducing both compilation and reconfiguration times compared to FPGAs [9-10]. These improvements enable CGRA to overcome some limitations of FPGAs and provide a more efficient and scalable solution for complex computations [11].
+Despite the above advantages of current CGRAs, they also exhibit limitations when applied to LDPC encoding, primarily due to challenges in programmability and memory efficiency. CGRAs are difficult to accomplish automatic compilation and further program in high-level language programming, mainly due to the complex control flow of modern programs [12-13]. This issue is particularly pronounced in LDPC encoding, where the intricate control flow, conditional logic in the loop, and data dependencies make it difficult for compilers to generate efficient dataflow graph (DFG) mappings, presenting substantial challenges to further deployment on CGRAs [14-15]. Additionally, CGRAs often rely on shared multi-port cachebased or scratchpad memory (SPM) schemes for their large PEAs, resulting in relatively limited on-chip memory that struggles to accommodate the demands of large-scale data transmission. LDPC encoding primarily involves operations on large-scale sparse matrices, which pose significant challenges for memory access efficiency on CGRAs. The sheer volume and sparsity of data lead to high memory bandwidth requirements
+
+979-8-3315-4330-3/25/$31.00 ©2025 IEEE
+
+1024
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:13:31 UTC from IEEE Xplore. Restrictions apply.
+
+and inefficient memory utilization, whereas the read/write interfaces of on-chip memory are limited. Moreover, the frequent use of indirect addressing in LDPC generates a large number of memory access requests, which may lead to memory access conflicts due to resource contention [16-18]. This limitation is particularly problematic given the increasing demand for processing massive datasets in modern LDPC applications.
+To address the incompatibility when deploying LDPC encoding on CGRA, we have proposed a series of optimization strategies to overcome these challenges. Firstly, to tackle the problem of complex control flow, we employed techniques such as loop fusion and Branch-preprocessing. By merging multiple nested loops into more efficient loop structures, we reduced the complexity of control flow, thereby bridging the gap between the DFG of LDPC encoding and CGRA hardware. Through Branchpreprocessing, we eliminated the need for conditional statements within loops, enhancing the computational efficiency of CGRAs. Secondly, To address the issue of low memory efficiency in CGRAs, we introduce the Compactor Embedded Direct Memory Access (C-DMA) module and heterogeneous memory structure to improve memory efficiency. On the one hand, C-DMA is capable of converting sparse matrices into dense matrices during data transfer, reducing memory fragmentation and improving memory utilization. On the other hand, heterogeneous memory structures divide memory into SRAM and Cache, where SRAM is used for regular data access and Cache is used for irregular data access. By processing different data access patterns in different memory structures, memory access conflicts during the calculation process are reduced. Overall, this paper makes the following contributions:
+•Improved memory efficiency: C-DMA is employed to densify the sparse matrix and optimize data organization during data transfer, hence improving memory efficiency and enhancing transmission bandwidth utilization. Experimental results indicate that the overall data transfer time is reduced by over 80%.
+•Minimized conditional branches and loop overhead: To improve computing efficiency on CGRA systems, branch preprocessing is implemented to minimize control flow overhead. Simultaneously, loop merging is applied to reduce iteration costs and optimize memory access patterns, which achieves a 43% reduction in computation time.
+•Decreased memory access conflicts: Heterogeneous memory architectures are proposed to process data and address with different access modes, hence mitigating contention and reducing the miss rate of memory access.
+II. MOTIVATION
+The LDPC encoding program primarily consists of data preprocessing and four layers as shown in Figure 1. The input is the original data presented by a sparse matrix, and the output is encoded data. We have analyzed the incompatibility between LDPC encoding and CGRA as follows:
+
+(i) Sparse matrices usually have only a few non-zero elements, which makes their storage and processing different from dense matrices. The on-chip memory of CGRA is relatively scarce, as it is designed for high-speed computation rather than large-scale data storage. Therefore, storing sparse matrices directly would result in significant memory resource wastage, as a large portion of the memory would be occupied by zerovalued elements that do not contribute to computation.
+(ii) As indicated in Figure 1, there exists conditional branches in the loops of the first and third layers of the original program. In CGRAs, all branches of a conditional statement need to be mapped simultaneously to ensure correct execution, as the architecture typically relies on static scheduling and lacks dynamic branch prediction mechanisms. However, only the result of one branch will ultimately be chosen at runtime, resulting in inefficient utilization of hardware resources. This inefficiency is particularly problematic in applications involving sparse matrices, where conditional branches are frequently used to filter data based on specific criteria. The need to allocate resources for both branches, despite only one being active, leads to underutilization of computational units and memory bandwidth, hence degrading efficiency and increasing energy consumption.
+(iii) In the program, loop merging between layer 1 and layer 2 is not feasible due to two major issues. First, there is a data dependency between the two layers. The program in Figure 1 indicates that the computation in layer 2 relies on the results generated by layer 1. This means that layer 2 cannot begin its execution until layer 1 has fully completed its tasks, creating a sequential relationship that prevents the two layers from being combined into a single loop. Second, the input-output order between the two layers is inconsistent. Layer 1 and layer 2 process data in different sequences, making it difficult to align their operations within a unified loop structure. These problems (i.e., data dependency and mismatched input-output order) make direct loop merging impractical. As a result, alternative optimization strategies must be explored to improve performance without compromising the correctness of the program.
+(iv) The data access patterns of Layer 1 and Layer 3 include indirect addressing, where addresses must first be retrieved from memory before accessing the corresponding data. This process significantly increases the demands for memory access and introduces uncertainty during computation. In the LDPC encoding process, access to addresses follows a fixed sequence, while access to the encoded information is random. For random access, caches are typically introduced to explore date locality and hence reduce memory access time. However, addresses are read in order, which means that each address information will be read only once. If a conventional cache structure is used, it will result in frequent cache miss. Therefore, we need to introduce a heterogeneous memory structure to solve this problem.
+
+1025
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:13:31 UTC from IEEE Xplore. Restrictions apply.
+
+Figure 1. The structure of the original program and its mismatch with CGRA
+
+III. METHODS
+A. Compactor Embedded Direct Memory Access
+To address the issue of on-chip memory wastage caused by sparsity of matrices, we propose Compactor Embedded Direct Memory Access (C-DMA). C-DMA is an advanced data transfer technology that enhances traditional DMA by embedding a Compactor within the DMA module. This innovation allows for the compaction of sparse matrices during the data transfer process.
+As shown in Figure 2, the compactor will compress the sparse matrix into a dense format, which starts with a row index, followed by column indices for all non-zero data bits in this row, and ends with an end flag. The proposed method compresses the original sparse matrix into a compact one-dimensional representation while preserving essential index information, thereby achieving optimal space efficiency. Through the C-DMA module, we implement the processing of sparse matrices outside CGRAs, thereby avoiding memory waste caused by storing sparse matrices in on-chip memory.
+Moreover, the C-DMA module significantly enhances data transfer efficiency. In this architecture, data is first fetched by the C-DMA module, where it undergoes filtering before being forwarded to downstream processing units. Compared to direct memory access by the CGRA, this approach provides two key benefits: first, it substantially improves bandwidth utilization by screening out invalid data entries; second, it allows for a greater number of read ports to be implemented, as the preliminary filtering stage eliminates redundant data transfers. In practical implementations, the C-DMA module supports scalable read ports whose configuration can be dynamically adjusted according to the features of the input matrix, allowing for maximized transmission efficiency in varying operational scenarios.
+
+B. Branch-preprocessing
+Branch-processing was proposed to solve the bottleneck caused by conditional branching in programs. As shown in Figure 1, the conditional branch in layer 1 determines whether the column index is less than K, while the conditional branch in layer 3 determines whether the column index is greater than or equal to K and less than K+Z. To avoid these branches, the Branch-preprocessing module organizes the input data into groups based on branch conditions, eliminating the need for using conditional branches. Figure 2 illustrates how Branch-preprocessing works. After receiving the data transmitted by C-DMA, the Branch Processing module will determine the range of its column index and transfer it to the corresponding position in on-chip memory based on its index range. By preprocessing the data in this manner, Branchpreprocessing ensures that all data within a group inherently satisfies the corresponding branch condition. This eliminates the need for conditional branches within loops during computation, thereby reducing overhead and improving computational efficiency.
+By introducing C-DMA and Branch-preprocessing, we have implemented preprocessing during the data transmission. Figure 2 demonstrates the complete process in detail. The sparse matrix stored in the main memory is first processed by the C-DMA module and then passed to the Branch-preprocessing module, where it is grouped based on predefined conditions. By combining C-DMA and Branch-preprocessing, the data preprocessing module achieves two key objectives: (1) Sparse matrix compaction during data transfer, which reduces the amount of data that needs to be stored. (2) Data grouping based on branch conditions, which eliminates the need for conditional branching within computational loops. The preprocessing maximizes the utilization of CGRA on-chip memory by minimizing the storage of redundant zero-valued elements and optimizes the handling of conditional branches, thereby improving overall computational efficiency.
+
+1026
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:13:31 UTC from IEEE Xplore. Restrictions apply.
+
+Figure 2. C-DMA and Branch-preprocessing
+
+C. Loop Fusion-Reordering
+In the original program, a data dependency exists between Layer 1 and Layer 2, where the computation in Layer 2 is contingent upon the output generated by Layer 1. However, there is a mismatch in the output sequence of Layer 1, and the input sequence required by Layer 2, which forces Layer 2 to wait until the completion of Layer 1. This sequential execution not only increases loop overhead, such as loop control and boundary checks but also results in repeated memory load/store operations, as intermediate data must be stored and retrieved multiple times. These inefficiencies lead to insufficient utilization of CGRAs.
+To address this inefficiency, we propose the Loop FusionReordering method. This technique involves reordering the output sequence of Layer 1 to align with the input sequence required by Layer 2, followed by fusing the loops of Layer 1 and Layer 2. According to the DFG graph in Figure 3, we calculate the partial data required for the calculation of layer 2 at first, which enables Layer 2 to initiate its computations based on partial results from Layer 1 and avoids repeated memory read and write operations. This approach not only enhances computational efficiency but also better leverages the parallel computing resources of CGRAs.
+D. Heterogeneous Memory Structure
+In the original program, the presence of indirect addressing leads to frequent random memory access operations during program execution. For instance, accesses to memory addresses follow the write order sequence, while accesses to encoded information are random. Using traditional cache structures may
+
+result in frequent memory access conflicts and cache misses. To optimize the program’s memory access issues, we introduce a heterogeneous memory structure.
+To be specific, the memory is divided into SPM and Cache to cope with different access patterns respectively. SPM is usually paired with a burst mode for streaming read and write, making it suitable for address reading in LDPC. This is mainly due to addresses in the program being read in the order of A[i] pattern with a fixed read order. Unlike SPM, cache employs sophisticated tag lookup mechanisms and multi-level hierarchies to efficiently handle indirect address accesses and explore the locality of the data. Therefore, cache is suitable for storing encoded data, as access to encoded information exhibits random patterns—driven only by address values fetched from SPM [19].
+As shown in Figure 4, the SRAM is composed of multiple memory banks, each storing non-zero entry indices within a data row. During parallel pipeline execution, different pipelines read address data from corresponding banks, thereby avoiding memory access conflicts when retrieving address information. In the Cache, the memory space is divided into three groups to store encoded data generated at different execution stages. This design prevents original encoded data from being overwritten by subsequent program layers during the computation of previous instruction stages. By implementing this heterogeneous memory structure, we minimize memory conflicts caused by random memory access patterns.
+
+1027
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:13:31 UTC from IEEE Xplore. Restrictions apply.
+
+Figure 3. Loop Fusion-Reordering for CGRA Optimization
+
+Figure 4. Heterogeneous memory structure
+
+IV. SIMULATION RESULTS AND ANALYSIS
+A. Experiment Setup
+This simulation is based on a 5×5 PEA and implemented in C++ language. The execution is divided into three parts: data transfer, configuration, and computation. In the data reading phase, a matrix with a sparsity of 0.25% (non-zero element ratio) is used as the input matrix. During computation, PEs are organized into a pipeline architecture.
+The baseline implementation follows a conventional dataflow structure, where Layer 1 and Layer 2 perform independent mapping and computation. In contrast, the proposed design merges these layers into one layer. The PEA mapping follows the structure illustrated in Figure 3, where different colors represent parallel pipelines. The proposed design eliminates conditional branches through Branch-preprocessing, which also inherently avoids full matrix traversal at each computation level by organizing data into groups. Table 1 illustrates more details
+
+about the experiment. The C-DMA implementation enables scalable read ports for direct memory access. In terms of memory, the Baseline only uses a regular Cache, while the proposed design uses a heterogeneous memory structure consisting of SPM and Cache.
+
+Table 1. Parameters for baseline and proposed design
+
+Baseline
+
+Our Work
+
+Heterogeneous Mem.
+
+×
+
+√
+
+In-Transit Data Processing
+
+×
+
+√
+
+Scalable Read Ports
+
+×
+
+√
+
+PEA Mem. Type Mem. Size Miss Rate
+
+5×5 mesh Cache 512k medium
+
+5×5 mesh Cache, SPM
+128k low
+
+1028
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:13:31 UTC from IEEE Xplore. Restrictions apply.
+
+Matric Size Sparsity
+Row weight Column weight
+
+1000×400 0.25% 5 2
+
+To simplify the simulation for the computation stage, the PEA is treated as multiple parallel pipelines, with a focus on analyzing memory access misses and conflicts during the simulation. The pipeline performs data read operations during each computing cycle. While cache accesses may incur miss penalties, there will be no miss penalties when accessing SPM, as the data is accessed in order.
+B. Experimental Results Analysis To evaluate the improvements brought by the proposed methods,
+we analyze the three execution stages separately. In the data transfer phase, the C-DMA module directly accesses data in memory through multiple ports and outputs only non-zero elements. Compared to directly transferring data to on-chip memory, this approach achieves efficient use of transfer bandwidth, significantly improving data access speed. As shown in Figure 5, by utilizing C-DMA, the proportion of total execution time occupied by data transfer has been significantly reduced. This indicates that the PEA can remain in an active working state more frequently, rather than waiting for data transfer to complete.
+Figure 5. The cycles occupied by each stage
+In the configuration state, the configuration time is reduced by 28.6%. This reduction primarily stems from preprocessing sparse matrices during data transfer and merging Layer 1 and Layer 2 configurations, which shortens the size of each configuration package.
+For the computation phase, we focus on the execution of four layers after sparse matrix preprocessing. As shown in Figure 6, the proposed methods significantly reduce the number of computation cycles. This improvement arises from both loop fusion and branch preprocessing, where non-zero index information is divided into two groups. This division eliminates conditional branches and reduces unnecessary memory access. Additionally, the heterogeneous memory structure enhances address access efficiency by adopting different memory structures for different data patterns, thereby mitigating memory access conflicts and cache misses.
+
+Figure 6. Execution time of each layer
+V. CONCLUSION
+This article mainly studies how to employ CGRAs for hardware acceleration of LDPC encoding and proposes four methods to improve execution efficiency. We introduce C-DMA and heterogeneous memory structures to improve memory efficiency, as well as Branch Processing and Loop Fusion reordering to enhance computational efficiency. The experimental results based on 5x5 PEA show that the optimized CGRA structure reduces data reading time by over 80%, configuration time by 28.6%, and computation time by 43%.
+In today's hyper-connected world, intelligence has emerged as a defining trend driving technological advancement. Innovations, such as the Internet of Things (IoT) and autonomous driving, have strong demand for ultra-low-latency communication and highly efficient energy consumption. The enhanced CGRA presents an advanced solution for LDPC encoding, offering superior hardware acceleration for 5G which not only supports the stringent requirements for high speed communication but also paves the way for future innovations in smart infrastructure.
+REFERENCES
+[1] C. Berrou, A. Glavieux, and P. Thitimajshima. Near shannon limit errorcorrecting coding and decoding: Turbo-codes. 1. In Proceedings of ICC ’93 - IEEE International Conference on Communications, volume 1, Geneva, Switzerland, 1993, pp. 1064–1070.
+[2] T. Miyamori and U. Olukotun, "A quantitative analysis of reconfigurable coprocessors for multimedia applications," Proceedings. IEEE Symposium on FPGAs for Custom Computing Machines (Cat. No.98TB100251), Napa Valley, CA, USA, 1998, pp. 2-11.
+[3] J. R. Hauser and J. Wawrzynek, "Garp: a MIPS processor with a reconfigurable coprocessor," Proceedings. The 5th Annual IEEE Symposium on Field-Programmable Custom Computing Machines Cat. No.97TB100186), Napa Valley, CA, USA, 1997, pp. 12-21.
+[4] Y. Yi, J. Gu, L.Luo, Z. Wang, B. Han, H. He, "Efficient and Flexible Implementation of FFT Application for CGRA Processor," 2023 8th International Conference on Intelligent Computing and Signal Processing (ICSP), Xi'an, China, 2023, pp. 957-960.
+[5] G. Gobieski, A. O. Atli, K. Mai, B. Lucia and N. Beckmann, "Snafu: An Ultra-Low-Power, Energy-Minimal CGRA-Generation Framework and Architecture," 2021 ACM/IEEE 48th Annual International Symposium on Computer Architecture (ISCA), Valencia, Spain, 2021, pp. 1027-1040
+[6] G. Gobieski, S. Ghosh; M. Heule, T. Mowry, T. Nowatzki, N. Beckmann., "RipTide: A Programmable, Energy-Minimal Dataflow Compiler and Architecture," 2022 55th IEEE/ACM International Symposium on Microarchitecture (MICRO), Chicago, IL, USA, 2022, pp. 546-564.
+
+1029
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:13:31 UTC from IEEE Xplore. Restrictions apply.
+
+[7] D. Mou, B. Wang and D. Liu, "SC-CGRA: An Energy-Efficient CGRA Using Stochastic Computing," in IEEE Transactions on Parallel and Distributed Systems, vol. 35, no. 11, pp. 2023-2038, Nov. 2024
+[8] Y. S. Chong, R. Harish, R. C. Panicker, V. P. Nambiar and A. T. Do, "A 420 GOPS/W CGRA with a Configurable MAC and Dynamic Truncation," 2024 IEEE International Symposium on Circuits and Systems (ISCAS), Singapore, Singapore, 2024, pp. 1-5
+[9] A. Podobas, K. Sano and S. Matsuoka, "A Survey on Coarse-Grained Reconfigurable Architectures from a Performance Perspective," in IEEE Access, vol. 8, pp. 146719-146743, 2020.
+[10] G. Gobieski, S. Ghosh, M. Heule, T. Mowry, T. Nowatzki, N. Beckmann, and B. Lucia, "RipTide: A Programmable, Energy-Minimal Dataflow Compiler and Architecture," 2022 55th IEEE/ACM International Symposium on Microarchitecture (MICRO), Chicago, IL, USA, 2022, pp. 546-564.
+[11] T. K. Bandara, D. Wijerathne, T. Mitra, and L. Peh. REVAMP: a systematic framework for heterogeneous CGRA realization. In Proceedings of the 27th ACM International Conference on Architectural Support for Programming Languages and Operating Systems (ASPLOS '22). Association for Computing Machinery, New York, NY, USA, 2022, 918–932.
+[12] J. Deng, X. Tang, J. Zhang, Y. Li, L. Zhang, B. Han, H. He, F. Tu, L. Liu, S. Wei, Y. Hu and S. Yin, "Towards Efficient Control Flow Handling in Spatial Architecture via Architecting the Control Flow Plane," 2023 56th IEEE/ACM International Symposium on Microarchitecture (MICRO), Toronto, ON, Canada, 2023, pp. 1395-1408.
+[13] N. Li, D. Li, Z. Wu, P. Jing, S. H. Pun and Y. Liu, "SubMap: A Partial Mapping Strategy for CGRA Based on sub-CGRA Exploration," in IEEE
+
+Transactions on Computer-Aided Design of Integrated Circuits and Systems
+[14] C. Tan, N. B. Agostini, T. Geng; C. Xie, J. Li, A. Li, K. J. Barker and A. Tumeo, "DRIPS: Dynamic Rebalancing of Pipelined Streaming Applications on CGRAs," 2022 IEEE International Symposium on HighPerformance Computer Architecture (HPCA), Seoul, Korea, Republic of, 2022, pp. 304-316.
+[15] J. Anderson, R. Beidas, V. Chacko, H. Hsiao, X. Ling, O. Ragheb, X. Wang and T. Yu, "CGRA-ME: An Open-Source Framework for CGRA Architecture and CAD Research : (Invited Paper)," 2021 IEEE 32nd International Conference on Application-specific Systems, Architectures and Processors (ASAP), NJ, USA, 2021, pp. 156-162.
+[16] Y. Chen, Z. Zhao, J. Jiang, G. He, Z. Mao and W. Sheng, "Reducing Memory Access Conflicts with Loop Transformation and Data Reuse on Coarse-grained Reconfigurable Architecture," 2021 Design, Automation & Test in Europe Conference & Exhibition (DATE), Grenoble, France, 2021, pp. 124-129.
+[17] D. Liu, D. Mou, R. Zhu, Y. Zhuang, J. Shang, J. Zhong, S. Yin, "DARIC: A Data Reuse-Friendly CGRA for Parallel Data Access via Elastic FIFOs," 2023 60th ACM/IEEE Design Automation Conference (DAC), San Francisco, CA, USA, 2023, pp. 1-6.
+[18] L. Dai, Y. Wang, C. Liu, F. Li, H. Li and X. Li, "Reexamining CGRA Memory Sub-system for Higher Memory Utilization and Performance," 2022 IEEE 40th International Conference on Computer Design (ICCD), Olympic Valley, CA, USA, 2022, pp. 42-49.
+[19] Q. Wu, J. Gu, Y. Lin, B. Han, H. He, Y. Hu, L. Liu, S. Wei, and S. Yin. Rmp-mem: A hw/sw reconfigurable multi-port memory architecture for multi-pea oriented cgra. In 2023 60th ACM/IEEE Design Automation
+
+1030
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 07:13:31 UTC from IEEE Xplore. Restrictions apply.
+
+

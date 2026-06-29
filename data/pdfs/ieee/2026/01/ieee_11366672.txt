@@ -1,0 +1,725 @@
+IEEE INTERNET OF THINGS JOURNAL, VOL. 13, NO. 8, 15 APRIL 2026
+
+15989
+
+Unified Error Correction Code Transformer With Low Complexity
+
+Yongli Yan , Member, IEEE, Jieao Zhu , Graduate Student Member, IEEE, Tianyue Zheng, Graduate Student Member, IEEE, Zhuo Xu , Graduate Student Member, IEEE,
+Chao Jiang , Graduate Student Member, IEEE, and Linglong Dai , Fellow, IEEE
+
+Abstract—Channel coding is vital for reliable sixth-generation (6G) data transmission, employing diverse error correction codes for various application scenarios. Traditional decoders require dedicated hardware for each code, leading to high hardware costs. Recently, artificial intelligence (AI)-driven approaches, such as the error correction code transformer (ECCT) and its enhanced version, the foundation error correction code transformer (FECCT), have been proposed to reduce the hardware cost by leveraging the Transformer to decode multiple codes. However, their excessively high computational complexity of O(N2) due to the self-attention mechanism in the Transformer limits scalability, where N represents the sequence length. To reduce computational complexity, we propose a unified Transformer-based decoder that handles multiple linear block codes within a single framework. Specifically, a standardized unit is employed to align code length and code rate across different code types, while a redesigned low-rank unified-attention module (UAM), with computational complexity of O(N), is shared across various heads in the Transformer. In addition, a sparse mask, derived from the parity-check matrix’s sparsity, is introduced to enhance the decoder’s ability to capture inherent constraints between information and parity-check bits, improving decoding accuracy and further reducing computational complexity by 86%. Extensive experimental results demonstrate that the proposed unified Transformer-based decoder outperforms existing methods and provides a high-performance, low-complexity solution for next-generation wireless communication systems.
+Index Terms—Bose–Chaudhuri–Hocquenghem (BCH), channel coding, error correction, low-density parity-check (LDPC), Polar, sixth generation (6G), sparse attention, Transformer, unified decoder.
+I. INTRODUCTION
+W ITH the continuous evolution of wireless communication technologies, the imminent arrival of sixthgeneration (6G) wireless communication will mark a paradigm shift toward ultrareliable communication [1], [2], [3], [4], [5],
+Received 30 October 2025; revised 2 January 2026; accepted 22 January 2026. Date of publication 28 January 2026; date of current version 9 April 2026. This work was supported in part by the National Natural Science Foundation of China (Youth Program) under Grant 62401332, in part by the Postdoctoral Fellowship Program of China Postdoctoral Science Fund (CPSF) under Grant GZC20231377, and in part by the National Natural Science Foundation of China (Distinguished Young Scholars Program) under Grant 62325106. (Corresponding author: Linglong Dai.)
+The authors are with the Department of Electronic Engineering, Tsinghua University, Beijing 100084, China, and also with the State Key Laboratory of Space Network and Communications, Beijing 100084, China (e-mail: yanyongli@tsinghua.edu.cn; zja21@mails.tsinghua.edu.cn; zhengty22@mails.tsinghua.edu.cn; xz23@mails.tsinghua.edu.cn; jiangc24@ mails.tsinghua.edu.cn; daill@tsinghua.edu.cn).
+Digital Object Identifier 10.1109/JIOT.2026.3658549
+
+[6], [7], [8], [9], [10], [11]. To meet the stringent performance demands of 6G, channel codes with strong error correction capabilities are expected to play a pivotal role. Specifically, low-density parity-check (LDPC) codes [12] and Polar codes [13] have proven effective in fifth-generation (5G) wireless communications. Due to their excellent performance, 3GPP has just made the decision to continue to use LDPC and Polar codes for future 6G in October 2025 [14]. Furthermore, algebraic geometry codes, such as Bose–Chaudhuri–Hocquenghem (BCH) codes [15], are commonly employed as outer codes in concatenated schemes with probabilistic codes to enhance decoding performance.
+A. Prior Works
+In wireless communication systems, multiple coding schemes are supported, such as LDPC and Polar codes in 5G [16], each requiring customized hardware for their decoding algorithms. For instance, LDPC codes employ iterative message passing for parallel data processing [17], while Polar codes rely on the successive cancellation (SC) decoding algorithm [13], which follows a sequential approach by traversing a decision tree, often simplified through binary tree pruning [18], [19], [20], [21]. Both LDPC and Polar codes utilize soft decoding methods, leveraging probabilistic information to achieve robust error correction. In contrast, BCH codes, another key coding scheme, employ algebraic decoding techniques classified as hard decoding [22], which rely on mathematical structures to correct errors. The gap between the hard decoding of BCH codes and the soft decoding of LDPC and Polar codes, combined with the distinct parallel and sequential architectures of LDPC and Polar codes, necessitates customized hardware circuits for each code type, resulting in significant hardware resource cost.
+To reduce hardware resource cost, three approaches have been investigated for decoding multiple codes with a single hardware framework: resource sharing, ordered statistical decoding, and artificial intelligence (AI)-driven methods. First, resource-sharing methods, such as those in [23] and [24], integrate LDPC and Polar code decoders into a single architecture using traditional decoding algorithms. These methods conserve hardware resources by multiplexing shared computational and storage units through reconfiguration. However, due to the distinct decoding algorithms for each code type, only partial resource sharing is achieved, limiting hardware resource reduction.
+
+2327-4662 © 2026 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:48:49 UTC from IEEE Xplore. Restrictions apply.
+
+15990
+
+IEEE INTERNET OF THINGS JOURNAL, VOL. 13, NO. 8, 15 APRIL 2026
+
+Second, ordered-statistics decoding methods, as explored in [17], [25], and [26], provide near-maximum likelihood (ML) decoding for linear block codes by ordering received symbols by reliability, enabling hardware reuse and reducing resource costs. Ordered-statistics decoding sorts signal positions by reliability, permutes the generator matrix of the code in a consistent manner across different linear block codes, and evaluates the most likely codewords through a limited search. This uniform approach to generator matrix processing enables hardware reuse across various linear block codes, reducing resource cost compared to code-specific decoding architectures. However, the computational complexity of ordered-statistics decoding increases exponentially with code length and search order (e.g., order-l). For example, an order-4 ordered-statistics decoding may require evaluating thousands of test codewords, increasing decoding latency.
+Third, in recent years, AI-driven decoders have gained attention as an alternative to reduce hardware resource cost. For example, inspired by the success of Transformers in natural language processing [27], the error correction code transformer (ECCT) was introduced to reduce hardware resources and enhance decoding performance for short codes [28]. The inherent connection between Transformers and decoders lies in their shared capability for sequence-to-sequence transformations, mapping input sequences—e.g., from one language to another in natural language processing or from log-likelihood ratios (LLRs) to information bits in channel decoding—into output sequences. ECCT leverages the Transformer’s self-attention mechanism, where multiple attention heads operate in parallel to process sequential data and capture long-range dependencies, effectively modeling the constrained relationships among the LLRs of decoder inputs. Building on ECCT, the foundation error correction code transformer (FECCT) enhances generalization to unseen codewords by integrating the distance matrix, derived from the parity-check matrix H, into the self-attention mechanism [29]. However, ECCT and FECCT rely on the Transformer’s powerful self-attention mechanism, which has a computational complexity of O(N2), where N represents the sequence length. Their high computational complexity makes them difficult to scale to long codes.
+B. Contributions
+To reduce computational complexity, we propose a unified Transformer-based decoder capable of handling multiple linear block codes, including LDPC, Polar, and BCH, within a single framework. To achieve this, we design a standardized unit and a low-rank unified-attention module (UAM) that shares attention scores across various heads in the Transformer. In addition, we develop a sparse masking mechanism to enhance decoding performance and further reduce computational complexity.1 Specifically, the main contributions of this article are summarized as follows.
+1) We introduce a unified Transformer-based decoder capable of seamlessly integrating various linear block codes. This architecture incorporates a standardized unit
+1Simulation codes will be provided to reproduce the results in this article: http://oa.ee.tsinghua.edu.cn/dailinglong/publications/publications.html
+
+to align code lengths, a UAM that compresses the structural information of all codewords, and a sparse mask leveraging the parity-check matrix’s sparsity to enhance decoding accuracy. These components achieve a code-agnostic decoder, eliminate the need for distinct hardware circuits for different decoding algorithms, and reduce computational complexity. 2) A standardized unit aligns parameters, such as code length and code rate, across different code types. Specifically, it pads codewords and their corresponding syndromes with zeros to a maximum length after receiving the channel output. This enables the Transformer-based decoder to handle any codeword within the maximum length, facilitating unified joint training. 3) We redesigned the self-attention module to create a unified attention mechanism that allows different attention heads to share attention scores. This approach contrasts with traditional self-attention mechanisms, where each head independently computes its scores using separate learned weights. This unified attention compresses structural information of different codewords through learning and shares parameters across various heads in the Transformer. It eliminates the need to project inputs into higher dimensions, reducing computational complexity from O(N2) to O(N), where N represents the sequence length. This results in a more efficient and unified decoding architecture. 4) By introducing a sparse mask, which leverages the sparsity of the parity-check matrix, we have significantly enhanced the model’s ability to capture inherent constraints between information and parity-check bits. This has led to a substantial improvement in decoding performance and the achievement of a state-of-the-art design. In addition, this sparse mask further reduces computational complexity by 86%, enabling efficient training for long codes.
+The rest of this article is organized as follows. Section II provides background knowledge, including the vanilla Transformers, channel encoders, as well as preprocessing and postprocessing involved to address the issue of overfitting. Section III details our proposed unified Transformer-based decoder. Section IV presents the results of training and inference. Section V analyzes the impact of the proposed optimization algorithms. Finally, Section VI concludes.
+Notations: Bold lowercase and uppercase letters denote vectors (e.g., v) and matrices (e.g., M), respectively, while scalars use regular letters (e.g., x). F2 represents the Galois field of order 2, and R and N denote the real and natural numbers, respectively. The transpose is indicated by [·]T , and N (µ, σ2) denotes a Gaussian distribution with mean µ and variance σ2. The function bipolar(x) = 1 − 2x maps x ∈ 0, 1 to bipolar values 1, −1, with its inverse bin(x) = (1 − x)/2 mapping 1, −1 back to 0, 1. The operator size(·) denotes the number of elements in a vector or matrix, and sign(·) represents the sign function, defined as sign(x) = 1 if x > 0, 0 if x = 0, and −1 if x < 0. For a linear block code with code length n and information bit length k, we denote it as (n, k).
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:48:49 UTC from IEEE Xplore. Restrictions apply.
+
+YAN et al.: UNIFIED ERROR CORRECTION CODE TRANSFORMER WITH LOW COMPLEXITY
+
+15991
+
+Fig. 3. Architecture of the communication system.
+
+Fig. 4. Decoder framework with preprocessing and postprocessing.
+
+Fig. 1. Single-layer vanilla Transformer encoder architecture.
+
+This embedding feeds into the MHA mechanism, which correlates sequence elements through
+
+Attn(Q,
+
+K,
+
+V)
+
+=
+
+Softmax
+
+Â
+
+Q· √
+
+KT
+
+Ã
+
+·
+
+V
+
+(2)
+
+dk
+
+extended to multiple heads as
+
+MHA(Q, K, V) = Concat (head1, . . . , headH) · WO (3)
+where headi = Attn(XQWiQ, XKWiK, XVWiV ), with XQ, XK, XV ∈ RN×dk set to Xe for self-attention, using trainable weights WiQ, WiK , WiV ∈ Rdk×dk and WO ∈ RHdk×Hdk , as depicted in Fig. 2.
+Next, the MHA output is processed by the FFN, applied uniformly across positions
+
+Fig. 2. Architecture of MHA.
+II. BACKGROUND For a better understanding of the proposed unified ECCT, this section will provide background knowledge on vanilla Transformers and forward error correction (FEC) codes.
+
+FFN(X) = W2 · ReLU(W1 · X + b1) + b2
+
+(4)
+
+where W1 ∈ Rdf ×dh , W2 ∈ Rdh×df , b1, and b2 are trainable parameters (TPs), and dh = H · dk and ReLU(x) = max(0, x) enables complex feature learning, with d f > dh for enhanced performance.
+Finally, residual connections and layer normalization link the MHA and FFN layers to produce the output X2 of a singlelayer Transformer encoder
+
+X1 = MHA LayerNorm (Xe) + Xe
+
+X2 = FFN LayerNorm (X1) + X1.
+
+(5)
+
+A. Vanilla Transformers
+The vanilla Transformer, a sequence-to-sequence model, comprises an encoder and decoder, each with L identical blocks. Each block integrates multihead self-attention (MHA), a positionwise feed-forward network (FFN), residual connections to mitigate gradient issues [30], and layer normalization for stability and faster convergence [31], as shown in Fig. 1.
+The process begins with embedding a 1-D input signal x ∈ RN into a higher-dimensional space
+
+Xe = Embedding(x) = diag(x) · W
+
+(1)
+
+where diag(x) ∈ RN×N is a diagonal matrix with x on the diagonal, and W ∈ RN×dk is a trainable weight matrix, producing Xe ∈ RN×dk with dk-dimensional embeddings for
+each position.
+
+B. Forward Error Correction Codes
+In information theory, FEC is a technique designed to reduce
+the bit error rate (BER) when transmitting data over a noisy
+channel. We adopt a linear block code defined by a generator matrix G ∈ Rk×n and a parity-check matrix H ∈ R(n−k)×n, satisfying G · HT = 0 over F2.
+The encoder maps a message vector m ∈ {0, 1}k to a codeword x ∈ {0, 1}n via x = m·G, where H· x = 0. This codeword is modulated using binary phase shift keying (BPSK), defined as BPSK(x) = 1 − 2x, yielding xs, which is transmitted over binary-input discrete memoryless channels (B-DMCs, e.g.,
+additive white Gaussian noise (AWGN) channels), producing y = xs + n, with n ∼ N (0, σ2).
+The decoder aims to recover m from y, as depicted in Fig. 3.
+Our work focuses on designing and training a parameterized
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:48:49 UTC from IEEE Xplore. Restrictions apply.
+
+15992
+
+IEEE INTERNET OF THINGS JOURNAL, VOL. 13, NO. 8, 15 APRIL 2026
+
+decoding function fθ. To develop a data-driven Transformer-
+
+based decoder, we leverage preprocessing and postprocessing
+
+techniques from [32], preserving BER and mean-squared error
+
+(MSE) performance (see Fig. 4). Training with an all-zero
+
+codeword mitigates overfitting due to exponential codeword
+
+space growth. The B-DMCs are modeled by (6), which is an
+
+equivalent statistical mode that differs from the true physical
+
+one [33]
+
+y = xs · z
+
+(6)
+
+where z is a random multiplicative noise independent of xs. In the preprocessing step, the absolute values of the received
+signal and the syndromes are concatenated as the input to the neural network, which can be written as
+
+ey = |y|, s (y)
+
+(7)
+
+where [·, ·] denotes the concatenation of vectors, |y| signifies the absolute value of y, and s(y) = H · bin(sign(y)) ∈ {0, 1}n−k is the syndrome from hard-decoded y.
+In the postprocessing step, the predicted noise ˆz is multiplied by the received signal y to recover x. That is, the predicted xˆ takes the form
+
+xˆ = bin sign (y · ˆz) .
+
+(8)
+
+C. Mask Generation in ECCT and FECCT
+Masks in Transformer-based error correction enhance decoding by integrating code structure into attention mechanisms. In ECCT [28], the mask g(H) : {0, 1}(n−k)×n → {−∞, 0}(2n−k)×(2n−k) embeds code structure using the paritycheck matrix H. Initialized as an identity matrix, it unmasks positions of paired ones in H rows, extending the Tanner graph to two-ring connectivity. It is applied additively in attention: Attn(Q, K, V) = Softmax(Q · KT + g(H)/(dk)1/2) · V.
+In FECCT [29], a learned ψ : N → R modulates attention via the distance matrix G(H) ∈ N(2n−k)×(2n−k), applied with a Hadamard product: Attn(Q, K, V) = (Softmax(Q· KT /(dk)1/2) ψ(G(H))) · V.
+III. PROPOSED UNIFIED ECCT
+In this section, we present the detailed architecture and training process of the proposed unified error correction code transformer (UECCT).
+
+A. Shared Unified Attention
+The vanilla self-attention mechanism in Transformer architectures establishes dense correlations among all input features within a sequence, resulting in a computational complexity of O(N2 · dk + N · dk2), where N is the sequence length and dk is the embedding dimension. This approach, while effective for capturing long-range dependencies, is computationally intensive and overlooks the intrinsic relationships across different samples, particularly in channel decoding tasks involving diverse linear block codes. Moreover, prior studies suggest that the input to the Softmax function in self-attention is probabilistically sparse, with only a few weights dominating the attention distribution [34]. This sparsity implies that a
+
+Fig. 5. Rank distribution of the Q · KT matrix in the ECCT model across six encoder layers for various code types.
+
+low-rank approximation could effectively capture the domi-
+
+nant correlations, reducing redundancy without compromising
+
+performance.
+
+To investigate this hypothesis, we trained an ECCT model
+
+[28] with parameters L = 6 (number of Transformer encoder
+
+layers), H = 8, dk = max(2n − k) = 182, and d f = 2912 on a diverse set of linear block codes, including LDPC (49, 24),
+
+LDPC(121, 60), LDPC(121, 80), Polar(32, 16), Polar(64, 32),
+
+Polar(128, 86), BCH(31, 16), BCH(63, 36), and BCH(127, 120). We analyzed the rank distribution of the Q · KT matrix
+
+across 1000 batches for the six-layer Transformer encoder. As
+
+illustrated in Fig. 5, the rank ranges from 12 to 181, with over
+
+90% of values below 69, consistently indicating a low-rank
+
+structure across all layers and code types. This observation
+
+suggests that the high-dimensional self-attention matrix can
+
+be approximated with a lower-rank representation, offering a
+
+pathway to reduce computational overhead.
+
+Furthermore, the conventional MHA mechanism computes
+
+independent attention scores for each head using distinct
+
+weight
+
+matrices
+
+WiQ,
+
+W
+
+K i
+
+,
+
+and
+
+WiV .
+
+However,
+
+we
+
+hypothesize
+
+that the attention distributions across heads may exhibit high
+
+similarity, particularly in channel decoding, where the sparse
+
+structure of the parity-check matrix H constrains bit interac-
+
+tions. To measure attention head similarity, we employed the
+
+Jensen–Shannon Divergence (JSD) [35], a symmetric measure
+
+of similarity between probability distributions, defined as
+
+JSD Ai [k] A j [k]
+
+=1 2
+
+DKL (Ai [k]
+
+M [k]) + DKL
+
+A j [k]
+
+M [k]
+
+(9)
+
+where k is the row index, Ai and A j ∈ RN×N are the Softmax outputs of attention heads i and j, M[k] =
+
+1/2(Ai[k]+A j[k]) is the average distribution, and DKL(P Q) =
+
+PN
+l=1
+
+P[l]
+
+log
+
+P[l]/Q[l]
+
+is
+
+the
+
+Kullback–Leibler
+
+divergence
+
+[36]. Using the same simulation setup as the low-rank valida-
+
+tion (L = 6, H = 8, dk = 182, and df = 2912), we computed the
+
+per-row JSD for all head pairs across all rows, averaging the
+
+results. As shown in Fig. 6, JSD values are consistently below
+
+0.17 across all layers, with a mean of 0.13, indicating strong
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:48:49 UTC from IEEE Xplore. Restrictions apply.
+
+YAN et al.: UNIFIED ERROR CORRECTION CODE TRANSFORMER WITH LOW COMPLEXITY
+
+15993
+
+Fig. 6. Distribution of JSD between attention head pairs across six layers, showing high similarity (JSD < 0.17).
+
+alignment in attention distributions. This similarity, driven by the sparse structure of H, supports the feasibility of sharing a common attention matrix across heads.
+Motivated by these findings, we propose a novel UAM to address the computational inefficiency and lack of crosscode generalization in traditional self-attention. The UAM introduces learnable memory components, Al and Vl ∈ RN×dl , where dl is a hyperparameter controlling the low-rank approximation. The UAM is defined as
+
+UniAttn ( Al, Vl) = Softmax ( Al) · VlT X
+
+(10)
+
+where X ∈ RN×dk is the input to the attention layer. In contrast, the conventional self-attention is expressed as
+
+Attn WQ, WK, WV
+
+= Softmax
+
+XWQ · √
+
+XWK
+
+T! ·
+
+XWV
+
+.
+
+(11)
+
+dk
+
+By eliminating the projections WQ and WK, the UAM
+
+reduces the computational complexity from O(N2 · dk + N · dk2)
+
+to O(N · dl · dk), where dl
+
+N. The shared attention
+
+matrix Al is applied across all heads, leveraging the observed
+
+head similarity to promote a unified decoding architecture.
+
+This design not only reduces the parameter count but also
+
+enables the model to learn shared features across diverse
+
+code types, facilitating a code-agnostic framework. Unlike the
+
+input-dependent Softmax in (11), (10) uses a fixed, learned
+
+Softmax( Al) to share attention scores, approximating data
+
+dependencies efficiently while VlT X incorporates input-specific values.
+Algorithm 1 Pseudocode for Multihead Unified Attention Require: Input: X # shape = (B, N, dh) 1: Trainable Parameters: Al, Vl 2: Hyper Parameters: number of heads H; batch size B 3: Hyper Parameters: embedding size dk; dh = H × dk 4: X = X.view(B, N, H, dk).transpose(1, 2) 5: A = Softmax(Al, dim = −1) # shape = (B, 1, N, dl) 6: Xo = A · (VlT · X) # shape = (B, H, N, dk) 7: Xo = Xo.transpose(1, 2).view(B, N, dh) 8: Xo = WO(Xo) 9: return Xo # shape = (B, N, dh)
+The architecture of the proposed multihead UAM is depicted in Fig. 7, with the corresponding pseudocode provided in Algorithm 1. The shared attention mechanism, combined with the low-rank approximation, significantly reduces model complexity while preserving decoding accuracy, as validated in subsequent experiments. This approach marks a significant advancement over the vanilla Transformer-based ECCT [28], which lacks cross-code unification.
+B. Sparse Masked Unified Attention
+Error detection and correction in channel decoding rely on analyzing received codewords against parity-check equations, where a nonzero syndrome indicates channel errors. In
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:48:49 UTC from IEEE Xplore. Restrictions apply.
+
+15994
+
+IEEE INTERNET OF THINGS JOURNAL, VOL. 13, NO. 8, 15 APRIL 2026
+
+Transformer architectures, vanilla self-attention is inherently
+
+dense, correlating all bits indiscriminately, despite parity bits
+
+not interacting with every information bit. To address this,
+
+we propose a sparse masked unified attention mechanism that
+
+incorporates code-specific dependencies, inspired by human
+
+intelligence in discerning bit relationships. This approach
+
+accelerates the model’s understanding of decoding principles,
+
+enhancing performance.
+
+Specifically, for any linear block code defined by a parity-
+
+check
+
+matrix
+
+H
+
+∈
+
+(n−k)×n
+F2
+
+,
+
+we
+
+define
+
+a
+
+mapping
+
+M(H)
+
+:
+
+{0, 1}(n−k)×n → {−∞, 0}N×dl that generates a mask for the
+
+attention memory Al. The UAM is formulated as
+
+UniAttn ( Al, Vl) = Softmax ( Al + M (H)) ·
+
+V
+
+T l
+
+X
+
+.
+
+(12)
+
+The design of the mask function M(H) aims to enable the
+neural network to capture the relationship between the received signal y ∈ Rn and its syndrome s(y) = H · y ∈ {0, 1}n−k, where y = bin(sign(y)) is the hard-decoded binary vector derived from y. For a valid codeword y (i.e., noise-free or correctly decoded), the orthogonality condition H · y = 0 holds over F2, yielding s(y) = 0. To embed this relationship within the attention mechanism, we define an extended parity-check matrix H ∈ R(2n−k)×(n−k) satisfying
+
+y, s (y) · H = 0.
+
+(13)
+
+Inspired by this, we explore a mask structure leveraging the
+
+parity-check constraints. Let Al be a matrix in RN×dl , where N
+
+is defined as 2n − k and dl as n − k. The theoretical foundation
+
+for setting dl = n − k stems from the maximum rank of the
+
+parity-check
+
+matrix
+
+H
+
+∈
+
+(n
+F2
+
+−
+
+k)×n,
+
+which
+
+is n
+
+−
+
+k. We then
+
+construct the extended parity-check matrix H as follows:
+
+H
+
+=
+
+Ä HT In−k
+
+(14)
+
+where In−k ∈ R(n−k)×(n−k) is an identity matrix with ones on the diagonal and zeros elsewhere. The generation of the attention mask is thus a direct process, formulated as M(H).
+We naturally proceed to define the density of H as
+
+Fig. 7. (a) Architecture of the vanilla MHA and (b) proposed multihead unified attention.
+Fig. 8. We present the corresponding matrices HT and H, and the Tanner graph for the Hamming (7, 4) code.
+
+sum H
+
+Hd
+
+=
+
+(2n
+
+−
+
+k)
+
+×
+
+(n
+
+−
+
+. k)
+
+(15)
+
+For enhanced clarity, Fig. 8 offers a visual depiction of matrices HT and H, and the Tanner graph, utilizing the
+Hamming (7, 4) code as an illustrative example. Here, matrix
+H is defined as
+
+21 1 1 0 1 0 03
+
+H = 41 0 1 1 0 1 05 .
+
+(16)
+
+0111001
+
+This illustration demonstrates that the application of the mask results in sparser attention, a phenomenon particularly pronounced in low-density parity-check codes. Most importantly, the computational complexity of the UAM is now reduced to the density of the code O(N × dl × dk × Hd). Our experimental results indicate that the use of this mask has successfully reduced the computational complexity of the attention mechanism by an average of 86%. Furthermore, we provide a summary of the Python-style sparse mask
+
+construction within Algorithm 2. It should be noted that, in application-specific integrated circuit (ASIC) implementations, computations involving the masked parts can be directly skipped to enhance efficiency [37]. This approach is applied to operations in (12), ensuring that computational complexity scales with the effective code length rather than the padded maximum [38].
+C. Architecture and Training Methodology
+The architecture of the proposed unified ECCT is illustrated in Fig. 9. The primary innovation in our model involves substituting the vanilla attention mechanism with a multihead shared UAM. This modification not only decreases computational complexity but also empowers the model to identify distinctive features among diverse codewords, thereby facilitating the establishment of a unified decoding architecture. We employ fine-tuning techniques to enhance the model’s generalization to unseen codewords. Furthermore, we have
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:48:49 UTC from IEEE Xplore. Restrictions apply.
+
+YAN et al.: UNIFIED ERROR CORRECTION CODE TRANSFORMER WITH LOW COMPLEXITY
+
+15995
+
+Fig. 9. Illustration of the proposed unified ECCT.
+
+Algorithm 2 Pseudocode for Sparse Mask Construction Require: Input: H # shape = (n − k, n)
+# Create a zero matrix of size (2n − k) × (n − k) 1: H = zeros(2n − k, n − k)
+# Transpose H and place in upper block 2: H[0 : n, 0 : n − k] = H.transpose(0, 1)
+# Identity matrix for syndrome extension 3: H[n : 2n − k, 0 : n − k] = eye(n − k)
+# Logical negation creates mask 4: return (−∞) · (¬ H)
+designed standardization units to standardize the lengths of codewords and syndromes across diverse datasets, ensuring the model’s compatibility with various code types, lengths, and rates.
+In Fig. 9, the output y from the AWGN channel passes through the preprocessing module to yield N = 2n − k input elements for the neural network. The decoder is constructed by concatenating L Transformer encoders, which consist of unified-attention and feed-forward layers, with normalization layers in between. The output module is characterized by two fully connected layers. The initial layer compresses the multihead output into a 1-D vector of size 2n − k, with the subsequent layer transforming it into an n-dimensional vector representing the softly decoded noise. Finally, the postprocessing module acts on the estimated noise to derive the transmitted original codeword.
+We employ binary cross-entropy as the loss function with the objective of learning to predict the multiplicative noise z. The corresponding target binary multiplicative noise is denoted as ˜z = bin(sign(z)). Therefore, the loss calculation for a received individual codeword y is given by
+n
+X loss = − z˜i log ( fθ (y)) + (1 − z˜i) log (1 − fθ (y)) . (17)
+i=1
+To accommodate codewords of varying lengths within a unified architecture, we have designed a standardization unit that performs padding on |y| and s(y) as described in (7). Specifically, after receiving the channel output, we pad
+
+different codewords and their corresponding syndromes with zeros up to the maximum length. Assuming that the maximum length of the codeword is Nmax and the maximum length of the syndrome is S max, the dataset is standardized according to
+
+y= e
+
+|y|, 0c , s (y) , 0s
+
+(18)
+
+where 0c and 0s represent zero vectors with sizes Nmax − size(y) and S max − size(s(y)), respectively. Through this unit, the Transformer neural decoder can accommodate any codeword within the maximum length, allowing for joint training in a unified manner. In ASIC implementations, computations for zero-padded parts can be skipped to improve efficiency, similar to the sparse masked attention [37].
+In the training phase, we conducted 1000 epochs, each consisting of 1000 minibatches, which in turn contained 512 samples each. Samples for each minibatch were randomly selected from a pool of LDPC, Polar, and BCH codewords. The learning rate was initialized at 10−3, and a cosine decay scheduler was applied without warmup [39], gradually reducing it to 10−6 by the end of the training process. We employ the Adam optimizer to dynamically adjust the learning rate, leveraging its efficacy in managing diverse data types and model architectures [40]. The AWGN noise introduced to the links had its signal-to-noise ratio (SNR) randomly chosen between 3 and 7 for each batch. All experiments were conducted on NVIDIA GeForce RTX 4090 24 GB GPUs.
+
+IV. EXPERIMENTS
+We conducted experiments on linear block codes, specifically LDPC, Polar, and BCH, to assess the effectiveness of the proposed architecture. The parity-check matrices utilized in the article were sourced from [41]. We benchmark our approach against the most recent state-of-the-art methods from [28], which trains each codeword parameter independently, and the jointly trained FECCT [29]. In addition, we compare it to legacy belief propagation (BP)-based decoders, including unlearned BP [42], fully supervised hyper BP [43], and autoregressive BP (AR BP) [44]. The results are presented in the form of BER and block error rate (BLER) at various normalized SNR (i.e., Eb/N0) values, with at least 105 random
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:48:49 UTC from IEEE Xplore. Restrictions apply.
+
+15996
+
+IEEE INTERNET OF THINGS JOURNAL, VOL. 13, NO. 8, 15 APRIL 2026
+
+Fig. 10. BER comparison of ECCT, FECCT, and proposed UECCT for Polar Fig. 13. BER comparison between the NMS algorithm and the proposed
+
+codes.
+
+UECCT for medium-to-long LDPC codes.
+
+Fig. 11. BER comparison of ECCT and proposed UECCT for LDPC codes.
+
+Fig. 14. ABER performance across various Transformer encoder layers and the embedding dimensions dk.
+
+Fig. 12. BER comparison of ECCT, FECCT, and proposed UECCT for BCH codes.
+codewords tested per SNR. We define aggregate BER (ABER) and aggregate BLER (ABLER) as the overall error rates spanning all evaluated codewords. It is worth mentioning that the learned weights remain fixed posttraining, with only the code-specific mask updating based on H for each decoding instance.
+In addition, to enable direct comparison with ECCT and FECCT, whose simulation results were sourced from their respective papers [28] and [29], we fine-tuned the pretrained UECCT models on consultative committee for space data systems (CCSDS) [45] and MacKay [46] codewords using jointly trained LDPC, Polar, and BCH models. Given GPU memory constraints and the fact that the performance of long codes has been thoroughly explored [33], while the error correction of short codes remains far from the Shannon limit [47], this work primarily focuses on training and validating medium-to-short codes.
+The proposed unified ECCT is defined by the following hyperparameters: the number of Transformer encoder layers L, the number of unified attention heads H, the dimensions of word embeddings dk, the dimensions dl of the trainable
+
+memory Al and Vl, and the dimension d f of the FFN layer. We present the performance of our framework with hyperparameters are set to L = 6, H = 8, dk = 64, dl = 64, and d f = 4·H·dk. The value of dl = 64 corresponds to the maximum syndrome length among the jointly trained codewords.
+Table I presents the simulation results, specifically showing the negative natural logarithm of the BER at Eb/N0 values of 4, 5, and 6 dB. It is noted that higher values in this context indicate better performance, with the best results for each SNR highlighted in bold. “N/A” indicates that the corresponding metric is not applicable or not reported in the original source due to differences in model configuration or unavailable data. Additional BER plots for Polar, LDPC, and BCH codes are provided in Figs. 10–12, respectively. Simulation results demonstrate that our proposed UECCT outperforms both the individually trained ECCT [28] and the jointly trained FECCT [29] across the majority of codewords, validating the effectiveness of the proposed architecture. Notably, UECCT even surpasses FECCT’s performance with an embedding length of 128 when operating at a more compact embedding length of 64, further highlighting the computational efficiency of our design. The superior performance arises from its ability to utilize a shared attention mechanism across heads, combined with sparsity-aware masking that reduces computational complexity while maintaining decoding accuracy.
+To further validate the performance and scalability of the proposed method on medium-to-long codes, we conducted joint training using LDPC(576, 288), LDPC(768, 512), and LDPC(960, 800) codewords with hyperparameters set to
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:48:49 UTC from IEEE Xplore. Restrictions apply.
+
+YAN et al.: UNIFIED ERROR CORRECTION CODE TRANSFORMER WITH LOW COMPLEXITY
+
+15997
+
+TABLE I
+NEGATIVE NATURAL LOGARITHM OF BER FOR ECCT, FECCT, AND UECCT ACROSS POLAR, LDPC, BCH, CCSDS, AND MACKAY CODES AT Eb/N0 = 4, 5, 6 DB, WITH BEST RESULTS IN BOLD (HIGHER IS BETTER)
+
+L = 12, H = 8, dk = 16, dl = 288, and d f = 512. The neural network training and inference were performed under an AWGN channel with BPSK modulation. During training, the SNR was randomly selected between 2 and 3 dB, with a batch size of 192, while other training methods were consistent with those described in Section III-C. During inference, 105 code blocks were tested per SNR. For comparison with traditional decoding algorithms, we utilized the normalized min-sum (NMS) algorithm for LDPC codes [48]. The NMS algorithm was configured with a normalization factor of 0.875 and a maximum of 15 iterations. The normalization factor of 0.875 (= 1 − 1/8) is chosen following established practices in LDPC decoding [49], as it provides a good performance-complexity tradeoff and enables hardware-efficient implementation via bitshift operations. In addition, an early stopping mechanism was implemented to halt decoding once the parity-check matrix H is satisfied. Fig. 13 presents the BER performance comparison between the NMS algorithm and the proposed UECCT. The simulation results demonstrate that the proposed method achieves performance comparable to the traditional NMS decoding algorithm. This indicates that our decoding architecture effectively scales to medium-to-long codes.
+V. ANALYSIS
+Using the parameters in Table I, we examine the effect of Transformer encoder layers on performance, focusing on
+
+the embedding dimension dk and sparse masked attention efficiency. We also compare our approach’s computational complexity with that of existing methods.
+A. Impact of Encoder Layers and Embedding Dimensions
+Fig. 14 displays the ABER performance across varying encoder layers L and embedding dimensions dk. Results reveal that L exerts a stronger influence on performance than dk. Increasing L broadens the parameter space, enhancing nonlinear fitting and enabling complex representations.
+Deeper architectures better capture intricate data patterns and dependencies, crucial for error correction. Additional layers enable multilevel abstraction and refinement, improving error estimation and correction, especially in complex wireless communication systems where simpler models falter.
+These findings highlight the primacy of model depth in Transformer-based error correction. Prioritizing L over dk can optimize model design, enhancing practical performance.
+B. Impact of Sparse Masked Attention
+Fig. 15 illustrates the effect of sparse masked attention on training loss, ABER, and ABLER. Sparse masked attention reduces training loss by 33.3% and speeds up convergence. It also significantly boosts error correction, improving ABER by 0.7 dB at a BER of 10−5 and ABLER by 0.9 dB at a BLER of 10−4.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:48:49 UTC from IEEE Xplore. Restrictions apply.
+
+15998
+
+IEEE INTERNET OF THINGS JOURNAL, VOL. 13, NO. 8, 15 APRIL 2026
+
+TABLE II
+COMPARISON OF TPS, MACS, TRAINING TIME, INFERENCE TIME, AND MASK DENSITY AMONG ECCT, FECCT, AND UECCT FOR VARIOUS CODES, ALL WITH IDENTICAL PARAMETERS L = 6, H = 8, dk = 64, dl = 64, AND d f = 2048
+
+Fig. 15. Overall improvement in loss, ABER, and ABLER with sparse masked attention.
+
+These gains highlight the effectiveness of embedding domain-specific knowledge into the attention mechanism, yielding significant improvements in efficiency and accuracy. By reducing computational complexity while boosting the model’s capacity to decode complex signals, this approach emerges as a promising advancement for future error correction techniques.
+C. Computational Complexity Analysis
+Before delving into the computational complexity, let us first review the unified ECCT presented in Fig. 9, which incorporates L layers of Transformer encoders. The principal computational complexity within each layer is found in the MHA module, which is predominantly responsible for matrix multiplication and is defined by the hyperparameters H, dk, and dl. Consequently, the computational complexity of the proposed architecture is given by O(L × H × (N × dl × dk × Hd)), where N = 2n − k, and dl N. Due to the sparsity of the parity-check matrix, Hd is usually quite small. In our experiment, Hd is approximately 0.14, which significantly reduces the computational complexity of the neural network. By contrast, the vanilla Transformer architectures in ECCT and FECCT have complexities of O(L × H × (N2 × dk × Md + N × dk2)) and O(L × H × (N2 × dk + N × dk2 + N2 × Md)), respectively, where Md represents the mask density in these models.
+Table II compares the TPs, multiply–accumulate operations (MACs), training time, inference time, and mask density for
+
+Fig. 16. Comparison of average TPs, MACs, training time, inference time, and mask density between ECCT, FECCT, and UECCT.
+ECCT, FECCT, and UECCT. Lower values are preferable, with the best performing values highlighted in bold. The metrics for TPs and MACs are obtained using Thop [50], a neural network profiling tool. UECCT reduces parameters and MACs by 25.0% compared to both ECCT and FECCT through lowrank approximation, shared attention, and omission of Q and K projections. This results in training times 19.7% and 81.2% lower, and inference times 23.1% and 93.5% lower than ECCT and FECCT, respectively. Mask densities are influenced by design choices: FECCT has the highest density due to Tanner graph distance calculations, ECCT has a moderate density from extended bit-pair relations, and UECCT has the lowest density, 58.2% and 79.7% lower than ECCT and FECCT, achieved through the direct utilization of H and the extension of the identity matrix. For a more intuitive representation, the average values of each metric across the codewords in Table II are provided in Fig. 16.
+Compared to the approach in [28] and [29], while the proposed method excels in decoding versatility and computational complexity, it may fall short in terms of memory efficiency, power consumption, and computational resource utilization when compared to nonlearning solutions. This inefficiency could limit its potential for deployment. To address these
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:48:49 UTC from IEEE Xplore. Restrictions apply.
+
+YAN et al.: UNIFIED ERROR CORRECTION CODE TRANSFORMER WITH LOW COMPLEXITY
+
+15999
+
+issues, future implementations could leverage techniques such [19] Y. Yan, X. Zhang, and B. Wu, “An implementation of belief propagation
+
+as parameter sharing, low-rank factorization, and quantization, aiming to reduce complexity and enhance efficiency [51], [52], [53].
+
+decoder with combinational logic reduced for polar codes,” IEICE Electron. Exp., vol. 16, no. 15, Jul. 2019, Art. no. 20190382. [20] Y. Yan, X. Zhang, and B. Wu, “Reduced complexity successivecancellation decoding of polar codes based on linear approximation,” IEICE Trans. Fundam. Electron. Commun. Comput. Sci., vol. 103, no. 8,
+
+VI. CONCLUSION
+
+pp. 995–999, Aug. 2020.
+
+[21] C. Leroux, A. J. Raymond, G. Sarkis, I. Tal, A. Vardy, and W. J. Gross,
+
+We proposed a unified Transformer-based decoder that
+
+“Hardware implementation of successive-cancellation decoders for polar
+
+seamlessly integrates multiple linear block codes within a single framework. By introducing a standardized unit, a UAM, and a sparse mask leveraging the parity-check
+
+codes,” J. Signal Process. Syst., vol. 69, no. 3, pp. 305–315, Dec. 2012. [22] P. Mathew, L. Augustine, G. Sabarinath, and T. Devis, “Hardware
+implementation of (63,51) BCH encoder and decoder for WBAN using LFSR and BMA,” 2014, arXiv:1408.2908.
+
+matrix’s sparsity, we achieved enhanced decoding accuracy and reduced computational complexity from O(N2) to O(N). This work delivers a high-performance, low-complexity solution, addressing hardware overhead and scalability challenges in next-generation wireless systems like 6G. Future work will focus on improving memory efficiency and power consumption through techniques such as pruning and quantization to
+
+[23] S. Cao, T. Lin, S. Zhang, S. Xu, and C. Zhang, “A reconfigurable and pipelined architecture for standard-compatible LDPC and polar decoding,” IEEE Trans. Veh. Technol., vol. 70, no. 6, pp. 5431–5444, Jun. 2021.
+[24] Y. Yue et al., “A unified forward error correction accelerator for multimode turbo, LDPC, and polar decoding,” in Proc. ACM/IEEE Int. Symp. Low Power Electron. Design, Boston, MA, USA, Aug. 2022, pp. 1–6.
+[25] M. P. C. Fossorier and S. Lin, “Soft-decision decoding of linear block codes based on ordered statistics,” IEEE Trans. Inf. Theory, vol. 41,
+
+enhance deployability in resource-constrained environments.
+
+no. 5, pp. 1379–1396, Sep. 1995. [26] M. P. C. Fossorier, “Iterative reliability-based decoding of low-density
+parity check codes,” IEEE J. Sel. Areas Commun., vol. 19, no. 5,
+
+REFERENCES
+[1] E. Bjo¨rnson, L. Sanguinetti, H. Wymeersch, J. Hoydis, and T. L. Marzetta, “Massive MIMO is a reality—What is next?: Five promising research directions for antenna arrays,” Digit. Signal Process., vol. 94, pp. 3–20, Nov. 2019.
+[2] M. Giordani, M. Polese, M. Mezzavilla, S. Rangan, and M. Zorzi, “Toward 6G networks: Use cases and technologies,” IEEE Commun. Mag., vol. 58, no. 3, pp. 55–61, Mar. 2020.
+[3] W. Jiang, B. Han, M. A. Habibi, and H. D. Schotten, “The road towards 6G: A comprehensive survey,” IEEE Open J. Commun. Soc., vol. 2, pp. 334–366, 2021.
+[4] H. Zhang and W. Tong, “Channel coding for 6G extreme connectivity—Requirements, capabilities, and fundamental tradeoffs,” IEEE BITS Inf. Theory Mag., vol. 3, no. 1, pp. 54–66, Mar. 2023.
+[5] Y. Zhao et al., “Near-field communications: Characteristics, technologies, and engineering,” Frontiers Inform. Technol. Electron. Eng., vol. 25, no. 12, pp. 1580–1626, 2024.
+[6] Z. Wang, J. Zhang, E. Bjo¨rnson, D. Niyato, and B. Ai, “Optimal bilinear equalizer for cell-free massive MIMO systems over correlated Rician channels,” IEEE Trans. Signal Process., vol. 73, pp. 1501–1517, 2025.
+[7] Z. Wang, K. Huang, and Y. C. Eldar, “Spectrum breathing: Protecting over-the-air federated learning against interference,” IEEE Trans. Wireless Commun., vol. 23, no. 8, pp. 10058–10071, Aug. 2024.
+[8] Z. Wang, A. E. Kalør, Y. Zhou, P. Popovski, and K. Huang, “Ultra-lowlatency edge inference for distributed sensing,” 2024, arXiv:2407.13360.
+[9] Z. Wang, M. Cui, H. Yang, Q. Zeng, M. Sheng, and K. Huang, “AirBreath sensing: Protecting over-the-air distributed sensing against interference,” 2025, arXiv:2508.11267.
+[10] Z. Xu, Z. Wu, and L. Dai, “How to enhance spectrum efficiency for near-field communications: From LDMA to NOMA?,” IEEE Trans. Commun., vol. 73, no. 11, pp. 10709–10723, Nov. 2025.
+[11] Z. Xu, Z. Zhang, and L. Dai, “Near-optimal near-field beam training: From searching to inference,” IEEE Trans. Wireless Commun., vol. 24, no. 11, pp. 9173–9185, Nov. 2025.
+[12] R. G. Gallager, “Low-density parity-check codes,” IEEE Trans. Inf. Theory, vol. IT-8, no. 1, pp. 21–28, Jan. 1962.
+[13] E. Arikan, “Channel polarization: A method for constructing capacityachieving codes for symmetric binary-input memoryless channels,” IEEE Trans. Inf. Theory, vol. 55, no. 7, pp. 3051–3073, Jul. 2009.
+[14] 3GPP TSG RAN WG1 Meeting #122-bis, 3GPP, Prague, Czech Republic, Oct. 2025.
+[15] R. C. Bose and D. K. Ray-Chaudhuri, “On a class of error correcting binary group codes,” Inf. Control, vol. 3, no. 1, pp. 68–79, Mar. 1960.
+[16] Technical Specification Group Radio Access Network; Multiplexing and Channel Coding, document TS 38.212, 3GPP, Sep. 2023.
+[17] M. P. C. Fossorier, M. Mihaljevic, and H. Imai, “Reduced complexity iterative decoding of low-density parity check codes based on belief propagation,” IEEE Trans. Commun., vol. 47, no. 5, pp. 673–680, May 1999.
+[18] C. Leroux, I. Tal, A. Vardy, and W. J. Gross, “Hardware architectures for successive cancellation decoding of polar codes,” in Proc. IEEE Int. Conf. Acoust., Speech Signal Process., May 2011, pp. 1665–1668.
+
+pp. 908–917, May 2001. [27] A. Vaswani et al., “Attention is all you need,” in Proc. Adv. Neural
+Inf. Process. Syst. (NeurIPS?17), vol. 30, Long Beach, CA, USA, Dec. 2025, pp. 5998–6008. [28] Y. Choukroun and L. Wolf, “Error correction code transformer,” in Proc. Adv. Neural Inf. Process. Syst. (NeurIPS), New Orleans, LA, USA, Nov. 2022, pp. 38695–38705.
+[29] Y. Choukroun and L. Wolf, “A foundation model for error correction codes,” in Proc. 12th Int. Conf. Learn. Represent. (ICLR), Apr. 2024, pp. 1–19.
+[30] K. He, X. Zhang, S. Ren, and J. Sun, “Deep residual learning for image recognition,” in Proc. IEEE Conf. Comput. Vis. Pattern Recognit. (CVPR), Las Vegas, NV, USA, Jun. 2016, pp. 770–778.
+[31] J. L. Ba, J. R. Kiros, and G. E. Hinton, “Layer normalization,” 2016, arXiv:1607.06450.
+[32] A. Bennatan, Y. Choukroun, and P. Kisilev, “Deep learning for decoding of linear codes—A syndrome-based approach,” in Proc. IEEE Int. Symp. Inf. Theory (ISIT), Vail, CO, USA, Jun. 2018, pp. 1595–1599.
+[33] T. J. Richardson and R. L. Urbanke, “The capacity of low-density paritycheck codes under message-passing decoding,” IEEE Trans. Inf. Theory, vol. 47, no. 2, pp. 599–618, Feb. 2001.
+[34] H. Zhou et al., “Informer: Beyond efficient transformer for long sequence time-series forecasting,” in Proc. AAAI Conf. Artif. Intell., vol. 35, no. 12, May 2021, pp. 11106–11115.
+[35] M. Mene´ndez, J. A. Pardo, L. Pardo, and M. D. C. Pardo, “The Jensen–Shannon divergence,” J. Franklin Inst., vol. 334, no. 2, pp. 307–318, Mar. 1997.
+[36] S. Kullback and R. A. Leibler, “On information and sufficiency,” Ann. Math. Stat., vol. 22, no. 1, pp. 79–86, Mar. 1951.
+[37] Y. Liao, J. Meng, and J.-S. Seo, “A 28 nm scalable and flexible accelerator for sparse transformer models,” in Proc. 29th ACM/IEEE Int. Symp. Low Power Electron. Design, New York, NY, USA, Aug. 2024, pp. 1–6.
+[38] T. J. Ham et al., “A3: Accelerating attention mechanisms in neural networks with approximation,” in Proc. IEEE Int. Symp. High Perform. Comput. Archit. (HPCA), San Diego, CA, USA, Feb. 2020, pp. 328–341.
+[39] R. Xiong et al., “On layer normalization in the transformer architecture,” in Proc. 37th Int. Conf. Mach. Learn. (ICML), Jul. 2020, pp. 10524–10533.
+[40] D. P. Kingma and J. Ba, “Adam: A method for stochastic optimization,” 2014, arXiv:1412.6980.
+[41] M. Helmling et al., “Database of channel codes and ML simulation results,” RPTU Rheinland-Pfa¨lzische Technische Universita¨t Kaiserslautern-Landau, Kaiserslautern, Germany, Tech. Rep., 2019. [Online]. Available: https://www.uni-kl.de/channel-codes
+[42] H. E. Kyburg Jr.., “Probabilistic reasoning in intelligent systems: Networks of plausible inference,” J. Philosophy, vol. 88, no. 8, pp. 434–437, Aug. 1991, doi: 10.2307/2026705. [Online]. Available: https://www.jstor.org/stable/2026705
+[43] E. Nachmani and L. Wolf, “Hyper-graph-network decoders for block codes,” in Proc. Adv. Neural Inf. Process. Syst. (NeurIPS), vol. 32, Vancouver, BC, Canada, Dec. 2019, pp. 2326–2336.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:48:49 UTC from IEEE Xplore. Restrictions apply.
+
+16000
+
+IEEE INTERNET OF THINGS JOURNAL, VOL. 13, NO. 8, 15 APRIL 2026
+
+[44] E. Nachmani and L. Wolf, “Autoregressive belief propagation for decoding block codes,” 2021, arXiv:2103.11780.
+[45] Recommendation for Space Data System Standards, CCSDS, Prague, Czech Republic, 2003.
+[46] D. J. C. MacKay, “Good error-correcting codes based on very sparse matrices,” IEEE Trans. Inf. Theory, vol. 45, no. 2, pp. 399–431, Mar. 1999.
+[47] C. E. Shannon, “A mathematical theory of communication,” Bell Syst. Tech. J., vol. 27, no. 3, pp. 379–423, Jul. 1948.
+[48] J. Chen and M. P. C. Fossorier, “Decoding low-density parity check codes with normalized APP-based algorithm,” in Proc. IEEE Global Telecommun. Conf. (GLOBECOM), vol. 2, Nov. 2002, pp. 1026–1030.
+[49] J. Chen, A. Dholakia, E. Eleftheriou, M. P. C. Fossorier, and X. Hu, “Reduced-complexity decoding of LDPC codes,” IEEE Trans. Commun., vol. 53, no. 8, pp. 1288–1299, Aug. 2005.
+[50] L. Zhu. (2020). THOP: A Tool for Measuring the FLOPs of Neural Networks. [Online]. Available: https://github.com/Lyken17/pytorchOpCounter
+[51] S. Takase and S. Kiyono, “Lessons on parameter sharing across layers in transformers,” 2021, arXiv:2104.06022.
+[52] B. Chen, T. Dao, E. Winsor, Z. Song, A. Rudra, and C. Re´, “Scatterbrain: Unifying sparse and low-rank attention,” in Proc. Adv. Neural Inf. Process. Syst. (NeurIPS), vol. 34, Dec. 2021, pp. 17413–17426.
+[53] Z. Liu, Y. Wang, K. Han, S. Ma, and W. Gao, “Post-training quantization for vision transformer,” in Proc. Adv. Neural Inf. Process. Syst., 2021, pp. 28092–28103.
+Yongli Yan (Member, IEEE) received the B.S. degree from Zhengzhou University, Zhengzhou, China, in 2014, and the Ph.D. degree from the University of Chinese Academy of Sciences, Beijing, China, in 2019.
+From 2020 to 2023, he served as a Senior Researcher at Huawei HiSilicon Technologies Company Ltd., Shanghai, China. Since 2023, he has been a Post-Doctoral Researcher with the Department of Electronic Engineering, Tsinghua University, Beijing. His research focuses on channel encoding and decoding, AI-driven wireless communication systems, and VLSI architectures for wireless communication chips. Dr. Yan was awarded the Postdoctoral Fellowship Program of CPSF in 2023 and received funding from the National Natural Science Foundation of China (Youth Program) in 2024. He was also awarded the Huawei HiSilicon Outstanding Engineer in 2023. His work integrates academic research and practical applications to advance wireless communication technologies.
+
+Jieao Zhu (Graduate Student Member, IEEE) received the B.E. degree in electronic engineering and the B.S. degree in applied mathematics from Tsinghua University, Beijing, China, in 2021, where he is currently pursuing the Ph.D. degree with the Department of Electronic Engineering.
+His research interests include electromagnetic information theory (EIT), reconfigurable intelligent surface (RIS), and Rydberg atomic receivers.
+Dr. Zhu received the National Scholarship for undergraduates in 2018 and 2020, and received the National Scholarship for doctoral students in 2025. He was elected the Excellent Graduates of Beijing in 2021.
+
+Province in 2021.
+
+Tianyue Zheng (Graduate Student Member, IEEE) received the B.E. degree in information engineering from Southeast University, Nanjing, China, in 2022. She is currently pursuing the Ph.D. degree with the Department of Electronic Engineering, Tsinghua University, Beijing, China.
+Her research interests include extremely large scale MIMO (XL-MIMO), CSI acquisition, and AI for communications.
+Dr. Zheng has received the National Scholarship in 2019 and the Excellent Student of Jiangsu
+
+Zhuo Xu (Graduate Student Member, IEEE) received the B.E. degree in communication engineering from Harbin Institute of Technology, Harbin, China, in 2023. He is currently pursuing the M.S. degree with the Department of Electronic Engineering, Tsinghua University, Beijing, China.
+His research interests include extremely largescale MIMO (XL-MIMO), near-field MIMO communications, and AI for communications.
+Dr. Xu received the National Scholarship in 2020, 2022, and 2025. He was awarded the Special Scholarship of Tsinghua University in 2025.
+Chao Jiang (Graduate Student Member, IEEE) received the B.E. degree in electronic engineering from Tsinghua University, Beijing, China, in 2024, where he is currently pursuing the M.S. degree with the Department of Electronic Engineering.
+His research interests include channel estimation and machine learning for wireless communications.
+Linglong Dai (Fellow, IEEE) received the B.S. degree from Zhejiang University, Hangzhou, China, in 2003, the M.S. degree from China Academy of Telecommunications Technology, Beijing, China, in 2006, and the Ph.D. degree from Tsinghua University, Beijing, in 2011.
+From 2011 to 2013, he was a Post-Doctoral Researcher with the Department of Electronic Engineering, Tsinghua University, where he was an Assistant Professor from 2013 to 2016, an Associate Professor from 2016 to 2022, and has been a Professor since 2022. He has co-authored the book MmWave Massive MIMO: A Paradigm for 5G (Academic Press, 2016). He has authored or co-authored over 100 IEEE journal articles and over 60 IEEE conference papers. He also holds over 20 granted patents. His current research interests include massive MIMO, reconfigurable intelligent surface (RIS), millimeterwave and Terahertz communications, near-field communications, machine learning for wireless communications, and electromagnetic information theory. Dr. Dai has received five IEEE Best Paper Awards at the IEEE ICC 2013, the IEEE ICC 2014, the IEEE ICC 2017, the IEEE VTC 2017Fall, the IEEE ICC 2018, and the IEEE GLOBECOM 2023. He has also received Tsinghua University Outstanding Ph.D. Graduate Award in 2011, Beijing Excellent Doctoral Dissertation Award in 2012, China National Excellent Doctoral Dissertation Nomination Award in 2013, the URSI Young Scientist Award in 2014, the IEEE Transactions on Broadcasting Best Paper Award in 2015, the Electronics Letters Best Paper Award in 2016, the National Natural Science Foundation of China for Outstanding Young Scholars in 2017, the IEEE ComSoc Asia–Pacific Outstanding Young Researcher Award in 2017, the IEEE ComSoc Asia–Pacific Outstanding Paper Award in 2018, the China Communications Best Paper Award in 2019, the IEEE Access Best Multimedia Award in 2020, the IEEE ComSoc Leonard G. Abraham Prize in 2020, the Distinguished Young Scholar of NSFC in 2023, and the IEEE ComSoc Stephen O. Rice Prize in 2025. He has been recognized as a Highly Cited Researcher by Clarivate from 2020 to 2024.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 05:48:49 UTC from IEEE Xplore. Restrictions apply.
+
+

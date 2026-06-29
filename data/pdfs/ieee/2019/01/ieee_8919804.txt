@@ -1,0 +1,762 @@
+Deep Learning-based Polar Code Design
+Moustafa Ebada, Sebastian Cammerer, Ahmed Elkelesh and Stephan ten Brink
+Institute of Telecommunications, Pfaffenwaldring 47, University of Stuttgart, 70569 Stuttgart, Germany
+{ebada,cammerer,elkelesh,tenbrink}@inue.uni-stuttgart.de
+Abstract—In this work, we introduce a deep learning-based
+polar code construction algorithm. The core idea is to represent
+the information/frozen bit indices of a polar code as a binary
+vector which can be interpreted as trainable weights of a neural
+network (NN). For this, we demonstrate how this binary vector
+can be relaxed to a soft-valued vector, facilitating the learning
+process through gradient descent and enabling an efficient code
+construction. We further show how different polar code design
+constraints (e.g., code rate) can be taken into account by means
+of careful binary-to-soft and soft-to-binary conversions, along
+with rate-adjustment after each learning iteration. Besides its
+conceptual simplicity, this approach benefits from having the
+“decoder-in-the-loop”, i.e., the nature of the decoder is inherently
+taken into consideration while learning (designing) the polar
+code. We show results for belief propagation (BP) decoding over
+both AWGN and Rayleigh fading channels with considerable
+performance gains over state-of-the-art construction schemes.
+Index Terms—Polar Code Construction, Frozen Bit Vector,
+Machine Learning, Deep Learning, Binarizer.
+I. INTRODUCTION
+Deep learning (DL) methods have been recently applied
+in many domains of communications. Examples span from
+trainable channel decoders [1]–[7], neural network (NN)-based
+detectors, e.g., for multiple-input multiple-output (MIMO) [8]
+or for molecular channels [9] up to end-to-end learning of
+a complete communication system [10]. Unfortunately, in
+particular in the field of channel (de-)coding, the exponen-
+tial training complexity [5] typically prevents from practical
+applications of a naive learning approach (i.e., fully learned
+without any given structure; see [5]). Therefore, the authors
+of [1], [3], [11] proposed to exploit the given code structure
+and pre-initialize the NN structure which reduces the training
+significantly. Hereby, the most common approach is to inter-
+pret the unrolled graph of the belief propagation (BP) decoder
+as a trainable NN [1] which turns out to work well for short
+length codes even with (relatively) dense decoding graphs.
+However, besides the implementation of DL during run-
+time (online complexity), i.e., the replacement or refinement
+of classical signal processing components by NNs, DL can be
+also used during design-time (offline complexity), e.g., to find
+good codes by the help of DL tools as in [7]. This work focuses
+on the later one, i.e., we use DL to design the polar code but
+use the classical decoders without any further modification.
+Although completely different, the previously mentioned
+approaches have in common that they optimize real-valued
+weights. However, in communications and, particularly, chan-
+nel coding, many essential problems boil down to the task of
+This work has been supported by DFG, Germany, under grant BR 3205/5-1
+and BR 3205/6-1.
+finding binary representations that are omnipresent in today’s
+digital communication systems. Thus, its worth mentioning
+that the proposed techniques from this work can be also
+applied to other communications (and signal processing) tasks.
+On the other hand, polar codes [12] have recently attracted
+a lot of research as they were selected to be among the error-
+correcting codes used in the control channel of the enhanced
+Mobile Broadband (eMBB) service [13] in the 5th generation
+mobile communication (5G) standardization process. They are
+also a potential candidate for ultra-reliable low-latency com-
+munications (URLLC) which faces the two major challenges
+of ultra high reliability and ultra low latency. They are the
+first class of error-correcting codes theoretically proven to
+be asymptotically capacity-achieving under successive can-
+cellation (SC) decoding. However, the problem of finding
+polar decoders that fulfill the practical constraints (e.g., target
+latency, error-rate, hardware-complexity, etc.) in the finite-
+length regime is not yet fully solved. Furthermore, the problem
+of polar code design that fits other types of decoders that are
+of completely different decoding characteristics than SC is still
+open. Nonetheless, the problem description is relatively simple
+and from a DL perspective the fundamental problem of polar
+code design is how to learn a binary vector optimizing the
+error-rate performance for a given practical decoder.
+Polar codes are typically decoded by the successive cancel-
+lation list (SCL) decoder [14], while using a high-rate cyclic
+redundancy check (CRC) code to select the correct codeword
+from the list. The increased implementation complexity (e.g.,
+hardware complexity, memory requirements, etc.) of the SCL
+decoder raised the urge for more simplified variants, e.g.,
+[15], [16]. However, the persistent drawback is the absence
+of soft-in/soft-out information processing, due to their se-
+quential hard-decoding nature, which prevents their effective
+deployment in iterative detection/decoding schemes. Besides
+SCL decoding, polar codes can also be decoded with itera-
+tive decoders [17], which do not have these aforementioned
+problems. This class of decoders could be potentially suitable
+for high data rate applications (i.e., decoding throughput
+and latency, from an implementation perspective). In [18], a
+belief propagation list (BPL) decoder was introduced, with
+an error-rate performance close to maximum likelihood (ML).
+Unfortunately, existing variants of BP-based decoders have an
+error-rate performance which is inferior to that of the CRC-
+aided SCL decoder. However, due to their unique advantages,
+further performance enhancements (i.e., code properties and
+decoding performance) are worth considering. Existing polar
+code construction methods that are tailored to the BP decoder
+2019 57th Annual Allerton Conference on Communication, Control, and Computing
+(Allerton)
+Allerton Park and Retreat Center
+Monticello, IL, USA, September 24-27, 2019
+978-1-7281-3151-1/19/$31.00 ©2019 IEEE
+177
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:01:40 UTC from IEEE Xplore.  Restrictions apply. 
+appear to be few (cf. [19] and the discussion therein).
+In this work, we propose a deep learning-based polar code1
+construction algorithm. Following the same spirit as [19], [20],
+we learn the polar code (i.e., frozen and non-frozen indices)
+for a given decoder and a specific channel. This showed to be a
+rather simpler code construction method than explicitly finding
+the analytical solution for general channels while taking the
+decoder properties into account. Therefore, we follow the
+general idea of Nachmani et al. [1], i.e., we apply iterative loop
+unrolling (deep unrolling [21]) and interpret the graph as a
+trainable NN. However, unlike [1] we do not add any trainable
+weights to the graph itself but interpret the frozen/non-frozen
+positions as trainable weights of the NN. As the unrolled graph
+is completely differentiable, we can apply standard stochastic
+gradient descent (SGD)-based training of these weights with
+the only exception that the frozen positions itself need to be
+carefully transformed from a binary vector into a soft one.
+Opposed to [7], our approach explicitly makes use of a
+given code structure (i.e., the Hadamard structure) and only
+learns the location of the frozen bit-channels. The benefits
+are a reduced training complexity and the availability of
+well-understood classical decoders. Therefore, our approach
+only introduces offline training complexity, however, once
+the design is fixed, the decoding complexity itself is the
+same as for any other classical design scheme. The decoding
+complexity may even be reduced as less iterations, for a fixed
+error-rate performance, can be sufficient, especially if the code
+design is well-suited for the BP algorithm. Also the channel
+and its noise statistics (e.g., additive white Gaussian noise
+(AWGN) or Rayleigh) is inherently taken into account, as the
+SGD-based training directly operates based on the actual data,
+rather than information theoretic approximations that may
+be inaccurate (e.g., the Bhattacharyya bound for the AWGN
+channel). Furthermore, this allows optimizing the code with
+respect to a fixed number of iterations and for any given finite
+block length.
+II. POLAR CODES AND BP DECODING
+Polar codes are conventionally based on the concept of
+channel polarization assuming that an SC decoder is used.
+As the code length N = 2n gets larger, the resulting bit-
+channels become purely noiseless or purely noisy (i.e., po-
+larize). Afterwards, information and frozen (known) bits are
+transmitted over the noiseless and the noisy bit-channels,
+respectively. The outcome from the polar code construction (or
+design) phase is the set of bit-channels used for information
+transmission. We denote the information and the frozen bit-
+channels by the sets A and ¯A, respectively. Since a bit-channel
+is either used for information or frozen bit transmission,
+thus, merging the two sets (i.e., A and ¯A) into one binary
+vector A = [a1,...,ai,...,aN] ∈FN
+2 is straightforward. The bit-
+channel i is described by the value of ai (e.g., ai = 1 means
+that bit-channel i is used for information transmission).
+1Strictly speaking this is not an original polar code as no channel polar-
+ization is involved (cf. SC decoding). However, it follows the same concepts
+and can be encoded/decoded alike.
+(a) Factor graph
+Rin,1
+Lout,1
+Rout,1
+Lin,1
+Rout,2
+Lin,2
+Rin,2
+Lout,2
+Lin,2 +Rin,2
+f (Rin,1,Lin,1)
+(b) Processing element (PE)
+Fig. 1: Original BP factor graph for a P(8,4)-code with A = {4,6,7,8}.
+Red nodes denote frozen positions and green nodes denote the LLRs of the
+channel output Lch.
+Polar codes are based on a (polarization) matrix F, an N ×N
+matrix constructed based on the 2 × 2 Arıkan kernel F2 as
+F = F⊗n
+2 , where F2 =
+
+1
+0
+1
+1
+
+and F⊗n
+2
+denotes the n-th
+Kronecker power of F2. Since polar codes are linear codes,
+encoding to find a codeword x is just a vector u by the matrix F
+multiplication. The vector u consists of the k information bits
+in the A positions and N −k frozen (known) bits. Throughout
+this work, we use the notation P(N,k)-code to denote a polar
+code of length N and code dimension k.
+The BP decoder of polar codes is a message passing decoder
+with an iterative decoding strategy. The underlying factor
+graph depends on the polarization matrix F of the polar code.
+The frozen bits (i.e., the positions ¯A and the frozen values
+u ¯A) are known to the decoder and this is used as the a priori
+information. The channel output in terms of log-likelihood
+ratio (LLR) Lch is the second input to the decoder. All other
+LLR messages are initialized to zero.
+LLRs are updated in the factor graph (Fig. 1a) from left-
+to-right (R-messages) and from right-to-left (L-messages)
+according to equations (1)-(4) till reaching a predefined max-
+imum number of iterations Nit or fulfilling a certain early
+stopping condition. A single processing element (PE) is shown
+in Fig. 1b. The L- and R-messages are updated in each PE as
+follows:
+Rout,1
+= f(Rin,1,Lin,2 +Rin,2)
+(1)
+Rout,2
+= f(Rin,1,Lin,1)+Rin,2
+(2)
+Lout,1
+= f(Lin,1,Lin,2 +Rin,2)
+(3)
+Lout,2
+= f(Rin,1,Lin,1)+Lin,2
+(4)
+where f(x,y) = x ⊞y is commonly referred to as boxplus
+operator defined as
+f(x,y) = x⊞y = ln 1+ex+y
+ex +ey .
+After some user-defined number of iterations Nit, the LLRs
+that represent the estimated information vector ˆu and estimated
+codeword vector ˆx are given as:
+L( ˆui)
+= Li,1 +Ri,1
+L(ˆxi)
+= Li,n+1 +Ri,n+1.
+178
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:01:40 UTC from IEEE Xplore.  Restrictions apply. 
+SGD(ℓ)
+Loss ℓ= ℓBER +λ1ℓrate +λ2ℓconv
+Aso ft
+∆A
+Binarizer (Fig. 3)
+A
+y
+Lch
+Compute
+LLR
+LLRmax
+iteration 1
+R
+L
+iteration 2
+R
+L
+.. .
+.. .
+.. .
+iteration Nit
+R
+L
+Compute ℓBER
+ℓBER
+BP decoding (forward)
+Training (backward)
+Fig. 2: Learning framework over the unrolled BP factor graph of a polar code with codelength N = 8 (i.e., a P(8,k)-code).
+Besides, BP decoding can be performed over permuted fac-
+tor graphs which greatly enhances the error-rate performance
+over both Binary Erasure Channel (BEC) and AWGN channel
+[18], [22], [23]. The polar code factor graph can be trans-
+formed into a low-density parity-check (LDPC)-like Tanner
+graph and, thus, LDPC sum product algorithm (SPA) decoding
+is possible after applying some graph-pruning techniques [24].
+Throughout this work, we use the BP decoder over the
+encoding polar factor graph (Fig. 1a) with the flooding update
+rule. We use a fixed number of BP iterations Nit without any
+further early stopping condition.
+III. CODE CONSTRUCTION MISMATCH PARADIGM
+The state-of-the-art polar code constructions (e.g., [12],
+[25]–[29]) assume that a hard-output SC decoder is used. Thus,
+these algorithms are not optimal for iterative decoding and list
+decoding [30]–[32]. The BP decoder has a different decoding
+strategy when compared to the SC decoder. A proper design
+tailored to BP decoding should take into consideration the
+LLR update schedule, the number of BP iterations and the
+underlying specific permutation of the polar code factor graph.
+These parameters directly give an indication about the cycles,
+stopping and trapping sets in the graph.
+In [30], the authors track the evolution of the LLRs in the
+polar code factor graph during BP decoding to find some bad
+information bit-channels and some good frozen bit-channels.
+Then these bit-channels are swapped enhancing the error-rate
+performance of the BP decoder. In [19], a Genetic Algorithm
+(GenAlg)-based method is used which takes into account the
+real decoding behavior (i.e., “decoder-in-the-loop” concept).
+The resulting polar codes are tailored to both the considered
+decoder and the channel. It was observed that different polar
+codes are optimal depending on the considered decoder. In
+[17], it was shown that using the Reed–Muller (RM) rule
+leads to codes with poor performance under BP decoding,
+thus, the minimum distance of the code dmin is not the
+(only) parameter to be maximized in order to design codes
+suitable for iterative decoding. In this paper, we focus on
+designing polar codes tailored to iterative decoding using some
+deep learning techniques, but extensions to SCL-tailored polar
+codes are possible.
+Most of the available polar code construction techniques are
+assuming a BEC or an AWGN channel. However, designing
+a polar code, e.g., for the Rayleigh fading channel is an in-
+teresting on-going research problem in the coding community.
+Our proposed algorithm depends on real Monte-Carlo error-
+rate simulations at a specific channel condition and, thus, can
+be used to efficiently construct polar codes tailored to the
+Rayleigh channel at a certain design SNR.
+IV. LEARNING TO CONSTRUCT POLAR CODES
+As shown in Fig. 2, we apply iterative loop unrolling
+[1], [21] and replace the frozen/non-frozen bit vector A by
+trainable weights. All BP operations are differentiable and,
+thus, a standard SGD-based training can be applied to find the
+best weights with the only exception that the frozen positions
+vector itself should be a binary vector. To overcome this soft-
+to-binary conversion, we re-interpret the real-valued weights
+as the probability that a specific position is frozen and evaluate
+it based on random realizations of A. With some modifications
+in the backward-propagation of SGD, this method allows to
+learn the frozen bit positions. Further, our approach shares
+the same advantages as in [1], and, as such, training with the
+all-zero codeword is possible. In the following, we assume
+without loss of generality that a frozen position is set to 0.
+For details on the loop unrolling for BP decoding, we refer
+the reader to [1] and, in particular, for polar codes to [33].
+A. From “classical” to stochastic code constructions
+The fundamental problem is that the optimization target
+(here the frozen/non-frozen positions A) is a binary decision
+and, therefore, a position is either frozen or non-frozen. In
+the following, we introduce a soft trainable frozen/non-frozen
+position vector Asoft that simply denotes the LLRs (cf. logits
+in the deep learning domain) of the probability that a position
+is frozen2.
+2Strictly speaking the BP decoder would also work with soft-A inputs,
+however, this does not lead to any meaningful interpretation at the encoder
+side as the code itself needs to be binary.
+179
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:01:40 UTC from IEEE Xplore.  Restrictions apply. 
+≤
+σ(.)
+Pu ∼U(0,1)
+Asoft ∈RN
+A ∈FN
+2
+stochastic binarizer
+backward path
+“Hard vector”
+“Soft vector”
+Fig. 3: Block diagram of the proposed stochastic binarizer.
+A common method for hard threshold activations (e.g.,
+a binary neuron) in deep learning literature is the so-called
+straight-through estimator [34]. This simply means that the
+gradient during back-propagation is set as if the forward-
+direction had been the identity function. To further speed-up
+the convergence, we follow the approach from [35] where the
+authors propose a stochastic binarizer layer, i.e., the samples
+of A within a batch are randomly assigned with probability
+pi = σ(Asoft,i) of being non-frozen. Hereby σ(.) denotes the
+sigmoid function.
+The binarizer-layer behaves as an identity function in the
+backward-direction while in the forward-direction the output
+is
+Ai =
+(
++1
+with probability pi = σ(Aso ft,i)
+0
+with probability 1−pi.
+This procedure ensures that the resulting code construction A
+describes one valid realization of a conventional binary polar
+code. Note that the same hard A-vector is used multiple times
+during decoding (after each iteration) and, thus, needs to be the
+same realization after each iteration as shown in Fig. 2. As a
+result, pi = σ(Asoft,i) denotes the probability that bit-position
+i is non-frozen and, thus, the average coderate is given by
+Rc,avg = 1
+N
+N
+∑
+i=1
+σ(Aso ft,i).
+(5)
+The choice of the right loss function has to ensure that
+the training converges to the desired design rate. However,
+after training, the N −k largest values of Asoft are considered
+as frozen positions to ensure that the final code rate exactly
+matches the target rate and the code itself is deterministic.
+B. Loss function and training methodology
+After having defined the basic setup, the detailed choice
+of the hyperparameters is given in Tab. I which essentially
+follows the common choice in the literature (cf. [1], [5],
+[7], [10]). Further gains may be achievable by extensive
+optimization of these hyperparameters, e.g., by means of
+heuristic search algorithms such as evolutionary algorithms
+[36]. However, one crucial hyperparameter is the design of the
+right loss function suited to the polar code design problem. We
+propose the weighted addition of multiple individual losses to
+fulfill all constraints, which are:
+1) Low error-rates. A good selection of the A-vector should
+minimize the error-rate after decoding either for infor-
+mation bits in u or codeword bits in x. Thus, the binary
+cross-entropy loss is used
+ℓBER(A)
+=
+1
+k∑
+i∈A
+
+−(ui)log(σ(L( ˆui)))
+−(1−ui)log(1−σ(L( ˆui)))
+
+.
+Alternatively, the mutual information (MI) of the decoder
+output LLRs could be maximized (e.g., based on the MI
+estimation in [37]).
+2) Target rate / rate adjustment. It turns out to be beneficial
+if the code rate can be adjusted during training (i.e., first
+force convergence to higher rate codes and afterwards
+successively freeze more and more positions; similar to
+slack variables). Let Rtarget denote the desired code rate
+and with (5) it follows
+ℓrate(Asoft,Rtarget)
+= (Rc,avg −Rtarget)2
+(5)
+=
+  1
+N ∑N
+i=1 σ(Asoft,i)−Rtarget
+2 .
+3) Convergence towards deterministic behavior. Although
+the training process is done based on stochastic real-
+izations of A, the final output of the training algorithm
+should be a deterministic solution (i.e., the learned code
+Aopt) and, thus, Asoft,i →±∞. Therefore, we propose the
+additional loss
+ℓconv(Asoft) = 1
+N ∑e−|Asoft,i|.
+4) Avoiding local minima. Unfortunately, the proposed
+losses are partly contradictive (e.g., the all-frozen vector
+obviously minimizes the bit error-rate (BER) but does
+not fulfill the rate requirement). Thus, we introduce
+weighting factors λi to adjust the individual impact per
+loss component during the training progress (e.g., in the
+beginning a relaxed rate loss penalty may be tolerable to
+allow more degrees of freedom).
+This leads to the final loss function:
+ℓ= ℓBER(A)+λ1ℓrate(Asoft,Rtarget)+λ2ℓconv(Asoft)
+where λi denotes the additional training hyperparameters.
+Now, training is conducted in three phases:
+• Phase 1 (Initialization), where an intermediate number of
+epochs is required to push the possibly randomly/weakly
+initialized A-vector Ainit towards a reasonably proper one.
+In this phase, λ1 and λ2 are set to 0, i.e., a relaxed loss
+penalty, as only BER acts as a loss in this phase and,
+thus, more degrees of freedom are provided.
+• Phase 2 (Optimization), where a reasonably large number
+of epochs is required to train the A-vector given the target
+code rate. In this phase, ℓrate is activated to constrain the
+training of the A-vector by the target rate. Balancing both
+losses ℓBER(A) and ℓrate(Asoft,Rtarget) can be adjusted by
+careful choice of λ1, while keeping λ2 set to 0 (i.e.,
+non-deterministic values of Asoft are still allowed in this
+phase).
+• Phase 3 (Saturation), where a large number of epochs
+is required to fine-tune the A-vector by pushing the soft
+180
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:01:40 UTC from IEEE Xplore.  Restrictions apply. 
+probabilities towards their extreme values. In this phase,
+ℓconv(Asoft) is activated and allowed to dominate the loss
+function to push towards a more deterministic solution.
+Phase 2 and 3 can be combined without a significant perfor-
+mance loss with the drawback of more difficult hyperparameter
+tuning. For a given number of BP iterations Nit, training is
+performed over 2 · Nit · (n + 1) layers, where the factor of 2
+accounts for the 2-way propagation in the iterative decoding
+algorithm.
+C. Approaches for non-differentiable decoders
+As SGD relies on the availability of the gradient per layer,
+the proposed idea is limited to BP-based decoders. However,
+the general idea of the soft Asoft-vector in combination with
+the straight-through estimator can also be applied with rein-
+forcement learning (e.g., see [38]) and, thus, also works for
+non-differentiable decoders. This will facilitate learning on
+SCL-based decoders for a specific list size over a user-defined
+channel state. The authors in [19] showed that this is critical, as
+a plain SCL-tailored polar code was able to achieve the same
+error-rate performance of a CRC-aided polar code under SCL
+decoding. This relieves some complexity and brings back the
+pure structure of polar codes without requiring a CRC/parity-
+check code in the loop.
+V. RESULTS AND DISCUSSION
+In this work, training was performed for a P(256,128)-
+code under BP decoding limited to Nit = 5 iterations (i.e.,
+corresponding to an equivalent of 90 NN-layers). This lim-
+itation was induced by some complexity constraints (e.g.,
+huge size of the NN and its memory requirements) and,
+thus, pushed forward for a future study. However, gains were
+still observed for a slightly larger number of iterations. The
+results for training over AWGN and Rayleigh fading channels
+are presented next. Extension of the current framework to
+accommodate different parameters (e.g., different codelengths,
+channel types, decoders, etc.) is straightforward. In this work,
+we focus on the BP decoder-tailored design which, to the
+best of our knowledge, still misses a systematic/analytical
+approach.
+A. AWGN channel results
+We learn (i.e., design) a P(256,128)-code under BP de-
+coding with BER as the error-rate cost function (i.e., ℓBER).
+The newly obtained code is compared to the 5G polar code
+without the CRC-aid [13] under BP decoding with Nit = 5
+iterations. As depicted in Fig. 4, the BER performance of the
+learned code outperforms the performance of the 5G polar
+code under Arıkan’s conventional BP decoder with Nit = 5
+iterations, leading to a performance gain in terms of BER.
+However, the gains are reduced for Nit = 20 iterations due to
+the aforementioned training complexity constraints.
+1
+1.5
+2
+2.5
+3
+3.5
+10−4
+10−3
+10−2
+10−1
+Eb/N0 [dB]
+BER
+Construction
+Nit
+5G Polar [13]
+5
+NN-designed
+5
+5G Polar [13]
+20
+NN-designed
+20
+5G Polar [13]
+200
+Fig. 4: BER performance of the learned P(256,128)-code over the AWGN
+channel under BP decoding with number of iterations Nit.
+Tab. I: Hyperparameters used for training the P(256,128)-code under BP
+decoding limited to Nit = 5 BP iterations
+Parameter
+Value
+Optimizer
+SGD with Adam
+Learning rate Lr
+0.001
+Training SNR Eb/N0
+2 dB, 4 dB and 5 dB
+Trainable parameters
+256
+Effective number of layers
+90
+B. Rayleigh fading channel results
+There exist limited amount of work on Rayleigh-specific
+polar codes (e.g., [39]). Next, same as before, a learned
+P(256,128)-code is compared to the 5G polar code without
+the CRC-aid [13] under BP decoding with Nit = {5,20}
+iterations. The system model is given by:
+y = α ·x+n
+where y is the channel output, n is the Gaussian noise
+attributed to the channel such that n ∼N (0,σ2
+ch) and α > 0
+is the fading coefficient which follows a Rayleigh distribution
+with E[α2] = 1. Assuming perfect Channel State Information
+(CSI) (i.e., α is known to the receiver at each received bit
+position), the corresponding channel LLRs, namely Lch, are
+computed as
+Lch(y) = log P(y|α,x = +1)
+P(y|α,x = −1) = 2
+σ2
+ch
+·α ·y.
+As depicted in Fig. 5, the BER performance of the learned
+code outperforms the performance of the 5G polar code under
+Arıkan’s conventional BP decoder for both scenarios with
+Nit = {5,20} iterations in terms of BER.
+As a reference, in both Fig. 4 and Fig. 5, we compare the
+performance of the obtained codes to that of the 5G polar
+code under Arıkan’s conventional BP decoder with Nit = 200
+iterations. It can be seen that the learned codes below Nit = 20
+iterations can possibly benefit from a reduced decoding latency
+and complexity (i.e., reduced number of BP iterations) without
+any loss in error-rate performance.
+181
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:01:40 UTC from IEEE Xplore.  Restrictions apply. 
+1
+2
+3
+4
+5
+6
+10−3
+10−2
+10−1
+100
+Eb/N0 [dB]
+BER
+Construction
+Nit
+5G Polar [13]
+5
+NN-designed
+5
+5G Polar [13]
+20
+NN-designed
+20
+5G Polar [13]
+200
+Fig. 5: BER performance of the learned P(256,128)-code over the Rayleigh
+fading channel under BP decoding with number of iterations Nit.
+VI. CONCLUSION AND FUTURE AVENUES
+A deep learning-based polar code design framework was
+introduced by inherently taking the actual decoder and channel
+into account. We have showcased that the DL toolkit itself can
+be not just used to completely learn new structures but also to
+support classical system design, namely the selection of frozen
+bit-positions of a polar code. This renders DL techniques into
+a universal toolkit that deserves further analysis of its capabil-
+ities but also its limitations in the context of communications.
+The major constraint of the binary vector representation
+of the information/frozen sets was relaxed to a soft-valued
+vector which can be regarded as training weights of a neural
+network. Proper loss functions and corresponding weights
+were also proposed to satisfy various design constraints (e.g.,
+BER performance, code rate, etc.) while tailoring the code
+to the decoder and the channel. Results were shown for
+BP decoding under limited iteration count over both AWGN
+and Rayleigh fading channels with considerable performance
+gains over state-of-the-art construction schemes. Extending the
+current framework to setups with different parameters (e.g.,
+codelengths, channels, decoders, etc.) is straightforward. The
+reason why we focused on the BP decoder-tailored design is
+(besides the easy access of the gradients) that, to the best of
+our knowledge, it still misses a systematic/analytical approach.
+It is also possible to deploy the proposed framework to design
+codes other than polar codes (e.g., LDPC codes) given the
+binary-to-soft conversion, rate adjustment, LLR saturation and
+other mentioned schemes. This is of particular significance
+for short codes, short LDPC codes for instance, that miss an
+analytical understanding and, thus, deep learning can prove to
+be most useful here. Several future aspects might be interesting
+to look into, e.g., the impact of different rate adjustment
+schemes and the effect of optimizing the intermediate loss
+functions on the overall training performance.
+REFERENCES
+[1] E. Nachmani, Y. Be’ery, and D. Burshtein, “Learning to decode linear
+codes using deep learning,” in 54th Annual Allerton Conf. on Commun.,
+Control, and Computing, 2016, pp. 341–346.
+[2] Y. Jiang, H. Kim, H. Asnani, S. Kannan, S. Oh, and P. Viswanath,
+“Deepturbo: Deep turbo decoder,” arXiv:1903.02295, 2019.
+[3] H. Kim, Y. Jiang, R. Rana, S. Kannan, S. Oh, and P. Viswanath, “Com-
+munication algorithms via deep learning,” arXiv:1805.09317, 2018.
+[4] Y. Jiang, H. Kim, H. Asnani, and S. Kannan, “Mind: Model independent
+neural decoder,” arXiv:1903.02268, 2019.
+[5] T. Gruber, S. Cammerer, J. Hoydis, and S. ten Brink, “On deep learning-
+based channel decoding,” in CISS, 2017, pp. 1–6.
+[6] W. Lyu, Z. Zhang, C. Jiao, K. Qin, and H. Zhang, “Performance
+evaluation of channel decoding with deep neural networks,” in ICC,
+2018, pp. 1–6.
+[7] Y. Jiang, H. Kim, H. Asnani, S. Kannan, S. Oh, and P. Viswanath, “Learn
+codes: Inventing low-latency codes via recurrent neural networks,”
+arXiv:1811.12707, 2018.
+[8] N. Samuel, T. Diskin, and A. Wiesel, “Deep MIMO detection,” in
+SPAWC, 2017, pp. 1–5.
+[9] N. Farsad and A. Goldsmith, “Detection algorithms for communication
+systems using deep learning,” arXiv:1705.08044, 2017.
+[10] T. O’Shea and J. Hoydis, “An introduction to deep learning for the
+physical layer,” IEEE Trans. on Cognitive Commun. and Networking,
+vol. 3, no. 4, pp. 563–575, 2017.
+[11] S. Cammerer, T. Gruber, J. Hoydis, and S. ten Brink, “Scaling deep
+learning-based decoding of polar codes via partitioning,” in IEEE Global
+Commun. Conf. (GLOBECOM), 2017, pp. 1–6.
+[12] E. Arıkan, “Channel Polarization: A Method for Constructing Capacity-
+Achieving Codes for Symmetric Binary-Input Memoryless Channels,”
+IEEE Trans. Inf. Theory, vol. 55, no. 7, pp. 3051–3073, July 2009.
+[13] “Technical Specification Group Radio Access Network,” 3GPP, 2018,
+TS 38.212 V.15.1.1. [Online]. Available: http://www.3gpp.org/ftp/Specs/
+archive/38 series/38.212/
+[14] I. Tal and A. Vardy, “List Decoding of Polar Codes,” IEEE Trans. Inf.
+Theory, vol. 61, no. 5, pp. 2213–2226, May 2015.
+[15] B. Li, H. Shen, and D. Tse, “An Adaptive Successive Cancellation
+List Decoder for Polar Codes with Cyclic Redundancy Check,” IEEE
+Commun. Lett., vol. 16, no. 12, pp. 2044–2047, Dec. 2012.
+[16] S. A. Hashemi, M. Mondelli, S. H. Hassani, C. Condo, R. L. Urbanke,
+and W. J. Gross, “Decoder Partitioning: Towards Practical List Decoding
+of Polar Codes,” IEEE Trans. Commun., vol. 66, no. 9, pp. 3749–3759,
+Sep. 2018.
+[17] E. Arıkan, “A Performance Comparison of Polar Codes and Reed-Muller
+Codes,” IEEE Commun. Lett., vol. 12, no. 6, pp. 447–449, June 2008.
+[18] A. Elkelesh, M. Ebada, S. Cammerer, and S. ten Brink, “Belief Prop-
+agation List Decoding of Polar Codes,” IEEE Commun. Lett., vol. 22,
+no. 8, pp. 1536–1539, Aug. 2018.
+[19] A. Elkelesh, M. Ebada, S. Cammerer, and S. ten Brink, “Decoder-
+Tailored Polar Code Design Using the Genetic Algorithm,” IEEE Trans.
+Commun., vol. 67, no. 7, pp. 4521–4534, July 2019.
+[20] A. Elkelesh, M. Ebada, S. Cammerer, L. Schmalen, and S. ten Brink,
+“Decoder-in-the-Loop: Genetic Optimization-based LDPC Code De-
+sign,” IEEE Access, 2019.
+[21] J. R. Hershey, J. L. Roux, and F. Weninger, “Deep unfolding: Model-
+based inspiration of novel deep architectures,” arXiv:1409.2574, 2014.
+[22] N. Hussami, S. B. Korada, and R. Urbanke, “Performance of Polar Codes
+for Channel and Source Coding,” in IEEE Inter. Symp. Inf. Theory (ISIT),
+June 2009, pp. 1488–1492.
+[23] A. Elkelesh, M. Ebada, S. Cammerer, and S. ten Brink, “Belief Propa-
+gation Decoding of Polar Codes on Permuted Factor Graphs,” in IEEE
+Wireless Commun. and Networking Conf. (WCNC), Apr. 2018.
+[24] S. Cammerer, M. Ebada, A. Elkelesh, and S. ten Brink, “Sparse Graphs
+for Belief Propagation Decoding of Polar Codes,” in IEEE Inter. Symp.
+Inf. Theory (ISIT), June 2018, pp. 1465–1469.
+[25] R. Mori and T. Tanaka, “Performance of Polar Codes with the Construc-
+tion using Density Evolution,” IEEE Commun. Lett., vol. 13, no. 7, pp.
+519–521, July 2009.
+[26] P. Trifonov, “Efficient Design and Decoding of Polar Codes,” IEEE
+Trans. Commun., vol. 60, no. 11, pp. 3221–3227, Nov. 2012.
+[27] I. Tal and A. Vardy, “How to Construct Polar Codes,” IEEE Trans. Inf.
+Theory, vol. 59, no. 10, pp. 6562–6582, Oct. 2013.
+182
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:01:40 UTC from IEEE Xplore.  Restrictions apply. 
+[28] G. He, J. C. Belfiore, I. Land, G. Yang, X. Liu, Y. Chen, R. Li, J. Wang,
+Y. Ge, R. Zhang, and W. Tong, “β-expansion: A Theoretical Framework
+for Fast and Recursive Construction of Polar Codes,” in IEEE Global
+Commun. Conf. (GLOBECOM), Dec. 2017, pp. 1–6.
+[29] C. Sch¨urch, “A Partial Order For the Synthesized Channels of a Polar
+Code,” in IEEE Inter. Symp. Inf. Theory (ISIT), July 2016, pp. 220–224.
+[30] M. Qin, J. Guo, A. Bhatia, A. G. i Fabregas, and P. Siegel, “Polar Code
+Constructions Based on LLR Evolution,” IEEE Commun. Lett., vol. 21,
+no. 6, pp. 1221–1224, June 2017.
+[31] M. Mondelli, S. H. Hassani, and R. L. Urbanke, “From Polar to Reed-
+Muller Codes: A Technique to Improve the Finite-Length Performance,”
+IEEE Trans. Commun., vol. 62, no. 9, pp. 3084–3091, Sep. 2014.
+[32] V. Bioglio, C. Condo, and I. Land, “Design of Polar Codes in 5G New
+Radio,” ArXiv e-prints, Apr. 2018.
+[33] N. Doan, S. A. Hashemi, E. N. Mambou, T. Tonnellier, and W. J.
+Gross, “Neural Belief Propagation Decoding of CRC-Polar Concate-
+nated Codes,” arXiv e-prints, 2018.
+[34] G. Hinton, “Neural networks for machine learning,” Coursera, video
+lectures, 2012.
+[35] I. Hubara, M. Courbariaux, D. Soudry, R. El-Yaniv, and Y. Bengio,
+“Binarized neural networks: Training neural networks with weights and
+activations constrained to +1 or -1,” arXiv:1602.02830, 2016.
+[36] M. Jaderberg et al., “Population based training of neural networks,”
+arXiv:1711.09846, 2017.
+[37] P. Hoeher, I. Land, and U. Sorger, “Log-likelihood values and Monte
+Carlo simulation-some fundamental results,” in 2nd Inter. Symp. on
+Turbo Codes and Related Topics, 2000, pp. 43–46.
+[38] F. A. Aoudia and J. Hoydis, “End-to-end learning of communications
+systems without a channel model,” in 52nd Asilomar Conf. on Signals,
+Systems, and Computers, 2018, pp. 298–303.
+[39] P. Trifonov, “Design of Polar Codes for Rayleigh Fading Channel,” in
+Inter. Symp. Wireless Commun. Syst. (ISWCS), Aug. 2015, pp. 331–335.
+183
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:01:40 UTC from IEEE Xplore.  Restrictions apply. 

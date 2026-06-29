@@ -1,0 +1,1511 @@
+Forty-Ninth Annual Allerton Conference Allerton House, UIUC, Illinois, USA September 28 - 30, 2011
+
+Stochastic Belief Propagation: Low-Complexity Message-Passing with Guarantees
+Nima Noorshams1 and Martin J. Wainwright1,2 Department of Statistics2 and
+Department of Electrical Engineering & Computer Science1, University of California Berkeley,
+{nshams, wainwrig}@eecs.berkeley.edu
+
+Abstract—The sum-product or belief propagation (BP) algorithm is widely used to compute exact or approximate marginals in graphical models. However, for graphical models with continuous or high-dimensional discrete states and/or high degree factors, it can be computationally expensive to update messages. We propose the stochastic belief propagation algorithm (SBP) as a low-complexity alternative. It is a randomized variant of BP that passes only stochastically chosen information at each round, thereby reducing the complexity per iteration by an order of magnitude. We prove that it enjoys a number of rigorous convergence guarantees: for any tree-structured graph, the SBP updates converge almost surely to the BP fixed point, and we provide non-asymptotic bounds on the mean absolute error. For general graphs that satisfy a standard contraction condition, we establish almost sure convergence to the unique BP fixed point, as well as non-asymptotic guarantees on the mean squared error, showing that it decays as 1/t with the number of iterations t. We also provide high probability bounds on the actual error.
+I. INTRODUCTION
+Graphical models and associated message-passing algorithms have a wide range of applications, including signal processing, channel and source coding, and computer vision among other areas (see the overviews [12], [22], [13] for more details). A fundamental computational challenge in applying graphical models is the marginalization problem, meaning the computation of a marginal distribution over some subset of variables in the graph. Naively approached, this marginalization problem has exponential complexity, and hence is intractable. For graphs without cycles, the marginalization problem is exactly solvable via the sumproduct algorithm, also known as belief propagation. It is an iterative algorithm in which nodes in the graph perform local computations and then relay results to their neighbors. For graphs with cycles, belief propagation is no longer an exact method, but nonetheless is widely used and known to be extremely effective in many settings.
+In many applications of belief propagation, the messages themselves are high-dimensional in nature, either due to discrete random variables with a very large number of states d, factor nodes with high degree, or continuous random variables. Examples of such problems include disparity estimation in computer vision, tracking problems in sensor
+
+networks, and error-control decoding. For such problems, it may be expensive to compute and/or store the messages, in which case belief propagation may run slowly, and hence be limited to small-scale instances.
+Motivated by this challenge, researchers have proposed different techniques to reduce complexity of BP in different applications (e.g., see the papers [7], [20], [14], [10], [11], [4] and references therein). For graphical models involving discrete variables, at the core of sum-product message-passing is a matrix-vector multiplication, with complexity scaling quadratically in the number of states d. Certain graphical models have special structure that can be exploited so as to reduce this complexity. For instance, for LDPC codes, the complexity of message-passing, if performed naively, would scale exponentially in the factor degrees; a clever use of the fast Fourier transform over GF(2) reduces this complexity to linear in the factor degrees (e.g., [12]). Other problems arising in computer vision involve pairwise factors with a circulant structure for which the fast Fourier transform can also reduce complexity [7]; similarly, computation can be accelerated by exploiting symmetry in factors [11], or additional factorization properties [14]. In the absence of structure to exploit, other researchers have proposed different types of quantization strategies for belief propagation updates [4], [10], as well as stochastic methods based on particle filtering (e.g., [2], [20], [5]). For certain types of particle filtering methods, it is possible to establish consistency as the number of particles tends to infinity [5] or finite-length results with particles scaling quadratically in network size [9]; the intuition underlying this behavior is that with a large number of particles, each update becomes close to noiseless.
+In this paper, we propose a low-complexity alternative to the usual sum-product updates, known as stochastic belief propagation (SBP). As suggested by its name, it is a stochastic version of the BP algorithm, where each node only passes randomly selected partial information to its neighbors at each round. An attractive feature is that SBP improves the efficiency of BP by an order of magnitude; in concrete terms, for arbitrary pairwise potentials over d states, it reduces the per iteration complexity from quadratic to linear. In addition, we provide a rigorous analysis of the convergence properties
+
+978-1-4577-1818-2/11/$26.00 ©2011 IEEE
+
+269
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:14:59 UTC from IEEE Xplore. Restrictions apply.
+
+of the algorithm, showing not only that it is consistent on tree-structured graphs—meaning that it converges almost surely to the unique BP fixed point—but also providing nonasymptotic guarantees on the error (Theorem 1). On the other hand, when the ordinary BP updates are contractive on general graphs, our analysis guarantees that the SBP updates converge at the rate O(1/t) to the unique BP fixed point, where t is the number of iterations. We also show that the typical performance is sharply concentrated around its mean (Theorem 2).
+The reminder of the paper is organized as follows. In Section II, we provide the necessary background on the graphical models as well as the belief propagation algorithm. The stochastic belief propagation algorithm and its complexity are established in Section III. In Section IV, we state our main results, proved in Section V. In order to demonstrate the algorithm’s effectiveness we provide some experimental results in Section VI. Finally we conclude in Section VII.
+
+II. BACKGROUND AND PROBLEM STATEMENT
+In this section, we state the problem and provide some background on graphical models as well as the belief propagation algorithm.
+
+A. Graphical Models
+Undirected graphical models, also known as Markov ran-
+dom fields, are based on associating a collection of random variables {X1, . . . , Xn} with the vertices of a graph in a way so as to capture their statistical dependencies. An undirected graph G = (V, E) is defined by a set of nodes V = {1, 2, . . . , n} and a set of edges E ⊂ V × V, where (u, v) ∈ E if and only if nodes u and v are connected. Furthermore, a random variable Xu is associated to every node u ∈ V, and edges of the graph encode Markov properties of the random vectors X. These Markov properties are captured by a particular factorization of the joint distribution of the random vectors X, which is guaranteed to be of the form of the product of the local functions on the cliques1 of the graph G.
+In this paper, we focus on the case of a discrete random variable Xu ∈ X : = {1, 2, . . . , d} at each node u ∈ V. We assume that the distribution of the random vector XV = (Xu, u ∈ V) has a factorization of the form
+
+P (x; ψ) ∝
+
+ψuv(xu, xv)
+
+ψu(xu),
+
+(1)
+
+(u,v)∈E
+
+u∈V
+
+where ψuv is a compatibility function associated with edge (u, v), and ψu is a compatibility function associated with node u ∈ V. Given our assumption of discrete random variables, these functions can be represented by a d × d matrix (for ψuv), and a d-vector (for ψu). Our assumption of a pairwise factorization entails no loss of generality: any
+discrete MRF can be converted into this pairwise form
+
+1A clique is a fully connected subgraph.
+
+by suitably augmenting the state vector (see the monograph [22], Appendix E.3 for details). With this set-up, the sum-product marginalization problem is to compute the singleton marginals
+
+P (xu; ψ) =
+
+P (x; ψ) ,
+
+xv ;v=u
+
+and possibly higher order marginal distributions. Note that a
+brute force approach to computing this sum would require dn−1 computations.
+
+B. Sum-Product Algorithm
+
+Belief propagation, also known as the sum-product algo-
+rithm, is an iterative algorithm for computing either exact
+or approximate marginal distributions. It is known as a
+“message-passing” algorithm, since it involves passing the
+results of local computations along edges of the graph.
+For tree-structured (cycle-free) graphs, it is known that BP
+updates converge to the exact marginals in a finite number of
+iterations. However, the same message-passing updates can
+also be applied to more general graphs, and are known to
+provide useful approximations in numerous applications. Let N (u) : = {w | (w, u) ∈ E} denote the neighborhood
+of the node u ∈ V, and E : = {(u → v) | v ∈ N (u)} denote the set of all directed edges. The belief propagation algorithm involves one message muv ∈ Rd for every directed edge (u → v) ∈ E. Defining the lifted dimension D : = 2|E|d, we then concatenate all these local messages to obtain the D-dimensional vector of messages m = {muv}(u→v)∈E .
+At each round t = 1, 2, . . ., every node u ∈ V calculates a message mtu+v1 ∈ Rd to be sent to its neighbor v ∈ N (u). In mathematical terms, this operation can be represented as
+
+mtu+v1 = Fuv(mt),
+
+(2)
+
+where Fuv : RD → Rd is the local update function of the directed edge (u → v)
+
+mut+v1(xv) = [Fuv(mt)](xv )
+
+=κ
+
+ψuv(xu, xv)ψu(xu)
+
+mwt u(xu) ,
+
+xu∈X
+
+w∈N (u)\v
+
+(3)
+
+for xv ∈ X . Moreover, upon receiving all the messages form
+its neighbors, node v updates its estimate of the marginal τvt(xv) according to
+
+τvt+1(xv) = κ ψv(xv)
+
+mtu+v 1 (xv ).
+
+(4)
+
+u∈N (v)
+
+In these update equations, κ denotes a normalization constant,
+whose value may change from line to line and is chosen so that xv∈X mut+v1(xv ) = 1, and xv∈X τvt+1(xv) = 1. For more background on the message-passing algorithms and
+graphical models, see the works [22], [12].
+Note that equation (2) is basically an iterative way of
+solving a set of fixed point equations. More precisely, we define the global update function F : RD → RD by
+
+270
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:14:59 UTC from IEEE Xplore. Restrictions apply.
+
+concatenating the local updates If the messages obtained from
+
+BFP(mup) d=ate{sFucvo(nmve)r}g(eu→tov)m∈E∗.,
+
+then we have the fixed point relationship F (m∗) = m∗.
+
+C. Overview
+
+The complexity of the ordinary BP algorithm is Θ d2
+
+per iteration, meaning that the number of required summations and/or multiplications per iteration scales as d2, which
+
+follows by inspection of equation (3). Therefore, computing
+
+the marginals when the data dimension d is huge could
+
+be a daunting task. Our goal in this work is to propose
+
+alternatives to the BP algorithm that have lower complexity
+
+and consequently faster performance.
+
+In this work, we are interested in algorithms generating a sequence of messages {mt}∞ t=1 that are consistent; that is mt → m∗ almost surely as t → ∞, where m∗ is a
+
+fixed point of BP, assumed here to be unique. We also are
+
+interested in characterizing the rate of convergence. Defining
+
+the error vector ǫt : = mt − m∗, we find upper bounds on
+
+the average error E
+
+ǫt
+
+2 2
+
+,
+
+or
+
+E [|ǫt|].
+
+Having
+
+found
+
+such
+
+bounds, one can easily characterize the operation complexity
+
+of the algorithm—more precisely, the number of summations
+
+and/or multiplications required to obtain a solution with
+
+E
+
+ǫt
+
+2 2
+
+< δ, for some fixed tolerance δ > 0.
+
+III. STOCHASTIC BELIEF PROPAGATION ALGORITHM
+
+In this section, we state our proposed algorithm and compare its complexity to the belief propagation algorithm.
+
+A. Proposed algorithm
+
+Note that the the update equations (2) and (3) can be reformulated in the matrix-vector form
+
+mtu+v1 = κ Γuv mtuv ,
+
+(5)
+
+where κ is a normalization constant, Γuv is a d×d matrix with
+entries Γuv(xv, xu) = ψuv(xu, xv)ψu(xu), xu, xv ∈ X , and mut v = {mtuv(xu)}xu∈X is a d-dimensional vector obtained from mtuv(xu) = w∈N (u)\v mwt u(xu). After a little bit of algebra, we obtain
+
+d
+Fuv(m) =
+j=1
+
+muv(j) βuv(j)
+
+d l=1
+
+muv
+
+(l)
+
+βuv
+
+(l)
+
+Γuv(: , βuv (j
+
+j )
+
+)
+
+,
+
+(6)
+
+where Γuv(: , j) denotes the j-th column of the matrix Γuv
+
+and βuv(j) =
+
+d i=1
+
+Γuv(i ,
+
+j)
+
+is
+
+the
+
+ℓ1-norm
+
+of
+
+Γuv(: ,
+
+j).
+
+Note that the weights
+
+puv(j ; m) : =
+
+muv (j )βuv (j )
+
+d l=1
+
+muv
+
+(l)βuv
+
+(l)
+
+,
+
+(7)
+
+from equation (6) form a probability mass function that
+
+depends on the update matrix as well as the messages. Thus,
+
+the message passed along the directed edge (u → v) can
+
+be viewed as the expectation of the normalized columns of
+
+Γuv. More precisely, denoting the normalized columns by Γuv(: , j) : = Γuv(: , j)/βuv(j) for j = 1, 2, . . . , d, we have
+
+Fuv (m) = EJuv∼puv Γuv(: , Juv ) .
+
+(8)
+
+Stochastic Belief Propagation algorithm:
+• Initialize the messages. • For iterations t = 1, 2, . . . and each directed edge
+(u → v) – Pick a random index Jut+v 1 with the probability mass P Jut+v 1 = j = puv(j ; mt), j = 1, 2, . . . , d, defined in (7). – Update the message mtu+v1 with the appropriately chosen step size αt = O(1/t) according to
+
+mtu+v1 = (1 − αt) mut v + αt Γuv(: , Jut+v 1). (9)
+
+• Update the marginal at every node v ∈ V by
+
+τvt+1(xv ) ∝ ψv(xv)
+
+mut+v1(xv) xv ∈ X .
+
+u∈N (v)
+
+Fig. 1: Stochastic Belief Propagation algorithm.
+
+Now we are ready to describe the SBP algorithm. At the highest level, the algorithm consists of two parts, picking a normalized column Γuv(: , Juv) for some Juv = 1, 2, . . . , d, and updating the message accordingly. From equation (8), we know that the message sent from node u to node v at each round is the expectation of the normalized columns Γuv(: , Juv), where the expectation is taken place over the random index Juv. Instead of computing the expectation at each round, which is computationally costly, the idea of SBP is to pick a normalized column with the appropriate probability and try to average it out over time by a proper message update. Figure 1 summarizes the steps involved in the SBP algorithm.
+B. Complexity of SBP vs. BP
+Note that the quantities Γuv(: , j)—and by extension βuv(j)—are only functions of the node and edge potentials, and hence can be precalculated and stored. Therefore, the per iteration computational complexity of the SBP algorithm lies in calculating the probability mass function puv, as previously defined (7), generating a random index Juv, and then performing the update (9).
+Denoting the maximum degree of the graph by ρmax, we require at most (ρmax − 1)d multiplications to compute muv. Moreover, an additional 3d operations is needed to compute the probability mass function puv, whereas, generating a random index Juv can be done with less than d operations. Finally, the update equation (9) needs 3d + 3 operations. Summing all of these terms, we find that for a graph with n nodes, maximum degree ρmax and state dimension d, each iteration of the SBP algorithm requires at most (ρmax+6)d+3 multiplications and/or summations per edge to update all messages. As can be seen from equation (3), the regular BP complexity per edge is Θ(d2). Therefore, the SBP has significantly (an order of magnitude) reduced the complexity of the BP per iteration.
+
+271
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:14:59 UTC from IEEE Xplore. Restrictions apply.
+
+IV. MAIN THEORETICAL RESULTS
+In this section, we state some theoretical guarantees regarding the SBP algorithm. We begin with Theorem 1, which provides guarantees for the special but very important case of tree-structured graphs. Theorem 2 applies to general graphical models, for which we prove consistency and error bounds under a standard contraction condition.
+A remark on notation before proceeding: parts of our results involve element-wise inequalities based on the orthant cone. In particular, for vectors x, y ∈ RD, we write x y if x(i) ≤ y(i) for all i = 1, 2, . . . , D, with a similar interpretation for the orthant inequality x y. We also recall that for some integer r ≥ 1, a square matrix A is said to be nilpotent of degree r if Ar = 0. Finally, the diameter of a graph G, denoted by diam(G), is the size of the largest path between any pair of nodes in the graph. With this notation, we have the following:
+
+Theorem 1 (Tree-structured models). For any tree-structured graphical model, the sequence of messages {mt}∞ t=0 generated by the SBP algorithm has the following properties:
+(a) Almost sure consistency: the message sequence {mt}∞ t=0 converges almost surely to the unique BP fixed point m∗ as t → ∞.
+(b) Non-asymptotic bounds on the error: with the step size αt = 1/(t + 1), there exist a nilpotent matrix A ∈ RD×D of degree at most r = diam(G) such that the D-dimensional error vector mt − m∗ satisfies the
+element wise inequality
+
+E |mt − m∗|
+
+4 (I − 2A)−1 √1 t
+
+for all iterations t = 1, 2, . . ..
+
+As mentioned previously, on tree-structured graphs, belief
+propagation always converges to a unique fixed point of the update function F after finite number of iterations. Theorem 1(a) shows that SBP is also consistent on trees; that is the sequence of messages {mt}∞ t=0 generated by SBP converges to the unique fixed point m∗ regardless of the node and edge potentials. √Part (b) guarantees the error decays at least as fast as O(1/ t).
+
+Our next theorem addresses the case of graphical models
+
+with general topology (including cycles). In contrast to the
+
+case of tree-structured graphs, the BP updates may not
+
+converge to a unique fixed point on a general graph. A
+
+sufficient condition for such convergence is contractivity
+
+of the update function F —namely, that there exists some
+
+0 < µ < 2 such that
+
+F (m) − F (m′) 2 ≤
+
+1
+
+−
+
+µ 2
+
+m − m′ 2.
+
+(10)
+
+Various authors [21], [8], [15], [18] have provided sufficient
+
+conditions for convergence and/or uniqueness of BP in terms
+
+of the graph structure, node and edge potentials, based on
+
+analyzing the fixed point equations.
+
+Theorem 2 (General graphs). Suppose that the update func-
+tion F is contractive with parameter 1 − µ/2. Then BP has a unique fixed point m∗ and the message sequence {mt}t∞=1 generated by the SBP algorithm has the following properties:
+(a) Almost sure consistency: mt −a.→s. m∗ as t → ∞.
+
+(b) Non-asymptotic bounds on mean-squared error: with step size αt = α/(µ(t + 2)) for some fixed 1 < α < 2, we
+
+have
+
+E
+
+ǫt
+
+2 2
+
+m∗
+
+2 2
+
+≤
+
+3αα2 K(ψ) 2α(α − 1) µ2
+
+1 t
+
++
+
+E
+
+ǫ0 m∗
+
+2 2 2 2
+
+2 t
+
+α
+,
+
+for all iterations t = 1, 2, . . ..
+
+(c) High probability bounds on error: with step size
+
+αt = 1/(µ(t + 1)), then for every c > 0 and for all
+
+iterations t = 1, 2, . . ., we have
+
+ǫt
+
+2 2
+
+m∗
+
+2 2
+
+≤
+
+K(ψ) 1 + log t
+
+µ2
+
+t
+
++
+
+√ 4K(ψ) 2c
+µ
+
+log t
+
+t
+
+,
+
+with probability at least 1 − 1/tc, where K(ψ) is a constant depending only on node and edge potentials.
+
+Some comments are in order regarding the interpretation
+
+and consequences of this result. In contrast to part (a),
+
+which provides asymptotic guarantees on the SBP algo-
+
+rithm, part (b) provides non-asymptotic bounds on the
+
+mean-squared error. For the specified choice of step-size
+
+(1 < α < 2), the first component of part (b) bound is dom-
+
+inant, hence the ℓ2-rate of convergence is 1/t and we have
+
+E
+
+ǫt
+
+2 2
+
+/
+
+m∗
+
+2 2
+
+=
+
+O(1/t).
+
+Therefore,
+
+after
+
+t
+
+=
+
+Θ(1/δ)
+
+iterations, the SBP algorithm returns a solution with MSE
+
+at most O(δ). Since the complexity of SBP is Θ(d) per
+
+iteration (see Section III-B), a total of Θ(d/δ) summations
+
+and multiplications per edge are required to guarantee O(δ)
+
+error. On the other hand, under the specified contraction
+
+condition, the usual BP updates will converge geometrically
+
+fast, and so requires Θ(log(1/δ)) iterations to obtain a δ-
+
+accurate solution. However, since the complexity of BP
+iteration is Θ(d2) per edge, the overall BP complexity is Θ(d2 log(1/δ)). Consequently, we see that our method has a
+
+Θ(d δ log(1/δ)) advantage over ordinary belief propagation.
+
+For any fixed tolerance δ, this difference scales linearly in
+
+the state dimension d, which is significant for large spaces.
+
+Part (c) on the other hand, provides high probability bounds on the actual error ǫt 22, at the rate O(t−1/2 log t).
+
+V. PROOF SKETCH
+Due to space constraints, we only present a sketch of the proofs, leaving the details to the full-length version [16]. Our proofs exploit different techniques from, matrix analysis, probability theory, stochastic approximation theory, as well as concentration inequalities.
+
+A. Proof of Theorem 1 We begin by stating a useful lemma.
+
+272
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:14:59 UTC from IEEE Xplore. Restrictions apply.
+
+Lemma 1. For any tree-structured Markov random field, there exist a nilpotent matrix A ∈ RD×D of degree at most r = diam(G) such that
+|F (m) − F (m′)| A |m − m′|,
+for all D-dimensional message vectors m, m′.
+Let us now show how Lemma 1 can be used to establish the claims in Theorem 1.
+
+1) Consistency: By combining all the local updates, we form the global update rule
+
+mt+1 = (1 − αt) mt + αt νt+1,
+
+(11)
+
+for t = 0, 1, 2, . . ., where νt+1 : = {Γuv(: , Jut+v 1)}(u→v)∈E is the D-dimensional vector obtained from stacking up all the normalized columns Γuv(: , Jut+v 1). Defining the vector Y t+1 : = νt+1 − F (mt) ∈ RD, we can rewrite the up-
+date (11) as
+
+mt+1 = (1 − αt) mt + αt F (mt) + αt Y t+1, (12)
+
+for iterations t = 0, 1, 2, . . .. With our step size choice αt = 1/(t + 1), unwrapping the recursion (12) yields the
+representation
+
+mt
+
+=
+
+1 t
+
+t−1
+F (mℓ)
+
++
+
+1 t
+
+t
+Y ℓ.
+
+ℓ=0
+
+ℓ=1
+
+Subtracting the unique fixed point m∗ from both sides then
+
+leads to
+
+mt − m∗
+
+=
+
+1 t
+
+t−1
+(F (mℓ) − F (m∗))
+
+ℓ=1
+
++
+
+1 t
+
+t
+
+Y
+
+ℓ
+
++
+
+1 t
+
+(F (m0)
+
+−
+
+F (m∗)),
+
+(13)
+
+ℓ=1
+
+Zt
+where we have introduced the convenient shorthand Zt. Next, applying the triangle inequality in conjunction with the result of Lemma 1 to equation (13) yields
+
+|mt − m∗|
+
+1 t
+
+t−1
+
+A
+
+|mℓ
+
+−
+
+m∗|
+
++
+
+|Z t |
+
+for t = 1, 2, . . ..
+
+ℓ=1
+
+Since Ar is the all-zeros matrix, unwrapping the last inequal-
+
+ity r = diam(G) times yields the element-wise upper bound
+
+|mt − m∗|
+
+G0t + AGt1 + A2Gt2 + . . . + Ar−1Gtr−1, (14)
+
+where Gℓt : =
+
+(thejt−=11teGrmℓj−s1)/Gttℓforarℓe=
+
+defined 1, . . . , r
+
+via − 1,
+
+the with
+
+recursion initial con-
+
+ditions Gt0 : = |Zt|.
+
+It remains to control the sequences {Gtℓ}t∞=1 for
+
+ℓ = 0, 1, . . . , r − 1. In order to do so, we note that {Y t}t∞=1
+
+forms a Martingale difference sequence with respect to the
+
+σ-field F t : = σ(m0, m1, . . . , mt), as generated by the
+
+randomness in the messages up to time t. More precisely, Y t is F t-measurable and we have E Y t+1|F t = 0 as can be
+
+seen from equation (8). Moreover, the sequence is bounded, in particular with |Y t(i)| ≤ 1 for all i = 1, 2, . . . , D and
+
+t = 1, 2, . . ..
+
+Since Y ℓ is a bounded martingale difference,
+
+standard convergence results [6] guarantee that
+
+|
+
+t ℓ=1
+
+Y
+
+ℓ|/t
+
+→
+
+0 almost surely. Moreover, we have
+
+the bound |F (m0) − F (m∗)|/t 1/t. Recalling the
+
+definition of Zt from equation (13), we conclude that
+
+Gt0 = |Zt| converges to the all-zeros vector almost surely as t → ∞. Extending our argument to the terms Gtℓ for ℓ = 1, . . . , r − 1, follows from a simple real analysis fact:
+
+for any sequence of then we also have (
+
+reℓta−=l10nxuℓm)/bter→s {0xt(}e∞ t.=g.0,
+
+Consequently, we conclude that G1t : = (
+
+such that xt → 0,
+
+see Royden [19]).
+
+t−1 j=1
+
+G0j )/t
+
+a→.s.
+
+0.
+
+This argument can be iterated, thereby establishing almost
+
+sure convergence for all terms Gℓt, and completing the proof
+
+of part (a).
+
+2) Bounds on expected absolute error: We now turn to part (b) of Theorem 1, which provides upper bounds on the expected absolute error. From part (a), we know that {Y t}∞ t=1 is a bounded martingale difference sequence, with |Y t(i)| ≤ 1. Applying the Azuma-Hoeffding inequality [3] and integrating this tail bound, we can upper bound the mean: in particular, we have
+
+E
+
+1 t
+
+|
+
+t
+
+Y ℓ(i)|
+
+ℓ=1
+
+≤
+
+∞
+2 exp
+0
+
+−
+
+t δ2 2
+
+dδ =
+
+2π t
+
+,
+
+and hence
+
+E G0t = E |Zt|
+
+2π t
+
+1
+
++
+
+1 t
+
+1
+
+√4 1. t
+
+Turning to the term Gt1, we have
+
+E[Gt1]
+
+=
+
+1 t
+
+t−1
+
+E[Gℓ0]
+
+ℓ=1
+
+1 t
+
+t−1 ℓ=1
+
+√4 ℓ
+
+1
+
+2√· 4 1. t
+
+By repeating this clude that E [Gtℓ]
+
+arg(u2mℓ e·n4t/√inta)
+
+recursive manner, 1 for ℓ = 2, 3, . .
+
+we .,r
+
+con− 1.
+
+Taking the expectation on both sides of the the inequality(14)
+
+and substituting these upper bounds, we obtain
+
+E |mt − m∗|
+
+4
+
+r−1
+(
+
+2ℓAℓ)
+
+√1
+
+= 4 (I − 2A)−1 √1 ,
+
+ℓ=0
+
+t
+
+t
+
+where we have used the fact that Ar = 0.
+
+B. Proof of the Theorem 2 We now turn to the proof of Theorem 2.
+
+273
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:14:59 UTC from IEEE Xplore. Restrictions apply.
+
+1) Consistency: Given contractivity of the updates, existence and uniqueness of the BP fixed point m∗ is an immediate consequence of the Banach fixed point theorem [1]. Part
+(a) of Theorem 2 is a relatively straightforward consequence
+of the Robbins-Monro theorem [17]. In particular, let
+
+Huv(m, J ) : = muv − Γuv(: , Juv).
+
+(15)
+
+denote the d-dimensional local vector field on the
+directed edge (u → v). Stacking up all these
+vectors yields the D-dimensional global vector field
+H(m, J ) = {Huv(m, J )}(u→v)∈E . With this notation, we can rewrite the global update function
+
+for all i ∈ X . Therefore, G1 can be bounded as follows
+
+2 G1 ≤
+4 ≤
+
+(u→v)∈E
+
+mut v
+
+2 2
+
++
+
+Γuv(: , Jutv)
+
+2 2
+
+m∗
+
+2 2
+
+(u→v)∈E maxi∈X Buv(i) (u→v)∈E (mini∈X Buv(i))
+
+:= K(ψ),
+
+(19)
+
+where we have used the fact that mut v, and Γuv(: , Jutv) sum to one. Moving on to the latter, equation (17) provides a
+
+lower bound on G2
+
+G2
+
+≥
+
+µ 2
+
+mt − m∗
+
+m∗
+
+2 2
+
+2
+2.
+
+(20)
+
+mt+1 = mt − αt H(mt, J t+1),
+
+(16)
+
+for t = 1, 2, . . . . Defining the mean vector field
+h(m) : = E [H(m, J)|m] = m − F (m), we only need to verify that the fixed point m∗ satisfies the condition supm m − m∗ , h(m) > 0, where · , · denotes the Euclidean inner product. Using the Cauchy-Schwartz inequality
+and the fact that F (m) is Lipschitz with constant L = 1−µ/2 for arbitrary m = m∗, we have
+
+m − m∗ , h(m) − h(m∗)
+
+=
+
+m − m∗
+
+2 2
+
+− m − m∗ , F (m) − F (m∗)
+
+≥
+
+µ 2
+
+m − m∗
+
+2 2
+
+> 0.
+
+(17)
+
+Since m∗ is a fixed point, we must have h(m∗) = m∗ − F (m∗) = 0, which concludes the proof.
+
+2) Non-asymptotic bounds on the mean-squared error:
+
+Let et : =
+
+ǫt
+
+2 2
+
+/
+
+m∗
+
+2 2
+
+denote the re-normalized squared
+
+error (ǫt = mt − m∗). In order to upper bound E[et] for all
+
+t = 1, 2, . . ., we first control the quantity E[et+1] − E[et],
+
+corresponding to the increment in the mean-squared error.
+
+Recalling the update equation (16) and using the tower
+
+property of the expectation, we obtain
+
+E[et+1] − E[et] = E
+
+mt+1 − mt , mt+1 + mt − 2m∗
+
+m∗
+
+2 2
+
+= (αt)2 E
+
+H(mt, J t+1)
+
+2 2
+
+m∗
+
+2 2
+
+−
+
+2αt
+
+E[
+
+h(mt) − h(m∗) ,
+
+m∗
+
+2 2
+
+mt − m∗
+
+].
+
+We continue by upper bounding the term
+
+G1 =
+
+H(mt, J t+1)
+
+22/
+
+m∗
+
+2 2
+
+and
+
+lower
+
+bounding
+
+the
+
+term G2 = h(mt) − h(m∗) , mt − m∗ / m∗ 22. Since
+
+muv is a convex combination of random columns of the
+
+matrix Γuv, we have
+
+Taking the expectation from both sides of the bounds, we
+
+obtain
+
+E [G1]
+
+≤
+
+K (ψ),
+
+and
+
+E [G2] ≥
+
+µ 2
+
+E[et].
+
+Putting
+
+the
+
+pieces together yields
+
+E[et+1] ≤ K(ψ) (αt)2 + (1 − αtµ) E[et]. (21)
+
+Setting αt = α/(µ(t+2)) and unwrapping the recursion (21),
+
+we obtain
+
+E[et+1]
+
+≤
+
+K(ψ) α2 µ2
+
+t+2
+
+i=2
+
+1 t+2 i2
+
+1
+
+−
+
+α ℓ
+
+ℓ=i+1
+
+t+2
++
+
+1
+
+−
+
+α ℓ
+
+E[e0],
+
+(22)
+
+ℓ=2
+
+adopting the convention that the inside product is equal to
+
+one for i = t + 2. The following lemma, provides an upper
+
+bound on the product
+
+t+2 ℓ=i+1
+
+(1
+
+−
+
+α ℓ
+
+).
+
+Lemma 2. For i ≤ t + 1 we have
+
+t+2
+
+1
+
+−
+
+α ℓ
+
+≤
+
+i+1 t+3
+
+α
+.
+
+ℓ=i+1
+
+Finally, substituting the result of Lemma 2 into equation (22), and doing some algebra yields the claim.
+
+3) High probability bounds on the actual error: Recall the definition of the normalized error et, from part (b). Doing
+
+some algebra similar to the previous part, we obtain
+
+et+1 − et = (αt)2
+
+H(mt, J t+1)
+
+2 2
+
+m∗
+
+2 2
+
+− 2αt
+
+H(mt, J t+1) , mt − m∗
+
+m∗
+
+2 2
+
+.
+
+Subtracting the conditional mean of the second term yields
+
+et+1 − et = (αt)2
+
+H(mt, J t+1)
+
+2 2
+
+m∗
+
+2 2
+
+− 2αt
+
+h(mt) , mt − m∗
+
+m∗
+
+2 2
+
++ 2αt Y t+1, (23)
+
+where we have denoted the residual term by
+
+B uv (i)
+
+:=
+
+min
+j∈X
+
+Γuv
+
+(i,
+
+j)
+
+≤
+
+muv (i)
+
+≤
+
+max
+j∈X
+
+Γuv
+
+(i,
+
+j
+
+)
+
+:=
+
+B uv (i),
+
+(18)
+
+Y t+1
+
+:=
+
+−
+
+H(mt, J t+1) − h(mt) , mt − m∗
+
+m∗
+
+2 2
+
+.
+
+274
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:14:59 UTC from IEEE Xplore. Restrictions apply.
+
+Substituting the bounds (19), and (20) into equation (23)
+
+VI. SIMULATION RESULTS
+
+yields
+
+In this section, we present some experimental results to
+
+et+1 ≤ K(ψ)(αt)2 + 2αt Y t+1 + (1 − µαt)et.
+
+demonstrate the effectiveness of the SBP algorithm. We
+
+Setting αt = 1/(µ(t + 1)), and unwrapping this recursion,
+
+we obtain
+
+et+1
+
+≤
+
+K(ψ) t+1 1 µ2(t + 1) τ
+
++
+
+t+1 2 Y τ µ (t + 1)
+
+τ =1
+
+τ =1
+
+≤
+
+K(ψ) 1 + log(t + 1)
+
+µ2
+
+t+1
+
++
+
+t+1
+
+µ
+
+2Yτ (t +
+
+1)
+
+.
+
+(24)
+
+τ =1
+
+Note that {Y τ }τ∞=1 is a martingale difference sequence with respect to the filtration F τ : = σ(m0, m1, . . . , mτ ).
+
+consider a simple measure of difference between node labels known as Potts model, which is widely used in computer vision (e.g., [7]). More specifically, for some fixed parameter 0 < γ < 1 we set
+
+ψuv(i, j) =
+
+1 γ
+
+i=j i=j
+
+,
+
+for all edges (u, v) ∈ E. Also we generate the node potentials as follows: for all nodes u ∈ V and for fixed parameters µ ≥ σ > 0, satisfying µ + σ < 1, we set
+
+Now we use concentration inequalities [3] to bound τt+=11(2 Y τ )/(µ (t + 1)). First of all, note that the Cauchy-
+
+ψu(i) =
+
+1 µ + σZ
+
+i=0 i=0
+
+,
+
+Schwartz inequality in conjunction with the triangle inequal-
+
+ity yields the following upper bound on the martingale
+
+differences
+
+|Y τ +1| ≤
+
+H(mτ , J τ +1) − h(mτ ) 2 mτ − m∗ 2
+
+m∗ 2
+
+m∗ 2
+
+where Z is picked uniformly at random from (−1, 1) and it is independent across the nodes and labels. For a fixed
+graph, edge and node potentials, we first run the belief propagation to compute m∗. Then we run the stochastic belief propagation algorithm to find the sequence of messages
+
+≤
+
+H(mτ , J τ +1) m∗ 2
+
+2
+
++
+
+h(mτ ) 2 m∗ 2
+
+mτ m∗
+
+2 2
+
++
+
+(25) m∗ 2 m∗ 2
+
+.
+
+{mt}∞ t=0 and compute the normalized mean squared-error
+
+E
+
+ǫt
+
+2 2
+
+/
+
+m∗
+
+2 2
+
+by
+
+averaging
+
+over
+
+20
+
+sample
+
+paths.
+
+Figure
+
+2 illustrates the error vs. the number of iterations for a
+
+Recalling the bound (19), from the previous part, it can be cycle of size n = 100 and a 10 × 10 regular grid. The
+
+seen that |Y τ+1| ≤ 2K(ψ), for τ = 0, 1, . . .. Consequently panels contain four different curves, each corresponding to a
+
+we may apply the Azuma-Hoeffding [3] inequality to obtain
+
+P
+
+t+1 τ =1
+
+µ
+
+2Yτ (t + 1)
+
+≥
+
+γ
+
+≤ exp
+
+−
+
+µ2γ2 (t + 1) 32K (ψ)2
+
+,
+
+different alphabet size d. In this experiment, we set the step size, the node, and the edge parameters to αt = 2/(t + 1), µ = 0.1, σ = 0.1, and γ = 0.1 respectively.
+As predicted by our results, the SBP algorithm is consistent
+
+for an arbitrary γ > 0. Now set
+
+and the error converges to zero. Also for an appropriately chosen step-size, the rate of convergence is 1/t. This man-
+
+γ2 =
+
+32K(ψ)2 c µ2
+
+log(t + t+1
+
+1)
+
+,
+
+ifests itself as a straight line with slope −1 in the log-log domain plot. More importantly, the complexity per iteration
+
+and substitute the result into (24) to obtian the bound
+
+has been significantly reduced.
+
+√
+
+et+1
+
+≤
+
+K (ψ) µ2
+
+1 + log(t + 1) t+1
+
++
+
+4K (ψ) µ
+
+2c
+
+log(t + t+1
+
+1)
+
+,
+
+VII. CONCLUSION In this paper, we presented the stochastic belief propaga-
+
+(26) tion algorithm as a low-complexity alternative to the sum-
+
+with probability at least 1−1/(t+1)c, for an arbitrary c > 0. product algorithm in pairwise Markov random fields. As it
+
+turns out, the sum-product messages are the expectations
+
+Remark: Although the bound (26) is reasonable, it is worth of the normalized columns of the BP compatibility matrix.
+
+observing that its derivation exploits only the boundedness of the martingale differences sequence {Y τ+1}τ∞=0. However, from inequality (25), it can be seen that |Y τ+1|2 is proportional to the ℓ2-norm of the error eτ , which decays as
+τ → ∞. To improve the bound (26), at a high-level, we split
+
+Instead of computing this expectation at every round, which is computationally costly, the idea of SBP is to sample a column with appropriate probability and update the messages accordingly to average it out in the long run. The complexity of the BP algorithm is Θ d2 per iteration; however SBP
+
+the sample space into two parts, a “good” event under which reduces this complexity by an order of magnitude to Θ (d) per eτ = O( log τ /τ ) for all τ > t0 and its complement, the iteration. We also provided rigorous mathematical analysis
+
+“bad” event. Then we upper bound the conditional variance for SBP. For the case of tree-structured graphs we proved the
+
+of the martingale difference on the “good” event and use almost sure consistency—that is the sequence of messages
+a Bernstein-type inequality [3]. Moreover, using the union generated by the SBP {mt}∞ t=1 converges to the unique fixed bound, we show that the probability of the “bad” event can point of BP as t → ∞ regardless of the edge and node
+
+be made arbitrarily small. For details, we refer the reader to potentials. We also provided non-asymptotic bounds on the
+
+the full length version of this paper.
+
+expected absolute error, showing that the rate of convergence
+
+275
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:14:59 UTC from IEEE Xplore. Restrictions apply.
+
+Normalized mean squared−error
+
+d = 128
+
+d = 256
+
+d = 512
+
+10−1
+
+d = 1024
+
+10−2
+
+100 10−1
+
+101 Number of iterations
+(a)
+
+102
+d = 128 d = 256 d = 512 d = 1024
+
+Normalized mean squared−error
+
+10−2
+
+10−3
+
+100
+
+101
+
+102
+
+Number of iteration
+
+(b)
+
+Fig. 2. Normalized mean squared-error E
+
+ǫt
+
+2 2
+
+/ m∗
+
+2 2
+
+vs. the number of iterations for (a) chain of size n = 100
+
+and (b) 10×10 grid. Each curve corresponding to a different
+
+alphabet size d ∈ {128, 256, 512, 1024}. The step size and
+
+the potential parameters are set to αt = 2/(t+1), µ = 0.1,
+
+σ = 0.1, and γ = 0.1 respectively.
+
+√ is at least 1/ t. On the other hand, for the case of general graphs and under a standard contraction condition, we proved the algorithm’s consistency, provided concrete bounds on the mean-squared error, and high probability bounds on the actual error. We showed that the ℓ2-rate of convergence is 1/t which is the best one can achieve.
+There are a number of problems that remain to be studied. The ideas that we have described in this paper have natural generalizations to more complicated models including continuous time state spaces, and to other types of sumproduct algorithms such as generalized belief propagation and reweighted sum-product algorithms [22]. In addition, it would be interesting to see if similar ideas could be applied to message-passing in other semirings, such as max-product.
+
+Acknowledgements
+Work was partially supported by MURI grant N00014-11-
+1-0688 to MJW. The authors thank Alekh Agarwal for helpful
+discussions and suggestions.
+REFERENCES
+[1] R. P. Agarwal, M. Meehan, and D. O’Regan. Fixed point theory and applications. Cambridge University Press, 2004.
+[2] M. S. Arulampalam, S. Maskell, N. Gordon, and T. Clapp. A tutorial on particle filters for online nonlinear/non-gaussian bayesian tracking. IEEE Transaction on Signal Processing, 50(2):174–188, 2002.
+[3] F. Chung and L. Lu. Concentration inequalities and martingale inequalities: A survey. Internet Mathematics, 3(1):79–127, 2006.
+[4] J. Coughlan and H. Shen. Dynamic quantization for belief propagation in sparse spaces. Computer Vision and Image Understanding, 106(1):47–58, 2007.
+[5] A. Doucet, N. de Freitas, and N. Gordon. Sequential Monte Carlo methods in practice. Springer, New York, 2001.
+[6] R. Durrett. Probability: Theory and Examples. Duxbury Press, New York, NY, 1995.
+[7] P. F. Flezenszwalb and D. P. Huttenlocher. Efficient belief propagation for early vision. International Journal of Computer Vision, 70(1):41– 54, 2006.
+[8] A. Ihler, J. Fisher, and A. S. Willsky. Loopy belief propagation: Convergence and effects of message errors. Journal of Machine Learning Research, 6:905–936, May 2005.
+[9] A. T. Ihler and D. McAllester. Particle belief propagation. In Proceedings of the Conference on Artificial Intelligence and Statistics, pages 256–263, 2009.
+[10] M. Isard, J. MacCormick, and K. Achan. Continuously-adaptive discretization for message-passing algorithms. In Proceedings of the Advances in Neural Information Processing Systems (NIPS), pages 737–744, 2009.
+[11] K. Kersting, B. Ahmadi, and S. Natarajan. Counting belief propagation. In Proceedings of the Twenty-Fifth Conference on Uncertainty in Artificial Intelligence, 2009.
+[12] F. R. Kschischang, B. J. Frey, and H. A. Loeliger. Factor graphs and the sum-product algorithm. IEEE Transaction on Information Theory, 47(2):498–519, 2001.
+[13] H. A. Loeliger. An introduction to factor graphs. IEEE Signal Processing Magazine, 21:28–41, 2004.
+[14] J. J. McAyley and T. S. Caetano. Faster algorithms for max-product message passing. Journal of Machine Learning Research, 12:1349– 1388, 2011.
+[15] J. M. Mooij and H. J. Kappen. Sufficient conditions for convergence of the sum-product algorithm. IEEE Transactions on Information Theory, 53(12):4422–4437, Dec 2007.
+[16] N. Noorshams and M. J. Wainwright. Stochastic belief propagation: Low-complexity message-passing with guarantees. Technical report, UC Berkeley, September 2011.
+[17] H. Robbins and S. Monro. A stochastic approximation method. Annals of Mathematical Statistics, 22:400–407.
+[18] T. G. Roosta, M. J. Wainwright, and S. S. Sastry. Convergence analysis of reweighted sum-product algorithms. IEEE Transactions on Signal Processing, 56(9):4293–4305, Sep 2008.
+[19] H.L. Royden. Real Analysis. Prentice-Hall, New Jersey, 1988. [20] E. B. Sudderth, W. T. Freeman A. T. Ihler, and A. S. Willsky. Nonpara-
+metric belief propagation. In Proceedings of the IEEE conference on Computer Vision and Pattern Recognition, volume 1, pages 605–612, 2003. [21] S. Tatikonda and M. I. Jordan. Loopy belief propagation and Gibbs measures. In Proc. Uncertainty in Artificial Intelligence, volume 18, pages 493–500, August 2002. [22] M. J. Wainwright and M. I. Jordan. Graphical Models, Exponential Families, and Variational Inference. now Publishers Inc, Hanover, MA 02339, USA, 2008.
+
+276
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 08:14:59 UTC from IEEE Xplore. Restrictions apply.
+
+

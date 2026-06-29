@@ -1,0 +1,736 @@
+IEEE TRANSACTIONS ON COMPUTER-AIDED DESIGN OF INTEGRATED CIRCUITS AND SYSTEMS, VOL. 39, NO. 4, APRIL 2020
+
+909
+
+Using Error Modes Aware LDPC to Improve Decoding Performance of 3-D TLC NAND Flash
+Fei Wu , Member, IEEE, Meng Zhang , Yajuan Du, Weihua Liu, Zuo Lu, Jiguang Wan, Zhihu Tan, and Changsheng Xie, Member, IEEE
+
+Abstract—3-D triple-level cell (3-D TLC) NAND flash has high storage density and capacity, but degrading data reliability due to high raw bit error rates induced by a certain number of program/erase cycles. To guarantee data reliability, low-density parity-check (LDPC) codes are selected as the error correction codes in modern flash memories because of strong error correction capability. However, directly adopting LDPC codes induces high decoding latency due to iterative updating of log-likelihood ratio (LLR) information in the decoding process. Increasing LLR information accuracy can greatly improve decoding performance. In this paper, we propose EMAL: using error modes aware LDPC codes for further enhancing the decoding performance of 3-D TLC NAND flash. We first obtain 3-D TLC error modes based on an FPGA testing platform, and then exploit the error modes to optimize LLR information and enable the decoding to converge at a high speed. The simulation results show that the decoding performance is significantly improved, resulting in reduced bit error rates and decoding latency.
+Index Terms—3-D triple-level cell (3-D TLC) NAND flash, error modes, low-density parity-check (LDPC) codes.
+I. INTRODUCTION
+N AND flash-based solid state drives (SSDs) have experienced tremendous development and grew with tens of billions of flash market during the last decade [41]. This growth is driven by aggressive technology scaling, such as the latest 1Xnm feature size, 3-D structures with more stacking layers, and more bits per cell (even the quad-level cell) [42]. More specifically, 3-D triple-level cell (3-D TLC) NAND flash has high storage density and capacity stemming from storing
+Manuscript received May 7, 2018; revised July 28, 2018, October 28, 2018, and January 17, 2019; accepted January 21, 2019. Date of publication February 4, 2019; date of current version March 18, 2020. This work was supported in part by the National Natural Science Foundation of China under Grant 61872413, Grant U1709220, Grant 61821003, Grant 61876019, and Grant 61802287, in part by the Wuhan Science and Technology Project under Grant 2017010201010108, in part by the Shenzhen Basic Research Project under Grant JCYJ20170307160135308 and Grant JCYJ20170818162129916, in part by the Fundamental Research Funds for the Central Universities under Grant 2016YXMS019, in part by 111 Project under Grant B07038, and in part by the Key Laboratory of Data Storage System, Ministry of Education. This paper was recommended by Associate Editor Z. Shao. (Corresponding author: Meng Zhang.)
+F. Wu, M. Zhang, W. Liu, Z. Lu, J. Wan, Z. Tan, and C. Xie are with the Wuhan National Laboratory for Optoelectronics, Huazhong University of Science and Technology, Wuhan 430074, China (e-mail: wufei@hust.edu.cn; zgmeng@hust.edu.cn; liuweihua@hust.edu.cn; luzuo@hust.edu.cn; jgwan@hust.edu.cn; tan@hust.edu.cn; cs_xie@hust.edu.cn).
+Y. Du is with the School of Computer Science and Technology, Wuhan University of Technology, Wuhan 430070, China (e-mail: dyj@whut.edu.cn).
+Digital Object Identifier 10.1109/TCAD.2019.2897706
+
+three bits per cell and adopting 3-D hierarchy [34]. However, it is more prone to bit errors when experiencing a certain number of program/erase (P/E) cycles, which reduces data reliability [36]. Low-density parity-check (LDPC) codes showing strong error correction capability have been widely adopted to ensure data reliability [40]. The LDPC decoding process relies on the more popular belief propagation algorithm [4], a kind of soft decision algorithm. During LDPC decoding, loglikelihood ratio (LLR) [3] information per bit is first obtained and then updated iteratively to correct bit errors, consuming a lot of time [10]. If LDPC codes are directly adopted, these iterations will induce high decoding latency as well as suboptimal decoding performance [18].
+There are some previous works proposed to investigate flash error characteristics and optimize LDPC decoding performance. Tseng et al. [9] relied on a hardware platform to study flash error characteristics induced by unexpected power off when executing normal operations. Cai et al. [1] investigated characteristics of various flash errors, such as retention errors, program interference errors, read interference errors, and erase errors. Meza et al. [17] studied failure patterns of SSDs by collecting large amounts of data from Facebook’s data centers. Schroeder et al. [27] studied a wide range of reliability characteristics by collecting great quantities of data from Google’s data centers. By exploiting the error behavior in planar TLC NAND flash, Yaakobi et al. [23] developed effective error correction techniques. Zhao et al. [2] developed three techniques to ensure data reliability and optimize flash read performance. Zhao et al. [4] proposed two techniques to improve LDPC decoding throughput in MLC NAND flash. Qiao et al. [20] developed a joint decoding scheme that depends on retention error characteristics of MLC NAND flash to decrease the decoding latency of nonbinary LDPC. Tanakamaru et al. [22] developed two schemes called error-prediction LDPC and error-recovery to reduce bit error rates and prolong data retention time. Aslam et al. [21] developed a retention-aware belief propagation scheme, called RA-BP, to correct decoding errors induced by retention noises. Li et al. [29] proposed a smart sensing level placement scheme by exploiting retention errors to reduce the use of soft sensing levels. Du et al. [26] proposed latency aware LDPC based on the read level characteristics along with data retention to improve read performance of SSDs. Nakamura et al. [40] proposed advanced error prediction LDPC with error dispersion coding to reduce burst errors and extend data retention time. These prior works mainly investigated and utilized error
+
+0278-0070 c 2019 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission. See http://www.ieee.org/publications_standards/publications/rights/index.html for more information.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:53:01 UTC from IEEE Xplore. Restrictions apply.
+
+910
+
+IEEE TRANSACTIONS ON COMPUTER-AIDED DESIGN OF INTEGRATED CIRCUITS AND SYSTEMS, VOL. 39, NO. 4, APRIL 2020
+
+Fig. 2. Program methods of 3-D CT TLC NAND flash.
+
+Fig. 1. 3-D structure of TLC NAND flash blocks and the planar structure of each tier storage array.
+characteristics of planar NAND flash, without analyzing and exploiting error modes of 3-D TLC NAND flash. In this paper, we first study the error modes of 3-D charge trap (CT) NAND flash memory on a real FPGA testing platform and obtain several observations. In the testing experiments, we focus on studying the error percentages, raw bit error rates (RBERs), and state shift characteristics. Then, we exploit these observations to optimize the LLR information to speed up the LDPC decoding convergence and improve the LDPC decoding performance.
+As mentioned above, LLR information is iteratively updated during LDPC decoding. More importantly, more accurate LLR information can significantly enhance the decoding performance and further reduce decoding latency. Therefore, we propose an error modes aware LDPC decoding method, called EMAL, to improve the decoding performance by leveraging error modes of 3-D TLC NAND flash. The simulation results show that EMAL significantly improves the decoding performance and reduces bit error rates as well as decoding latency.
+The major contributions of this paper are as follows. 1) We study the error modes of 3-D TLC NAND flash based
+on the real FPGA testing platform, and analyze the reasons that the error modes exist in the 3-D TLC NAND flash. 2) Motivated by the error modes, we propose EMAL, which exploits them to optimize the LLR information of LDPC decoding, leading to enhanced decoding performance and reduced decoding latency. 3) We evaluate the effectiveness of EMAL by extensive simulations. The rest of this paper is organized as follows. Section II introduces some backgrounds about 3-D TLC NAND flash. Section III presents 3-D TLC error modes. The proposed EMAL scheme is introduced in Section IV. The simulation results and analysis are given in Section V. Section VI makes a conclusion.
+II. BACKGROUND
+In this section, we introduce the basics of 3-D TLC NAND flash, describe the LDPC decoding process and explain the performance and factors of affecting decoding.
+
+A. Basics of 3-D TLC NAND Flash
+3-D NAND flash blocks with the vertical structure consist of many layers shown in Fig. 1, each of which includes a lot of cells. Bit and word lines (WLs) connect cells to form storage arrays. The source selective line and drain selective line control data programming and reading. 3-D TLC NAND flash stores three bits in each cell with eight states. When programming, three bits per cell are mapped to three different logical pages, the least significant bit (LSB) page, the central significant bit (CSB) page, and the most significant bit (MSB) page. The LSB page is formed by collecting all left bits in the three bits. Similarly, the CSB and MSB pages are formed by collecting all center and right bits, respectively, [23]. Each WL consists of such three pages. The page numbers are successive, such as WL0 with page 0, page 1, and page 2 and WLi with page 3i, page 3i+1, and page 3i+2. Currently, there are two types of 3-D NAND flash cells in industry, floating gate (FG) and CT. CT-based 3-D TLC NAND flash technologies are widely adopted by Samsung, Toshiba, and Hynix, due to better scalability and performance than FG-based 3-D TLC NAND flash [44]. The main difference between them is that an FG cell uses an FG made of doped polycrystalline silicon to store electrons rather than a silicon nitride film used in the CT-based cell. This difference leads to distinct program methods for FG and CT NAND flash [36]. Since the CT uses the insulator, there is less coupling effect between cells that may result in low program disturb. Therefore, the program method for 3-D CT NAND flash is to program three pages (i.e., LSB, CSB, and MSB pages) only undergoing one round as shown in Fig. 2. It means that they are completed to program at the same time, called one-shot-program. On the contrary, the FG has strong program disturb between cells. To program three pages in 3-D and 2-D FG NAND flash requires three rounds to complete, which is called multistep-program [44].
+We introduce the read operations on different bit pages as follows.
+LSB Read: The LSB read requires to apply two reference thresholds VL1 and VL2 between S0 and S1, between S4 and S5, respectively. If the cell threshold voltage VCT < VL1 or VCT > VL2, the read bit data is “1,” otherwise, “0.”
+CSB Read: Three reference voltages VC1, VC2, and VC3 are applied between S1 and S2, between S3 and S4, and between S5 and S6, respectively. If VC2 > VCT > VC1 or VCT > VC3, the read bit data is 0, otherwise, 1.
+MSB Read: The MSB is read by using two reference voltages, VM1 and VM2 between S2 and S3 and between S6 and S7. If VM2 > VCT > VM1, the read bit data is 0, otherwise, 1.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:53:01 UTC from IEEE Xplore. Restrictions apply.
+
+WU et al.: USING ERROR MODES AWARE LDPC TO IMPROVE DECODING PERFORMANCE OF 3-D TLC NAND FLASH
+
+911
+
+Fig. 3. Information update process of LDPC decoding is implemented iteratively. By exploiting the initial soft information, check nodes are first updated, and then the updated information of check nodes is utilized to update the information of variable nodes.
+
+B. LDPC Codes
+In this section, we first introduce the basics of LDPC codes [8], and then present the working principle, involving how to obtain initial soft information of decoding and how to correct bit errors in the decoding process.
+1) Basics of LDPC Codes: The parity-check matrix is an important parameter in the process of constructing LDPC codes. The matrix with only 0 and 1 has sparse properties, i.e., the number of 0s is far more than that of 1s. The matrix is used to encode and decode whose rows and columns correspond to parity-check equations (i.e., called check nodes) and variable nodes, respectively. And, the matrix is able to be transformed into a corresponding Tanner graph [3] exploited to distinctly show the decoding process. We take the matrix H as an example to explain how to transfer the matrix into a Tanner graph, and how to use the graph to decode. vj and ci denote variable nodes and check nodes, respectively. The transformed Tanner graph is shown in Fig. 3
+⎡ V1 V2 V3 V4 V5 V6 ⎤ 1 1 0 1 0 1 C1
+H = ⎣ 0 1 1 1 1 0 ⎦ C2 1 0 1 0 1 1 C3
+
+Parity Check Equations
+
+→
+
+C1 C2
+
+: V1 + V2 + V4 + V6 = 0 : V2 + V3 + V4 + V5 = 0
+
+C3 : V1 + V3 + V5 + V6 = 0.
+
+2) LDPC Decoding: Before starting LDPC decoding, initial soft information obtained from flash is considered as the LLR information (i.e., real numbers [31]). If the cell threshold voltage is in the sensing level region [vi, vj], the LLR information of LSB, CSB, and MSB can be computed by utilizing the following expression [3]:
+
+LLR(k) = ln
+
+7 m=0
+
+vj vi
+
+pSm (v)dv
+
+−
+
+l∈STk
+
+l∈STk
+
+vj vi
+
+pl(v)dv
+
+vj vi
+
+pl(v)dv
+
+.
+
+(1)
+
+Here, STk(k ∈ {1, 2, 3}) represents the set of TLC NAND flash cell storage states in which the kth bit is 0. pSm (v) (0 ≤ m ≤ 7) and pl(v) (l ∈ STk) denote the probability density
+function of state Sm and state l, respectively. Specifically, if k = 1, l ∈ ST1 = {S1, S2, S3, S4} shown in Fig. 2. Suppose
+wIthfhele=trherSeμ1sh,S1opllda(vnv)do=lσtaS[g11e/d(fe√onl2oloπtweσstSh1teh)]emenxeopar(nm−aa[l(n(ddvis−sttraiμbnuSd1tai)ro2dn)/d[(5e2]vσ,iSa2[14t)i0o])]n,.
+
+of state S1, respectively. Once the initial soft information is achieved, LDPC decoding with the iteration process can be launched. The Tanner graph shown in Fig. 3 is exploited to explain the process of LDPC decoding. First, using initial soft information sij (1 ≤ j ≤ 6) successively updates the information of check nodes c1, c2, and c3. c1 connected to v1 is updated from the information of variable nodes v2, v4, and v6 excluding v1. c3 connected to v1 is updated from the information of variable nodes v3, v5, and v6 excluding v1. After finishing the information update of all check nodes connected to variable node v1, the information update of all check nodes connected to variable node v2 is activated until completing the updates of all check nodes connected to v6.
+Second, once all check node updates are finished, the updated information of all check nodes is used to update the information of all variable nodes. The information of variable node v1 is updated by utilizing the updated information of check nodes c1 and c3 until finishing the updates of all variable nodes. Third, when completing the updates of all variable nodes, the bit decisions are made to judge whether the updated information satisfies check equations. The update principle is shown as [4], [12], [18]
+
+Check node updates:
+
+CIikj+1 = β
+
+sgn BIikl · min BIikl : l ∈ M(i)\j .
+
+l∈M(i)\j
+
+(2)
+
+Variable node updates:
+
+BIikj+1 = SIj +
+
+CIhkj+1.
+
+(3)
+
+h∈P(j)\i
+
+Bit decisions:
+
+BIjk+1 = SIj +
+
+CIikj+1.
+
+(4)
+
+i∈P(j)
+
+Here, CIij and BIij denote the information of the check and variable nodes, respectively. M(i) denotes the sets of all variable nodes connected to check node ci. M(i)\j represents M(i) excluding variable node vj. P(j) denotes the sets of all check nodes connected to variable node vj. P(j)\i represents P(j) excluding check node ci. β and k denote the normalization factor and the iteration, respectively. If BIjk+1 ≥ 0, vj = 1, otherwise vj = 0. If V · HT = 0 or k gets to the maximum iteration, stop updating. Otherwise, continually updating the
+check and variable nodes until termination conditions are sat-
+isfied. In the LDPC decoding process, the accuracy of LLR
+information influences the decoding performance. Increasing
+LLR information accuracy can significantly improve decod-
+ing performance. Therefore, decoding convergence time and
+bit error rates can be reduced due to the enhanced decoding
+performance. In this paper, we exploit 3-D TLC error modes to
+improve the LLR information accuracy in the LDPC decoding
+process.
+
+III. ERROR MODES OF 3-D CT TLC NAND FLASH
+In this section, we first obtain error modes of 3-D CT TLC NAND flash by using the real FPGA testing platform, and then
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:53:01 UTC from IEEE Xplore. Restrictions apply.
+
+912
+
+IEEE TRANSACTIONS ON COMPUTER-AIDED DESIGN OF INTEGRATED CIRCUITS AND SYSTEMS, VOL. 39, NO. 4, APRIL 2020
+
+(a)
+
+(b)
+Fig. 4. Different states of 3-D TLC NAND flash cells show different shift percentages with the increase of P/E cycles. (a) and (b) State shift percentages under P/E cycles.
+
+give an analysis. Finally, we explain how to exploit the error modes to optimize the LLR information for LDPC decoding.
+A. Obtaining Error Modes
+We study error characteristics of 3-D CT TLC NAND flash memory on the real FPGA [45] hardware testing platform. Windows-based applications communicate with the hardware platform by using the PCIe interface and NVMe protocol. The read, program, and erase commands are sent to the testing chip. We test the 3-D CT TLC chip under different retention periods, i.e., 0-week, 1-week, 2-week, 3-week, and 4-week. The error characteristics are studied at the P/E interval as 500 cycles. We obtain several error modes, including cell state shift characteristics and error percentages of LSB, CSB, and MSB pages under different P/E cycles. We first count the state shift percentages shown in Fig. 4. The experimental results show that it is a relatively high percentage for cell states to shift to adjacent directions when suffering from noise interferences, such as state S0 to state S1. There are low percentages for crossing the middle state to shift to other states, such as state S0 to state S2 and state S3 to state S6 with less 1%.
+Then, we study the RBER of different 3-D CT TLC NAND flash pages under different P/E cycles and retention time. The experimental results in Fig. 5 shows that P/E cycles and retention time can severely affect the RBER of 3-D-TLC NAND flash. The overall RBER increases as the P/E cycles and retention time increase. The RBER in LSB pages with P/E cycles
+
+presents approximate exponential growth trend, as shown in Fig. 5(a). The RBER in LSB pages is much higher than that of the CSB and MSB pages. The RBER with retention 0-week gets to 0.011 at the P/E cycles of 6000, with retention 1-week getting to 0.0125, with retention 4-week getting to 0.015. If the P/E cycles and retention time continue to increase, the bit error rate will be higher. There is a larger probability to approach 2.0×10−2. It requires to design much stronger error correction code (ECC) to improve data reliability of LSB pages. Once the bit error rates exceed the error correction capability of ECC, the LSB pages cannot be exploited, leading to unreliable storage. Therefore, the LDPC codes with stronger error correction capability are considered.
+Finally, error percentages of LSB, CSB, and MSB pages are counted. Experiment results in Fig. 6 show that there are unbalanced bit errors in these three pages. When experiencing more P/E cycles, bit error percentages of LSB pages are much higher than that of the CSB and MSB pages. Because there are much higher state shift percentages of S0 to S1, leading to higher bit errors in the LSB pages.
+B. Analysis of Error Modes
+The storage cell of 3-D FG NAND flash is the conductor such that it is much easier to attract additional electrons into the cells when experiencing program operations, leading to high program interference errors. Each TLC cell stores fewer electrons, once flash cells capture more additional electrons so
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:53:01 UTC from IEEE Xplore. Restrictions apply.
+
+WU et al.: USING ERROR MODES AWARE LDPC TO IMPROVE DECODING PERFORMANCE OF 3-D TLC NAND FLASH
+
+913
+
+(a) (a)
+(b)
+
+(c)
+
+(b)
+
+Fig. 5. RBER of (a) LSB, (b) CSB, and (c) MSB pages under different P/E cycles and retention periods.
+
+(c)
+
+Fig. 6. Error distribution among LSB, CSB, and MSB pages in 3-D TLC NAND flash under different P/E cycles.
+that it is easy to cross middle states to shift to other states. FG flash is the dominant storage type in the planar NAND flash memory due to the process technology. Conversely, 3-D CT TLC NAND flash adopts peculiar storage structure, making it become mainstream. The storage cell of 3-D CT TLC is the insulator so that it is difficult to capture electrons, resulting in low program interference errors. Therefore, when a 3-D CT TLC NAND flash cell suffers from the noise interference, its threshold voltage is relatively easy to shift to adjacent states and it is more difficult to cross the middle state to shift to other states. According to this analysis, the bit error modes can be summarized as follows.
+Error Mode 1: As shown in Fig. 7(a), if MSB is the bit 0 and CSB is also the bit 0, LSB is correct with the large probability. Because it is difficult for S3− > S6 or S6− > S3. If MSB is the bit 0 and CSB is the fuzzy bit, LSB is correct with the large probability since it is relatively easy to shift from S3− > S4, S4− > S3, S5− > S6, or S6− > S5. It is difficult for S3− > S5, S5− > S3, S4− > S6, or S6− > S4. The fuzzy bit means that it is unable to determine the correct bit with 1
+
+Fig. 7. Error modes of 3-D TLC NAND flash are analyzed. The decoding results of the MSB and CSB pages can affect the decoding decision on the LSB page. (a) State shifting among S3 and S5, S3 and S6, and S4 and S6 is difficult. (b) State shifting among S2 and S7, S0 and S2, S2 and S4, S2 and S5, S0 and S3, and S1 and S3. (c) State shifting between S1 and S4, and S0 and S5 is difficult. State shifting between adjacent states is relatively easy.
+or 0. Specifically, when we know the correct MSB is the bit 0 after decoding, the corresponding data storage states are only S3, S4, S5, or S6. If the original data storage states are S3 or S6, the correct CSB is the bit 0. If the original data storage states are S4 or S5, the correct CSB is the bit 1. If we only know the correct MSB is the bit 0, it is unable to determine the correct CSB is 0 or 1. It may shift from state S3 to S4 or state S4 to S3 due to noise interference. It may also shift from state S5 to S6 or S6 to S5 because there is a relatively high probability of the adjacent state shift as shown in Fig. 4. Therefore, if the decoding and detection results of CSB are different, we cannot determine the correct CSB is 0 or 1. We call the fuzzy bit which cannot be correctly determined.
+Error Mode 2: As shown in Fig. 7(b), if MSB is the bit 1 and CSB is the bit 0, LSB is correct with the large probability since it is difficult to shift from S2− > S7 or S7− > S2. If MSB is the bit 1 and CSB is the fuzzy bit, LSB is the bit 0 with the large probability since it is relatively easy to shift
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:53:01 UTC from IEEE Xplore. Restrictions apply.
+
+914
+
+IEEE TRANSACTIONS ON COMPUTER-AIDED DESIGN OF INTEGRATED CIRCUITS AND SYSTEMS, VOL. 39, NO. 4, APRIL 2020
+
+from S1− > S2 or S2− > S1. If both MSB and CSB are the fuzzy bits, LSB is correct with the large probability because it is difficult for S2− > S4, S4− > S2, S2− > S5, or S5− > S2. It is similar for S0− > S3, S3− > S0, S1− > S3, or S3− > S1.
+Error Mode 3: As shown in Fig. 7(c), if MSB is the fuzzy bit and CSB is the bit 0, LSB is correct with the large probability since it is relatively easy to shift from S2− > S3, S3− > S2, S6− > S7, or S7− > S6. If MSB is the fuzzy bit and CSB is the bit 1, LSB is correct with the large probability because if CSB is the bit 1 after decoding, the corresponding data storage states are only S0, S1, S4, or S5. And, when MSB is the fuzzy bit, it means that the cell storage states may shift from S1− > S4, S1− > S5, S0− > S4, S0− > S5, S4− > S1, S4− > S0, S5− > S1, or S5− > S0. However, such state shifting is very difficult.
+C. Exploiting Error Modes to Optimize LLR Information
+More accurate LLR information can significantly reduce the decoding iterations and latency. We exploit the observed error modes to optimize the LLR information. The specific optimization method is described as follows.
+Method 1: Decoding results of MSB and CSB are denoted as DEmsb and DEcsb. Initial LLR information of MSB, CSB, and LSB is denoted as LLRmsb, LLRcsb, and LLRlsb, respectively. We define the optimized LSB LLR information as MMllsb. The decoding result DE corresponds to the LLR information when making the decoding decision, which is given by using the formulas (11) and (12) in Algorithm 1. If the decoding result DE > 0, the corresponding bit is made decision as 1, otherwise, 0. The purpose of using DE and initial LLR is to judge the storage state of MSB and CSB for assisting the decoding decision for LSB. If DEmsb < 0 and LLRmsb < 0, LLRcsb < 0, and DEcsb < 0, it means that MSB and CSB are the bit 0, according to Error Mode 1, LSB is correct with the large probability. Thus, it sets LSB LLR information as MMllsb = 2.5 × LLRlsb. If DEmsb < 0 and LLRmsb < 0 and DEcsb × LLRcsb < 0, it means that MSB is the bit 0 and CSB is the fuzzy bit, LSB is correct with the large probability. Therefore, it sets LSB LLR information as MMllsb = 2.5 × LLRlsb to speed up LSB convergence to the correct bit.
+Method 2: If DEmsb > 0 and LLRmsb > 0, LLRcsb < 0 and DEcsb < 0, it means that MSB is the bit 1 and CSB is the bit 0. According to Error Mode 2, LSB is correct with the large probability. Thus, it sets LSB LLR information as MMllsb = 2.5×LLRlsb to expedite LSB convergence to the correct bit. If DEmsb > 0 and LLRmsb > 0, DEcsb × LLRcsb < 0, it means that MSB is the bit 1 and CSB is the fuzzy bit, LSB is the bit 0 with the large probability. It sets MMllsb = −2 to speed up the LSB convergence to the correct bit 0. If DEmsb × LLRmsb < 0 and DEcsb × LLRcsb < 0, it means that MSB and CSB are the fuzzy bits. Therefore, LSB is correct with the large probability. It sets LSB LLR information as MMllsb = 2.5 × LLRlsb.
+Method 3: If DEmsb × LLRmsb < 0, LLRcsb < 0 and DEcsb < 0, it means that MSB is the fuzzy bit and CSB is the bit 0. According to Error Mode 3, LSB is correct with the large probability. Thus, it sets LSB LLR information as
+
+MMllsb = 2.5 × LLRlsb to accelerate LSB convergence to the correct bit. If DEmsb × LLRmsb < 0, LLRcsb > 0 and DEcsb > 0, it means that MSB is the fuzzy bit and CSB is the bit 1. LSB is correct with the large probability. Thus, it sets LSB LLR information as MMllsb = 2.5 × LLRlsb.
+To adjust the LSB LLR values for gaining more accurate
+decoding soft information, we conduct multiple simulation
+experiments. Finally, we choose the optimal LLR information as MMllsb = 2.5 × LLRlsb explained in Methods 1–3 as well as MMllsb = −2 explained in Method 2, which enables the decoding to converge with high speed. The simulation results
+validate their effectiveness of reducing the decoding latency
+and improving the decoding performance.
+
+IV. PROPOSED EMAL SCHEME
+In this section, we introduce the proposed EMAL scheme, including the overview and decoding algorithm in detail.
+
+A. EMAL Overview
+
+The schematic of EMAL overview is drawn in Fig. 8.
+
+K information bits (M1, M2, . . . , Mk−1, Mk) are first encoded to generate the codeword (M1, M2, . . . , Mk−1, Mk, . . . , Mn),
+
+and then transferred to the register. Finally, this codeword
+
+is programmed into the MSB page. Similarly, codewords
+
+(C1, C2, . . . , Cn−1, Cn) and (L1, L2, . . . , Ln−1, Ln) are written
+
+to the CSB and LSB pages, respectively. When these three
+
+codewords are interfered by channel noises of 3-D TLC NAND
+
+flash, bit errors occur so that they change into bit vectors M =
+
+(M1T , M2T , M3T , . . . , MnT−1, MnT ), C = (C1T , C2T , . . . , CnT−1, CnT ),
+
+and ing,
+
+L = (L1T , bit vector
+
+LM2T→, .
+
+.. is
+
+, LnT−1, LnT ), first read to
+
+respectively. During decodthe register, then transferred
+
+to the LDPC decoder for correcting bit errors. The decoding
+
+result of the MSB page, (Rm1, Rm2, Rm3, . . . , Rm(n−1), Rmn),
+
+is output, while stored in one buffer. When decoding the bit
+
+vector C, the decoding result of the CSB page, RC, is output
+
+and stored in another buffer. When decoding the LSB page,
+
+the LLR information is optimized by exploiting the decoding
+
+results of both the MSB and CSB pages along with the error
+
+modes, as given in Section III-C.
+
+B. EMAL Decoding Algorithm
+The EMAL decoding algorithm is described in Algorithm 1 as an Appendix. We use the decoding flowchart shown in Fig. 9 to explain Algorithm 1. The MSB page is first decoded by implementing step 13 to initialize the LLR information. Check nodes information is updated through the formula in step 16 (5). Variable nodes information (i.e., the LLR information per bit) is updated through the formula in step 17 (8) after updating information of each check node. After finishing the updating of each variable node, the decoding decision on the MSB page is made using the formula in step 18 (11). The decoding LLR information of the MSB page is recorded by implementing step 19 (14). By implementing steps 44–48, the decoding LLR information can be changed into the corresponding bit sequences to check whether the decoding termination condition in step 49 is satisfied. If so, the decoding process of the CSB page is
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:53:01 UTC from IEEE Xplore. Restrictions apply.
+
+WU et al.: USING ERROR MODES AWARE LDPC TO IMPROVE DECODING PERFORMANCE OF 3-D TLC NAND FLASH
+
+915
+
+Fig. 8. When implementing decoding operations on the LSB page, the decoding results of both the MSB and CSB pages together with the error modes are combined to optimize LLR information of the LSB page.
+
+Fig. 9. Decoding flowchart to explain Algorithm 1 in the Appendix.
+
+activated by implementing similar steps. Otherwise, from the beginning of step 16 (5), the decoding process of the MSB page is continued until the termination condition is satisfied. When performing the decoding process of the LSB page, the decoding LLR information is optimized by combining the LLR information of MSB and CSB pages and error modes via the steps 20–43. The optimized LLR information is considered as the initialization value to launch the decoding operations by implementing corresponding steps. Especially, when updating variable nodes information and making the decoding decision, the optimized LLR information is merged into the formulas in step 17 (10) and step 18 (13) for improving the reliability of the bit decision and decoding convergence speed.
+
+V. IMPLEMENT AND RESULTS In this section, we first present the simulation setup, and then analyze the results, sensitivity, and overhead. Finally, we give a brief discussion.
+A. Simulation Setup We conduct the MATLAB simulation to evaluate the
+effectiveness of EMAL on improving the LDPC decoding performance and reducing the decoding latency. We construct quasi-cyclic LDPC with the code rate of 0.89 fitting in NAND flash storage systems [11] and compare EMAL with the normalized min-sum decoding algorithm [12], [14] extensively
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:53:01 UTC from IEEE Xplore. Restrictions apply.
+
+916
+
+IEEE TRANSACTIONS ON COMPUTER-AIDED DESIGN OF INTEGRATED CIRCUITS AND SYSTEMS, VOL. 39, NO. 4, APRIL 2020
+
+Fig. 10. Decoding iterations are extremely unbalanced due to asymmetric RBERs, which shows more obvious at lower S/Ns because of larger differences for bit errors. Conversely, the decoding iterations show small differences at higher S/Ns.
+
+used in NAND flash, without considering the error modes of 3-D TLC NAND flash. Information bits are first encoded, then modulated using 8-pulse amplitude modulation [13], and finally sent the additive white Gaussian noise channel verified to be similar to the flash channel [3], [5]. The process of LDPC decoding is implemented, and the decoding performance is evaluated. To further evaluate the system read performance, we exploit the Disksim simulator [48] with the SSD module, which is widely used [16], [24], [26], [37] to evaluate NAND flash-based storage system performance, to carry out the simulation experiments by using real-world traces. In the system simulation, we configure the SSD with eight channels. Each channel has eight planes. Each plane has 2048 blocks. Each block has 256 pages. Each page size is 4 KB. We set the latency of each decoding iteration as 1μs. The transfer latency is 5 ns per byte. The read latency from flash medium to the page register is 70μs. The program latency is 0.8 ms and the erase latency is 3.5 ms.
+
+Fig. 11. EMAL requires fewer decoding iterations to correct bit errors in LSB pages with the page size of 2 KB since the optimized LLR information is appropriately leveraged during decoding.
+
+B. Results and Analysis
+We count average decoding iterations when implementing LDPC decoding operations. The simulation results in Fig. 10 show that there are unbalanced decoding iterations between LSB, CSB, and MSB pages due to unbalanced bit errors. Decoding iterations in LSB pages are abnormally higher than that of the other two pages, regardless of the page sizes of 2 KB and 4 KB. In the context, 2 KB and 4 KB are the subpage size of 3-D TLC NAND flash with large page capacity and commonly considered as ECC units. The decoding iterations of LDPC codes are directly affected by the RBER (i.e., the bit error rate without the decoding), and higher RBER leads to more decoding iterations. Therefore, more decoding iterations happen in LSB pages with higher RBER. The gap of RBERs between the MSB and CSB pages is small.
+Besides, we compare the decoding iterations in LSB pages with and without EMAL. The simulation results in Fig. 11 show that by exploiting EMAL to correct bit errors in LSB
+
+pages with the page size of 2 KB, decoding iterations are reduced by up to 34.9% at the approximate RBERs of 1.8 × 10−2. Although, at higher RBER of 2.0 × 10−2, EMAL still reduces the decoding iteration by up to 13.6%. Because it fully exploits the more accurate LLR information from error modes of 3-D TLC NAND flash such that decoding performance is significantly improved. It shows fewer advantages at higher signal-to-noise (S/N) ratios with lower bit errors, leading to relatively small differences. All decoding time is counted and normalized to the time cost by the LSB pages without EMAL, as shown in Fig. 12. Decoding time is drastically decreased by using EMAL in LSB pages. The decreased ratios fluctuate with the changing of S/N. The decoding time is reduced by up to 36.8% at S/N of 8.7 dB. At a lower S/N of 8.6 dB, it is also decreased by up to 18.2%. At the higher S/Ns, such as 9.3 dB, 9.4 dB, and 9.5 dB, the reduced ratios are relatively low due to small differences of decoding iterations with and without EMAL. We also compare the decoding performance, as shown in Fig. 13. Before decoding, when the RBER becomes much
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:53:01 UTC from IEEE Xplore. Restrictions apply.
+
+WU et al.: USING ERROR MODES AWARE LDPC TO IMPROVE DECODING PERFORMANCE OF 3-D TLC NAND FLASH
+
+917
+
+Fig. 12. Decoding time is counted with and without EMAL in LSB pages with the page size of 2 KB. The latency gap between MSB pages, CSB pages, and LSB pages is much larger due to unbalanced decoding iterations induced by asymmetric RBERs between these pages. After exploiting EMAL, this gap is shortened dramatically.
+
+Fig. 14. System read response time is reduced under different workloads.
+
+Fig. 13. By using EMAL, decoding performance is significantly improved, leading to lower bit error rates in LSB pages.
+
+higher, the decoding operations may not fully correct the bit
+errors in the flash page, leading to the residual errors. BER
+denotes the bit error rate after decoding. BER is much lower
+when making use of EMAL due to the improved decoding
+performance. BER in LSB pages of 2 KB is reduced by up to 41.8%, 66.4% at the approximate RBERs of 2.0 × 10−2 and 1.8 × 10−2, respectively. And, BER in LSB pages of 4 KB is reduced by up to 52.8%, and 80.2% at the approximate RBERs of 2.0×10−2 and 1.8×10−2, respectively. The decoding is successful at other RBERs, such as 1.6 × 10−2 and 1.4 × 10−2. After adopting EMAL, the LDPC decoding performance is
+significantly improved, reducing decoding iterations, decoding
+time, and BER. Furthermore, we carry out simulation experi-
+ments based on real workloads to further evaluate the effects of
+the proposed scheme on the system read response time. In this
+simulation, we investigate the reduced system read response
+time percentages for different traces, as shown in Fig. 14. The
+simulation results show that the proposed scheme can decrease
+the system read response time. The percentages are increased from 6% to 14% at the RBER range of [1.7×10−2, 1.8×10−2]. The reduced system read response time percentages decrease
+
+Fig. 15. EMAL can significantly reduce decoding iterations in LSB pages of 4 KB at relatively high RBERs, such as 1.8 × 10−2.
+with the increasing of RBER because the decreased decoding iteration percentages become small at a high RBER. For example, when RBER is 1.9×10−2, the percentage (i.e., 13%) is lower than that of 1.8 × 10−2.
+C. Sensitivity and Overhead Analysis In this section, we select the page size of 4 KB for analyz-
+ing the sensitivity of EMAL to different parameters. Average
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:53:01 UTC from IEEE Xplore. Restrictions apply.
+
+918
+
+IEEE TRANSACTIONS ON COMPUTER-AIDED DESIGN OF INTEGRATED CIRCUITS AND SYSTEMS, VOL. 39, NO. 4, APRIL 2020
+
+Algorithm 1 Decoding Algorithm of EMAL
+
+Input: Initial soft information of the MSB, CSB, and LSB, denoted as LLRmsbj , LLRcsbj , and LLRlsbj
+Output: Decoded bits of the MSB, CSB, and LSB pages
+
+1: Decoding processes are divided into decoding the MSB page, the CSB page, and
+
+the LSB page.
+
+2: if Decoding the MSB page then
+
+3: Steps of 13, 16 (5), 17 (8), 18 (11), 19 (14), and 44-55 are activated in turn.
+
+4: else
+
+5: if Decoding the CSB page then
+
+6:
+
+Steps of 14, 16 (6), 17 (9), 18 (12), 19 (15), 56-67 are launched in turn.
+
+7: else
+
+8:
+
+if Decoding the LSB page then
+
+9:
+
+Steps of 20-43, 15, 16 (7), 17 (10), 18 (13), 68-79 are started in turn.
+
+10:
+
+end if
+
+11: end if
+
+12: end if 13: Initialize information of variable node Vv0j→ci = LLRmsbj (1 ≤ i ≤ m, 1 ≤ j ≤ n),
+set the maximum number of decoding iterations as Pmax. 14: Initialize information of variable node Vv0j→ci = LLRcsbj , set the maximum number
+of decoding iterations as Pmax. 15: Initialize information of variable node Vv0j→ci = LLRllsbj , set the maximum number
+of decoding iterations as Pmax. 16: Use the formula (5), (6), and (7) to update all check nodes information, β is usually
+
+set as 0.85, α = vk ∈ M(ci)\vj
+
+CcPi+→1v(mj sb) = β
+
+α
+
+sgn(VvPk(→ mscbi)
+
+)
+
+vk
+
+min ∈M(ci
+
+)\vj
+
+(|VvPk(→ mscbi) |)
+
+(5)
+
+CcPi+→1v(cj sb) = β α sgn(VvPk(→ csbc)i ) vk∈Mm(icni)\vj(|VvPk(→ csbc)i |)
+
+(6)
+
+CcPi+→1v(ljsb) = β α sgn(VvPk(→ lsbc)i ) vk∈Mm(icni)\vj(|VvPk(→ lsbc)i |)
+
+(7)
+
+17: Exploit the updated check nodes information to update all variable nodes information using the following formulas of (8), (9), and (10), the updated all variable nodes information is utilized to continually update the check nodes information in the next iteration
+
+VvPj+→1c(imsb) = LLRmsbj +
+
+CcPl+→1v(mj sb)
+
+cl ∈N (vj )\ci
+
+VvPj+→1c(icsb) = LLRcsbj +
+
+CcPl+→1v(cj sb)
+
+cl ∈N (vj )\ci
+
+VvPj+→1c(ilsb) = LLRllsbj +
+
+CcPl+→1v(ljsb)
+
+cl ∈N (vj )\ci
+
+(8) (9) (10)
+
+18: Make decoding decision based on the information of updated check nodes using the following formulas of (11), (12), and (13)
+
+VvPj+→1c(imsb) = LLRmsbj +
+
+CcPl+→1v(mj sb)
+
+cl ∈N (vj )
+
+(11)
+
+VvPj+→1c(icsb) = LLRcsbj +
+
+CcPl+→1v(cj sb)
+
+cl∈N vj
+
+VvPj+→1c(ilsb) = LLRllsbj +
+
+CcPl+→1v(ljsb) + MMllsbj
+
+cl∈N vj
+
+19: DEmsbj = VvPj+→1c(imsb) (14), DEcsbj = VvPj+→1c(icsb) (15)
+
+20: if DEmsbj < 0 and LLRmsbj < 0
+
+21: if DEcsbj < 0 and LLRcsbj < 0 then
+
+22:
+
+Let LLRllsbj = MMllsbj = 2.5 × LLRlsbj
+
+(12) (13)
+
+23:
+
+else if DEcsbj × LLRcsbj < 0 then
+
+24:
+
+Let LLRllsbj = MMllsbj = 2.5 × LLRlsbj
+
+25:
+
+end if
+
+26: end if
+
+27: end if
+
+28: if DEmsbj > 0 and LLRmsbj > 0
+
+29: if DEcsbj < 0 and LLRcsbj < 0 then
+
+30:
+
+Let LLRllsbj = MMllsbj = 2.5 × LLRlsbj
+
+31:
+
+else if DEcsbj × LLRcsbj < 0 then
+
+32:
+
+Let LLRllsbj = MMllsbj = −2
+
+33: end if
+
+34: end if
+
+35: end if
+
+36: if DEmsbj × LLRmsbj < 0
+
+37: if DEcsbj > 0 and LLRcsbj > 0 or
+
+DEcsbj < 0 and LLRcsbj < 0 then
+
+38:
+
+Let LLRllsbj = MMllsbj = 2.5 × LLRlsbj
+
+39:
+
+else if DEcsbj × LLRcsbj < 0 then
+
+40:
+
+Let LLRllsbj = MMllsbj = 2.5 × LLRlsbj
+
+41: end if
+
+42: end if
+
+43: end if 44: if VvPj+→1c(imsb) > 0 then 45: Bmsbj = 1 46: else Bmsbj = 0 47: end if
+
+48: 49:
+
+Bmsb = if Bmsb
+
+·(BHmTsb=1
+
+, Bmsb2 0 or P
+
+,. =
+
+. . , Bmsbn ) Pmax then
+
+50: break;
+
+51: else
+
+52: for P from 1 to Pmax then
+
+53: repeat steps of 16 (5), 17 (8), 18 (11), 19 (14), and 44-55
+
+until step 49 is satisfied
+
+54: end for
+
+55: end if 56: if VvPj+→1c(icsb) > 0 then 57: Bcsbj = 1 58: else Bcsbj = 0 59: end if
+
+60: 61:
+
+Bcsb = if Bcsb
+
+·(BHcTsb=1 ,0Bcosrb2P,
+
+.. =
+
+. , Bcsbn ) Pmax then
+
+62: break;
+
+63: else
+
+64: for P from 1 to Pmax then
+
+65:
+
+repeat steps of 16 (6), 17 (9), 18 (12), 19 (15), and 56-67
+
+until step 61 is satisfied
+
+66: end for
+
+67: end if 68: if VvPj+→1c(ilsb) > 0 then 69: Blsbj = 1 70: else Blsbj = 0 71: end if
+
+72: 73:
+
+Blsb = if Blsb ·
+
+(HBTlsb=1
+
+, Blsb2 , . . 0 or P =
+
+. , Blsbn ) Pmax then
+
+74: break;
+
+75: else
+
+76: for P from 1 to Pmax then
+
+77:
+
+repeat steps of 16 (7), 17 (9), 18 (13), and 68-79
+
+until step 73 is satisfied
+
+78: end for
+
+79: end if
+
+decoding iterations are counted after using EMAL, as shown
+in Fig. 15. EMAL reduces the decoding iterations by up to 41.0% at the approximate RBER of 1.8 × 10−2. Even at a higher RBER of 2.0 × 10−2, they are also decreased by up to 16.2%. The changing trend is very similar to Fig. 11. It means
+that EMAL has less sensitivity to page sizes with different
+parameters. For further analyzing the sensitivity, all decod-
+ing time is also counted, as shown in Fig. 16. The variation
+
+tendency is also similar to Fig. 12. It further proves that EMAL
+is suitable for larger pages. Besides, we study the effects
+of different parameters on the decoding iterations, as shown
+in Fig. 17. In this figure, these parameters denote different
+optimization factors on the LSB LLR information. For example, (2.5, −2) represents the optimized LSB LLR information MMllsb = 2.5 × LLRlsb or MMllsb = −2, as explained in Section III-C. The simulation results show that the selected
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:53:01 UTC from IEEE Xplore. Restrictions apply.
+
+WU et al.: USING ERROR MODES AWARE LDPC TO IMPROVE DECODING PERFORMANCE OF 3-D TLC NAND FLASH
+
+919
+
+Fig. 16. All decoding time is counted and normalized to the decoding time spent by LSB pages of 4 KB without EMAL. The proposed scheme narrows the latency gap between MSB pages, CSB pages, and LSB pages.
+
+with the decoding time of 2 KB pages. For the space overhead, it requires two buffers to store the initial detecting and decoding results of MSB and CSB pages whose sizes are equal to four times of one ECC unit.
+For example, suppose that the ECC unit is considered as 4 KB, the buffer size is 16 KB. For 3-D TLC NAND flash with 256GB capacity, the ratio of the space overhead to total capacity is only (16 KB/228 KB) × 100% that is negligible.
+
+Fig. 17. Effects of different parameters on the decoding iterations.
+
+D. Discussion
+EMAL is able to improve the LDPC decoding performance and reduce the decoding latency at high RBER. It is more suitable for sequential read operations because obtaining the decoding results of MSB and CSB pages is necessary to decode the LSB page. Fortunately, the prior work [28] has shown that performing sequential read operations is beneficial for improving system performance.
+
+Fig. 18. Time overhead to optimize the LLR information is very small, compared with the decoding time.
+
+VI. CONCLUSION
+In this paper, we propose the EMAL scheme, which exploits error modes of 3-D TLC NAND flash for improving the decoding performance and decreasing the decoding latency. EMAL incorporates the error modes into the LDPC decoding process. Specifically, the decoding results of both the MSB and CSB pages are combined with the error modes to reasonably deduce the correct bit value of LSB pages, leading to optimized LLR information of decoding the LSB page and, hence, speeding up the decoding convergence. The simulation results show that the proposed scheme significantly improves the decoding performance and reduces the decoding latency.
+
+parameter (2.5, −2) can lead to a lower decoding iteration. Moreover, we analyze overheads, including time and space overheads. The time overhead normalized to decoding time is evaluated in Fig. 18, which is extremely low. In this figure, Et(2k) and Et(4k) denote the time to compute the optimized LSB LLR information for 2 KB and 4 KB pages, respectively. Dt(2k) and Dt(4k) represent the decoding time of 2 KB and 4 KB pages, respectively. Especially, for the page size of 4 KB, the time overhead shows a very low ratio, compared
+
+APPENDIX
+In this Appendix section, the EMAL decoding algorithm is described, with symbols explained as follows. p denotes the decoding iteration. H is the parity-check matrix. Pmax represents the maximum decoding iteration. m and n are the check and variable node numbers, respectively. M(ci) is the set of variable node vj connected to check node ci. N(vj) is the set of check node ci connected to variable node vj. N(vj)\ci is the set of N(vj) excluding check node ci. M(ci)\vj is the set of M(i)
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:53:01 UTC from IEEE Xplore. Restrictions apply.
+
+920
+
+IEEE TRANSACTIONS ON COMPUTER-AIDED DESIGN OF INTEGRATED CIRCUITS AND SYSTEMS, VOL. 39, NO. 4, APRIL 2020
+
+excluding variable node vj. LLRlsbj , LLRcsbj , and LLRmsbj are the initial LLR information of the jth variable node in MSB,
+CSB, and LSB pages, respectively. Vvj→ci is information of variable node vj connected to check node ci. Similarly, Cci→vj is information of check node ci connected to variable node vj. LLRllsbj is the optimized LLR information of variable node vj in LSB pages.
+REFERENCES
+[1] Y. Cai, E. F. Haratsch, O. Mutlu, and K. Mai, “Error patterns in MLC NAND flash memory: Measurement, characterization, and analysis,” in Proc. DATE, Dresden, Germany, 2012, pp. 521–526.
+[2] K. Zhao et al., “LDPC-in-SSD: Making advanced error correction codes work effectively in solid state drives,” in Proc. FAST, San Jose, CA, USA, 2013, pp. 243–256.
+[3] G. Dong, N. Xie, and T. Zhang, “On the use of soft-decision errorcorrection codes in NAND flash memory,” IEEE Trans. Circuits Syst. I, Reg. Papers, vol. 58, no. 2, pp. 429–439, Feb. 2011.
+[4] W. Zhao et al., “Improving Min-sum LDPC decoding throughput by exploiting intra-cell bit error characteristic in MLC NAND flash memory,” in Proc. MSST, Santa Clara, CA, USA, 2014, pp. 1–6.
+[5] Y. Cai, E. F. Haratsch, O. Mutlu, and K. Mai, “Threshold voltage distribution in MLC NAND flash memory: Characterization, analysis, and modeling,” in Proc. DATE, Grenoble, France, 2013, pp. 1285–1290.
+[6] S.-L. Chen, B.-R. Ke, J.-N. Chen, and C.-T. Huang, “Reliability analysis and improvement for multi-level non-volatile memories with soft information,” in Proc. DAC, San Diego, CA, USA, 2011, pp. 753–758.
+[7] Z. Wang, Z. Cui, and J. Sha, “VLSI design for low-density parity-check code decoding,” IEEE Circuits Syst. Mag., vol. 11, no. 1, pp. 52–69, 1st Quart., 2011.
+[8] R. Gallager, “Low-density parity-check codes,” IRE Trans. Inf. Theory, vol. 8, no. 1, pp. 21–28, Jan. 1962.
+[9] H.-W. Tseng, L. Grupp, and S. Swanson, “Understanding the impact of power loss on flash memory,” in Proc. DAC, New York, NY, USA, 2011, pp. 35–40.
+[10] D.-H. Lee and W. Sung, “Estimation of NAND flash memory threshold voltage distribution for optimum soft-decision error correction,” IEEE Trans. Signal Process., vol. 61, no. 2, pp. 440–449, Jan. 2013.
+[11] S. Tanakamaru, Y. Yanagihara, and K. Takeuchi, “Over-10x-extendedlifetime 76%-reduced-error solid-state drives (SSDs) with errorprediction LDPC architecture and error-recovery scheme,” in Proc. ISSCC, San Francisco, CA, USA, 2012, pp. 424–426.
+[12] J. Zhao, F. Zarkeshvari, and A. H. Banihashemi, “On implementation of min-sum algorithm and its modifications for decoding low-density parity-check (LDPC) codes,” IEEE Trans. Commun., vol. 53, no. 4, pp. 549–554, Apr. 2005.
+[13] J. Wang, T. Courtade, H. Shankar, and R. D. Wesel, “Soft information for LDPC decoding in flash: Mutual-information optimized quantization,” in Proc. GLOBECOM, Kathmandu, Nepal, 2011, pp. 1–6.
+[14] H. Sun et al., “Exploiting intracell bit-error characteristics to improve min-sum LDPC decoding for MLC NAND flash-based storage in mobile device,” IEEE Trans. Very Large Scale Integr. (VLSI) Syst., vol. 24, no. 8, pp. 2654–2664, Aug. 2016.
+[15] P. Huang, P. Subedi, X. He, S. He, and K. Zhou, “FlexECC: Partially relaxing ECC of MLC SSD for better cache performance,” in Proc. ATC, Philadelphia, PA, USA, 2014, pp. 489–500.
+[16] Q. Li et al., “Access characteristic guided read and write cost regulation for performance improvement on flash memory,” in Proc. FAST, Santa Clara, CA, USA, 2016, pp. 125–131.
+[17] J. Meza, Q. Wu, S. Kumar, and O. Mutlu, “A large-scale study of flash memory failures in the field,” in Proc. SIGMETRICS, Portland, OR, USA, 2015, pp. 177–190.
+[18] M. Zhang et al., “REAL: A retention error aware LDPC decoding scheme to improve NAND flash read performance,” in Proc. MSST, Santa Clara, CA, USA, 2016, pp. 1–13.
+[19] G. Dong, N. Xie, and T. Zhang, “Techniques for embracing intra-cell unbalanced bit error characteristics in MLC NAND flash memory,” in Proc. Globecom Workshops, 2010, pp. 1915–1920.
+[20] L. Qiao, H. Wu, D. Wei, and S. Wang, “A joint decoding strategy of non-binary LDPC codes based on retention error characteristics for MLC NAND flash memories,” in Proc. IMCCC, Harbin, China, 2016, pp. 183–188.
+
+[21] C. A. Aslam, Y. L. Guan, and K. Cai, “Retention-aware beliefpropagation decoding for NAND flash memory,” IEEE Trans. Circuits Syst. II, Exp. Briefs, vol. 64, no. 6, pp. 725–729, Jun. 2017.
+[22] S. Tanakamaru, Y. Yanagihara, and K. Takeuchi, “Error-prediction LDPC and error-recovery schemes for highly reliable solid-state drives (SSDs),” IEEE J. Solid-State Circuits, vol. 48, no. 11, pp. 2920–2933, Nov. 2013.
+[23] E. Yaakobi, L. Grupp, P. H. Siegel, S. Swanson, and J. K. Wolf, “Characterization and error-correcting codes for TLC flash memories,” in Proc. ICNC, 2012, pp. 486–491.
+[24] R.-S. Liu et al., “EC-Cache: Exploiting error locality to optimize LDPC in NAND flash-based SSDs,” in Proc. DAC, San Francisco, CA, USA, 2014, pp. 1–6.
+[25] J. Guo et al., “FlexLevel: A novel NAND flash storage system design for LDPC latency reduction,” in Proc. DAC, San Francisco, CA, USA, 2015, pp. 1–6.
+[26] Y. Du et al., “LaLDPC: Latency aware LDPC for read performance improvement of solid state drives,” in Proc. MSST, Santa Clara, CA, USA, 2017, pp. 1–11.
+[27] B. Schroeder, R. Lagisetty, and A. Merchant, “Flash reliability in production: The expected and the unexpected,” in Proc. FAST, Santa Clara, CA, USA, 2016, pp. 67–80.
+[28] F. Chen, D. A. Koufaty, and X. Zhang, “Understanding intrinsic characteristics and system implications of flash memory based solid state drives,” in Proc. SIGMETRICS Perform., Seattle, WA, USA, 2009, pp. 181–192.
+[29] Q. Li, L. Shi, C. J. Xue, Q. Zhuge, and E. H.-M. Sha, “Improving LDPC performance via asymmetric sensing level placement on flash memory,” in Proc. ASP-DAC, 2017, pp. 560–565.
+[30] L. Zuolo, C. Zambelli, A. Marelli, R. Micheloni, and P. Olivo, “LDPC soft decoding with improved performance in 1X-2X MLC and TLC NAND flash-based solid state drives,” IEEE Trans. Emerg. Topics Comput., to be published.
+[31] O. Vahabzadeh, “LDPC codes: Principles and implementation aspects,” in Proc. Flash Summit, Santa Clara, CA, USA, 2016, pp. 1–113.
+[32] S.-H. Shin et al., “A new 3-bit programming algorithm using SLC-toTLC migration for 8MB/s high performance TLC NAND flash memory,” in Proc. VLSIC, Honolulu, HI, USA, 2012, pp. 132–133.
+[33] D. W. Lee et al., “The operation algorithm for improving the reliability of TLC NAND flash characteristics,” in Proc. IMW, Monterey, CA, USA, 2011, pp. 1–2.
+[34] C. Zambelli et al., “Characterization of TLC 3D-NAND flash endurance through machine learning for LDPC code rate optimization,” in Proc. IMW, Monterey, CA, USA, 2017, pp. 1–4.
+[35] Y. Nakamura, T. Iwasaki, and K. Takeuchi, “Machine learning-based proactive data retention error screening in 1Xnm TLC NAND flash,” in Proc. IRPS, Pasadena, CA, USA, 2016, pp. 1–4.
+[36] Q. Xiong et al., “Characterizing 3D floating gate NAND flash,” in Proc. SIGMETRICS, 2017, pp. 31–32.
+[37] Y. Du et al., “Reducing LDPC soft sensing latency by lightweight data refresh for flash read performance improvement,” in Proc. DAC, Austin, TX, USA, 2017, pp. 1–6.
+[38] T. Tokutomi et al., “7.7 Enterprise-grade 6x fast read and 5x highly reliable SSD with TLC NAND-flash memory for big-data storage,” in Proc. ISSCC, San Francisco, CA, USA, 2015, pp. 1–3.
+[39] T. Tokutomi, S. Tanakamaru, T. O. Iwasaki, and K. Takeuchi, “Advanced error prediction LDPC for high-speed reliable TLC NAND-based SSDs,” in Proc. IMW, Taipei, Taiwan, 2014, pp. 1–4.
+[40] T. Nakamura, Y. Deguchi, and K. Takeuchi, “AEP-LDPC ECC with error dispersion coding for burst error reduction of 2D and 3D NAND flash memories” in Proc. IMW, Monterey, CA, USA, 2017, pp. 1–4.
+[41] G. Wong, “SSD market overview,” in Inside Solid State Drives (SSDs). Dordrecht, The Netherlands: Springer, 2013, pp. 1–17.
+[42] S. Ohshima and Y. Tanaka, “New 3D flash technologies offer both low cost and low power solutions,” in Proc. Flash Summit, Santa Clara, CA, USA, 2016, pp. 309–318.
+[43] H. Kim, S. J. Ahn, Y. G. Shin, K. Lee, and E. Jung, “Evolution of NAND flash memory: From 2D to 3D as a storage market leader,” in Proc. IMW, Monterey, CA, USA, 2017, pp. 1–4.
+[44] J. Yang, “ECC approach for correcting errors not handled by RAID recovery,” in Proc. Flash Summit, Santa Clara, CA, USA, 2017, pp. 1–25.
+[45] F. Wu et al., “Characterizing 3D charge trap NAND flash: Observations, analyses and applications,” in Proc. ICCD, Orlando, FL, USA, 2018, pp. 381–388.
+[46] J. Zhang et al., “OpenNVM: An open-sourced FPGA-based NVM controller for low level memory characterization,” in Proc. ICCD, New York, NY, USA, 2015, pp. 666–673.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:53:01 UTC from IEEE Xplore. Restrictions apply.
+
+WU et al.: USING ERROR MODES AWARE LDPC TO IMPROVE DECODING PERFORMANCE OF 3-D TLC NAND FLASH
+
+921
+
+[47] Y. Luo, S. Ghose, Y. Cai, E. F. Haratsch, and O. Mutlu, “HeatWatch: Improving 3D NAND flash memory device reliability by exploiting selfrecovery and temperature awareness,” in Proc. HPCA, Vienna, Austria, 2018, pp. 504–517.
+[48] J. S. Bucy, J. Schindler, S. W. Schlosser, and G. R. Ganger, “The DiskSim simulation environment version 4.0 reference manual,” Parallel Data Lab., Carnegie Mellon Univ., Pittsburgh, PA, USA, Rep. CMU-PDL-08-101, 2008.
+[49] N. Agrawal et al., “Design tradeoffs for SSD performance,” in Proc. ATC, Boston, MA, USA, 2008, pp. 57–70.
+
+Zuo Lu received the B.S. degree from the School of Computer and Information Engineering, Hubei University, Wuhan, China, in 2016. He is currently pursuing the M.S. degree with the Wuhan National Laboratory for Optoelectronics, Huazhong University of Science and Technology, Wuhan.
+His current research interests include computer storage system, intelligent storage, and nonvolatile memories.
+
+Fei Wu (M’15) received the B.S. and M.S. degrees in electrical automation, control theory and control engineering from Wuhan Industrial University, Wuhan, China, in 1997 and 2000, respectively, and the Ph.D. degree in computer science from the Huazhong University of Science and Technology (HUST), Wuhan, in 2005.
+She is currently an Associate Professor with the Information Storage Lab, Wuhan National Laboratory for Optoelectronics, HUST. Her current research interests include computer architecture, nonvolatile storage, and green storage. Dr. Wu is a Senior Member of the China Computer Federation and the Committee Member of the Information Storage of China Computer Society.
+
+Jiguang Wan received the B.S. degree in computer science from Zhengzhou University, Zhengzhou, China, in 1996 and the M.S. and Ph.D. degrees in computer science from the Huazhong University of Science and Technology, Wuhan, China, in 2003 and 2007, respectively.
+His current research interests include computer architecture, networked storage systems, file systems, and parallel and distributed systems.
+
+Meng Zhang is currently pursuing the Ph.D. degree with the Wuhan National Laboratory for Optoelectronics, Huazhong University of Science and Technology, Wuhan, China.
+His current research interests include error correction codes (ECCs), applications of ECC in nonvolatile memory (NVM) technologies, flash memory reliability, and NVM storage systems.
+
+Zhihu Tan received the Ph.D. degree in computer architecture from the Huazhong University of Science and Technology (HUST), Wuhan, China, in 2008.
+He is currently an Associate Professor with the School of Computer Science and Technology, HUST. His current research interests include mass data storage, reliability of storage systems, and parallel and distributed computing.
+
+Yajuan Du received the Ph.D. degree from the City University of Hong Kong, Hong Kong, and the Huazhong University of Science and Technology, Wuhan, China.
+She is currently with the Wuhan University of Technology, Wuhan. Her current research interests include computer storage systems and coding algorithms, such as the low-density parity-check codes in NAND flash memory.
+Weihua Liu received the M.S. degree from the Wuhan National Laboratory for Optoelectronics, Huazhong University of Science and Technology, Wuhan, China, where he is currently pursuing the Ph.D. degree.
+His current research interests include intelligent storage, machine learning, system, and nonvolatile memories.
+
+Changsheng Xie (M’16) received the B.S. and M.S. degrees in computer science and technology from the Huazhong University of Science and Technology (HUST), Wuhan, China, in 1982 and 1988, respectively.
+He is currently a Professor with the Wuhan National Laboratory for Optoelectronics (WNLO), HUST. His current research interests include new storage technology and architecture, multimedia computing and network, computer storage, and network storage and security. Dr. Xie has served as the Deputy Director of WNLO and the Computer Peripheral Equipment Committee of China Computer Federation, a Committee Member of information storage of the China Computer Society, and the Vice Chairman of the China Expert Committee of the International Network Storage Industry Association.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 10:53:01 UTC from IEEE Xplore. Restrictions apply.
+
+

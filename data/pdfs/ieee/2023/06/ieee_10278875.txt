@@ -1,0 +1,718 @@
+ICC 2023 - IEEE International Conference on Communications | 978-1-5386-7462-8/23/$31.00 ©2023 IEEE | DOI: 10.1109/ICC45041.2023.10278875
+
+2023 IEEE International Conference on Communications (ICC): SAC Satellite and Space Communications Track
+LDPC Codes with Low Error Floors and Efficient Encoders
+Benjamin Gadat‡, Lyonel Barthe‡, Bala´zs Matuz†, Charly Poulliat∗ ‡ Airbus Defence & Space, Toulouse, France
+†Institute of Communications and Navigation, German Aerospace Center (DLR), Oberpfaffenhofen, Germany ∗Univ. of Toulouse, IRIT/INP-ENSEEIHT, Toulouse, France
+
+Abstract—This work presents low-density parity-check (LDPC) codes with low error floors, close to capacity performance and highly efficient encoders targeting high throughput applications such as free-space optical downlinks from low earth orbit (LEO) satellites to ground. We devise a code design strategy to find suitable protograph LDPC code ensembles and discuss an field-programmable gate array (FPGA) implementation of the obtained codes. In addition to having competitive decoding performance, the proposed codes have advantages in terms of encoding complexity. An FPGA prototype highlights significant improvements in resource utilization by a factor of around 10 compared to standardized DVB-S2 and CCSDS solutions.
+I. INTRODUCTION
+Free-space optical satellite communications gained increasing interest in the recent years as an attractive technology for high data rate communications ranging from Gbit/s to a few Tbit/s. Such data rates are difficult to achieve with radio frequency satellite systems due to the limited availability of spectrum. Particular applications are LEO downlinks, for instance for Earth observation, where large amount of data has to be transmitted in a short time window (typically 5 to 10 minutes) [1]. Due to various channel impairments, data integrity needs to be ensured notably by forward error correction (FEC) codes. Such systems have particular requirements on the FEC such as very low bit error rates (BERs) or highly efficient encoders. In particular, for LEO downlinks the encoder is located on board of the satellite and has to account for the limited power and hardware resources.
+A popular class of capacity approaching channel codes with practical decoding algorithms are LDPC codes originally introduced in [2]. They have been recently adopted in the terrestrial 5th generation mobile network (5G) standard for enhanced mobile broadband (eMBB) links [3]. Thanks to their structured parity-check matrix, these protograph-based LDPC codes enable high throughput encoding/decoding (in the order of a few Gbit/s). However, they are tailored to operate at high/moderate BERs and their encoders are not fully designed for low-complexity: the degree-3 column in the parity-part of their parity-check matrix—inherited from the worldwide interoperability for microwave access (WiMAX) standard— increases encoding complexity.
+The probably most common class of LDPC codes for satellite communications are those of digital video broadcasting – Satellite 2 (DVB-S2) [4]. The permuted structure of the parity-check matrix and the concatenation with an
+
+outer Bose–Chaudhuri–Hocquenghem (BCH) code increases implementation cost and hampers throughput. An alternative are accumulate-repeat-jagged-accumulate (ARJA) based codes [4] which guarantee low target error rates, but their encoders are not tailored to Gbit/s communications due to the jagged accumulator structure.
+In this work, we design LDPC codes with efficient encoders, targeting BERs of 10−12, and close to capacity performance for data links beyond 10 Gbit/s. These requirements are typical for free-space optical LEO downlinks, so the proposed codes have been selected for standardization by the consultative committee for space data systems (CCSDS) [1]. Nevertheless, the codes in this work may find applications in a much broader set of communication systems. The main contributions of this work are as follows. First, we extend an existing algorithm and design a family of protograph LDPC codes with lowcomplex encoders which show an excellent trade-off between error floor and waterfall performance. Second, we discuss an efficient hardware implementation of the encoder, as well as the decoder and verify the design down to a BER of 10−12 through FPGA prototyping. Finally, a comparison with standardized DVB-S2 LDPC codes and ARJA LDPC codes shows notable gains in resource utilization for FPGA, mainly in terms of look-up tables (LUTs) and flip-flops (FFs).
+
+II. PRELIMINARIES A. System model
+For the code design we resort to a standard discrete time additive white Gaussian noise (AWGN) channel model
+
+yt = xt + nt,
+
+where yt is the received symbol at time t, xt ∈ {−1, +1} the transmitted binary phase shift keying (BPSK) symbol, and nt
+the Gaussian noise term. Denoting random variables (r.v.s) by capital letters we write Nt ∼ N (µn, 2σn2 ). Let the energy per information bit to noise power spectral density ratio be
+
+Eb N0
+
+=
+
+1 Rc2σn2 ,
+
+where Rc is the code rate.
+
+B. Protograph LDPC codes
+
+The LDPC codes considered in this work are based on a protograph structure which has many advantages from an
+
+978-1-5386-7462-8/23/$31.00 ©2023 IEEE
+
+6658
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:29:38 UTC from IEEE Xplore. Restrictions apply.
+
+2023 IEEE International Conference on Communications (ICC): SAC Satellite and Space Communications Track
+
+implementation point of view. A protograph is a bipartite graph with a small number of nb variable nodes (VNs) and mb check nodes (CNs) which are connected to each other by edges. A protograph can be represented by an mb × nb adjacency matrix B = [bi,j] where bi,j ∈ Z+0. The protograph serves as a blueprint for a larger bipartite graph of an LDPC code with n = nbQ variable nodes (VNs) and m = mbQ check nodes (CNs), where Q is called lifting factor. The code rate is Rc ≥ 1 − m/n where equality holds when all m constraints are linearly independent. In that case the information length k = m − n. An LDPC code is obtained from a protograph by lifting (or expansion) [5]. In a nutshell, the protograph is copied Q times and the different copies are interconnected with each other. In our case, the interconnections are described by circular permutation matrices yielding quasi-cyclic (QC) LDPC codes. When choosing the interconnections we rely on enhanced versions of the progressive edge-growth (PEG) [6] and approximate cycle extrinsic message degree (ACE) algorithm [7] to mitigate the effect of harmful cycles in the code’s bipartite graph.
+
+C. Overview of code design tools
+
+The waterfall performance of long LDPC codes is well-
+
+predicted by the iterative decoding threshold η of the corre-
+
+sponding
+
+code
+
+ensemble
+
+[8].
+
+The
+
+threshold
+
+is
+
+the
+
+smallest
+
+Eb N0
+
+such that the symbol error probability vanishes as the block
+
+length and the number of decoding iterations go to infinity.
+
+On AWGN channels extrinsic information transfer (EXIT)
+
+analysis [9] is a low-complex tool to accurately approximate
+
+the iterative decoding threshold of LDPC code ensembles. By
+
+use of an optimization algorithm protograph code ensembles
+
+with ”good” thresholds [10], i.e., thresholds close to the
+
+Shannon limit, can be found.
+
+The iterative decoding threshold does not capture the error
+
+floor performance which is limited by codewords of minimum
+
+weight
+
+for
+
+high
+
+Eb N0
+
+.
+
+For
+
+a
+
+quasi-cyclic
+
+LDPC
+
+code
+
+C
+
+an
+
+upper
+
+bound on the minimum distance dmin(C) is obtained with help
+
+of the permanent [11], [12]. Let the permanent of an mb × mb
+
+square matrix A = [ai,j] be
+
+mb
+
+perm (A) =
+
+ai,π(j),
+
+π j=1
+
+where the summation is over all mb! permutations π of the set {1, . . . , mb} and π(j) refers to the jth entry of the permutation vector π. Let BS denote a submatrix of the base matrix B formed by the columns with indices in S and P the set of punctured VNs (assuming that puncturing does not change the code dimension). An upper bound on the minimum distance of a (punctured) quasi-cyclic code obtained from the mb × nb base matrix B with set of punctured VNs in P is
+
+dmu in(B, P) ≤ min∗
+
+perm BS\i , (1)
+
+S ⊆{1,...,nb }, |S |=mb +1
+
+i∈S
+
+\P
+
+where for a set of non-negative real numbers R, min∗R returns the smallest strictly positive real number in R. Despite
+
+being an upper bound, choosing the base matrix entries such that (1) is maximized has been shown to yield short codes with low error floors [13].
+
+III. LDPC CODE DESIGN
+The code design is subject to the following constraints which are typical, but not exclusive for optical downlinks:
+a) high throughput encoding and decoding (≥ 10 Gbit/s) b) flexibility in the choice of the code rate (0.4 ≤ Rc < 1) c) constant encoded block size n d) decoding threshold close to Shannon limit (≤ 0.5 dB) e) error floor below a BER of 10−12.
+We split the code design into two steps. First, we design a high-rate protograph. Second, if lower rates are targeted (i.e., Rc < 3/4), we design an extended protograph by adding additional columns and rows. LDPC codes in 5G make use of such low-rate extensions which were already proposed in [14] following the work by Richardson and Urbanke [15].
+
+A. Protograph search for high rates
+
+The accumulate-repeat-accumulate (ARA) construction exhibits a good trade-off between threshold and error floor
+
+performance, especially in the high rate regime. Therefore, the proposed construction method rely on it for the mother code design with a modification leading to an improved encoding, as detailed hereafter.
+The base matrix of an ARA code is
+
+B0 =
+
+AE0D C0I 0
+
+,
+
+where I is the identity matrix, C and D are matrices of column/row weight of 2. The VNs corresponding to the first column of B0 are punctured (marked with color). Further, the matrix A takes a specific form which is AT = (I F )T . The matrices F and E are subject to optimization. The matrices C and D are replaced by double diagonal matrices after expansion which allows linear time encoding.
+In this work, we modify the original ARA structure and require that submatrix D of B0 takes the form [16]
+
+1 0 0 · · · 0
+
+1 1 0 ··· 0
+
+D
+
+=
+
+  
+
+...
+
+...
+
+...
+
+...
+
+  
+
+.
+
+ 
+
+...
+
+...
+
+1
+
+ 0
+
+0 ··· 1 1
+
+This has two advantages. First, after expansion via circulant permutation matrices, the parity-check matrix can be put into a double-diagonal form by use of row and column permutations. Therefore, a description of the double diagonal part by circulants is possible. Second, it can be checked that after expansion the secondary diagonal is periodically interrupted with a period of Q. This allows the use of parallel encoders, enabling low-complexity and high throughput encoding. The same consideration could be applied to C. In this work we consider non-systematic encoding, i.e., part of the information bits are mapped to punctured VNs.
+
+6659
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:29:38 UTC from IEEE Xplore. Restrictions apply.
+
+2023 IEEE International Conference on Communications (ICC): SAC Satellite and Space Communications Track
+
+An exhaustive search for candidates with (quasi-)regular structure of E and F having good thresholds yields the following high-rate base matrices
+
+1 3 ··· 1 3 0 1 0
+
+1 2 1··· 1 3 0 1 0
+
+B0r =
+
+3 1 ··· 3 1 0 1 1 2 0 ··· 0 0 1 0 0
+
+, B0qr =
+
+3 1 3··· 3 1 0 1 1 2 0 0··· 0 0 1 0 0
+
+B. Low-rate extension
+
+The low-rate extension consists in designing a mb ×nb base matrix with structure
+
+B=
+
+B0 0 MI
+
+,
+
+where I is the me × me identity matrix. The matrix B0 is referred to as high-rate part and we assume that it is a priori
+fixed as discussed in the previous subsection. Our objective is to determine M , referred to as extension part, such that our
+code design constraints are fulfilled.
+The identity matrix allows efficient encoding (constraint a)) and the choice of me yields a wide set of code rates (constraint b)). To guarantee a fixed block length (constraint c)) we design
+various base matrices yielding a non-rate-compatible family of
+codes.
+In order to fulfill constraints d) and e) we proceed as follows. We start with the high rate part B0 and successively add me rows and columns similarly to [13]. We generate an iterated sequence of matrices B defined as the submatrix of B composed by B0 and subsequent rows and columns, where 0 ≤ ≤ me. To obtain B from B −1 we select the mb − me + th row, such that the iterative decoding threshold is optimized under a side-constraint on the upper bound on
+the minimum distance. The selection procedure at iteration 1 ≤ ≤ me, can be described as follows, reasoning by induction. Given B −1, let dumin(B −1) be the upper bound on minimum distance of a quasi-cyclic code obtained from B −1. Clearly, dmu in(B −1) also depends on the punctured VNs (see (1)), but for ease of notation we omit them. We define a target value dmin,t = dmu in(B −1) + ∆ on the upper bound on minimum distance, where ∆ is a non-negative increment
+which is fixed at the beginning of the optimization process. The matrix B is build as
+
+B=
+
+B −1 0 b1
+
+.
+
+b = [bj, ] is a 1×nb−me+ −1 vector to be optimized, where bj, ∈ Z+0 and the last − 1 entries are set to 0. We generate the set B of base matrices B such that dumin(B ) ≥ dmin,t. Let η(B ) be the threshold of the protograph code ensemble
+with base matrix B . Then, we select B as
+
+B = argmin η(B˜ ).
+B˜ ∈B
+
+The procedure is repeated until = me and we get B = Bme . To find base matrices with good iterative decoding thresh-
+olds and low error floors, ∆ needs to be carefully chosen. Maximization of the minimum distance upper bound at every step yields codes with very low floors at the price of significant
+
+TABLE I TARGET VALUE dmin,t ON THE MINIMUM DISTANCE UPPER BOUND.
+Rate 2/3 3/5 1/2 2/5 Target 13 14 21 30
+
+low rate high rate
+
+TABLE II OBTAINED THRESHOLDS FOR PROPOSED CODE FAMILY.
+
+Rate Threshold [dB] Capacity [dB] Gap [dB]
+
+9/10
+
+3.55
+
+7/8
+
+3.2
+
+5/6
+
+2.7
+
+4/5
+
+2.38
+
+3/4
+
+1.95
+
+3.2
+
+0.35
+
+2.85
+
+0.35
+
+2.36
+
+0.34
+
+2.04
+
+0.34
+
+1.63
+
+0.32
+
+2/3
+
+1.44
+
+3/5
+
+1.02
+
+1/2
+
+0.51
+
+2/5
+
+0.1
+
+1.06
+
+0.38
+
+0.68
+
+0.34
+
+0.19
+
+0.32
+
+-0.24
+
+0.35
+
+loss in terms of thresholds (especially for high-rates), while threshold optimization at every step may yield high error floors. The proposed optimization procedure aims at controlling at each step this trade-off. To avoid a severe threshold degradation for high-rate codes, it has been observed that the sequence ∆ (or alternatively dmin,t), for = 1, . . . , me, should be a non-decreasing sequence, avoiding a too stringent constraint on the minimum distance upper bound in the first steps. A set of suggested values can be found in Table I.
+C. Proposed code family
+Following the preceding procedure, a code family has been designed. The protographs have code rates ranging from Rc = 2/5 to Rc = 9/10 with thresholds reported in Table II. The corresponding protographs are listed in Appendix (punctured VNs are colored). Observe that the proposed family operates within 0.3 − 0.4 dB from capacity.
+Codes with n = 30720 bits and different rates have been designed by a two-step QC lifting method with Q = Q1Q2. For implementation reasons, the lifting factor of the second step Q2 was chosen to be a factor of two. We choose Q2 = 128 while Q1 depends on the base matrix size, i.e., Q1 = n/(nbQ2). Frame error rate (FER) floating point simulation results over the AWGN channel (35 decoding iterations, approximate min* algorithm [17]) are shown in Figure 1. They confirm the competitive waterfall performance in comparison with DVB-S2 (n = 64800 bits) and ARJA (k = 16384 bits) codes. They perform within 0.1 dB from existing solutions.
+Remark 1. All codes have a small girth of (at least) 6. Simulation results confirm a remarkable performance, both in the waterfall and the error floor region.
+IV. PROTOTYPING
+As a proof of concept, QC LDPC encoder and decoder intellectual property (IP) cores for FPGAs have been prototyped for 10 Gbit/s communication links.
+A. QC LDPC decoder architecture
+A partial-parallel architecture [18] coupled with layered horizontal scheduling [19] is implemented for a cost-efficient
+
+6660
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:29:38 UTC from IEEE Xplore. Restrictions apply.
+
+2023 IEEE International Conference on Communications (ICC): SAC Satellite and Space Communications Track
+
+Proposed DVB-S2 ARJA 100
+
+10−1
+
+10−2
+
+10−3
+
+FER
+
+10−4
+
+10−5
+
+10−6
+
+10−7 0
+
+1
+
+2
+
+3
+
+4
+
+Eb/N0 [dB]
+
+Fig. 1.
+
+FER versus
+
+Eb N0
+
+of
+
+the LDPC code family
+
+with
+
+35 iterations and
+
+Rc ∈ {2/5, 1/2, 3/5, 2/3, 3/4, 4/5, 5/6, 7/8, 9/10} (from left to right).
+
+design. The partial-parallel architecture implements data path parallelization within one circulant matrix. The maximum exploitable parallelization factor is driven by the lifting factor Q2. Layered scheduling partitions the parity-check matrix into layers (set of rows). In one decoding step, only edges associated with a specific layer are processed. Convergence of a min-sum based decoder is increased by approximately a factor of 2 compared to a flooding schedule decoder [19]. A lifting factor Q2 = 128 is chosen for all code rates with 128 functional units working in parallel, in order to minimize routing problems [20] and to efficiently size the permutation network based on pipelined barrel shifter primitives to achieve higher clock speed. This design choice also eases data exchange with wide logical bus interfaces based on AXI-4 standards [21]. Since external logical interfaces use word data width with 4, 8, 16, 32, or even 64 bytes, we choose Q2 to be a power of two in order to avoid data alignment issues.
+An offset min-sum (OMS) decoder is used [22] which provides good hardware design trade-offs for the target data rates of at least 10 GLLR/s (Giga log-likelihood ratios (LLRs) per second). For the proposed LDPC family, it performs better than plain min-sum or normalized min-sum with a very small silicon overhead. Compared to approximate min*, a performance degradation is observable, particularly for low code rates (of around 0.35 dB for Rc = 2/5). The average throughput rate per decoder core is between 450 MLLR/s and 700 MLLR/s assuming on the one hand a stopping criterion for all code rates and on the other hand a clock frequency of 300 MHz with double buffering methods for input and output interfaces.1 The number of pipeline stages depends on the code rate which is related to the degree of the CNs: in the proposed implementation, it can reach 48 stages for
+
+Fig. 2. High-speed LDPC encoder based on a cascaded architecture of three partial-parallel QC LDPC encoders.
+the code rate Rc = 9/10. Off-line rescheduling [18] based on a two dimensional simulated annealing algorithm (one dimension for ordering CNs within a layer, one dimension for ordering layers) is able to resolve all data hazards for all code rates without the use of pipeline stalls. This is also a result of the appropriate sizing of Q2: for the proposed codes it offers a large number of solutions for the re-scheduling with a significant pipeline depth.
+Finally, a multi-core parallelization strategy is used to scale the throughput to at least 10 GLLR/s by multiplying the number of decoder cores. The stopping criterion introduces an out-of-order execution: on an AWGN channel, the loss of throughput associated with the use of a basic blocking round-robin method is estimated to be less than 5% for all code rates. Advanced re-ordering buffer scheduling methods typically found in super-scalar general purpose processors [25] can be adapted to reduce this loss of throughput, but are not considered in this case study. To tackle the routing congestion, the decoder cores are grouped into clusters to provide an additional degree of freedom during the floor-planning phase.
+B. QC LDPC encoder architecture
+All LDPC codes in this work can be efficiently encoded using architectures optimized for matrix-multiplication and back-substitution operations for sparse matrices. The proposed encoder is implemented using a high level of parallelization by cascading three QC LDPC encoders based on partial-parallel architectures [26] as illustrated in Figure 2. It takes benefit of parallel encoding of ARA codes by construction (IRA and precoder) and pipeline parallelism for Raptor-like codes (low-rate extension) through the use of additional memory buffers and multiplexers. A first in - first out (FIFO) is also implemented at the output stage to enable efficient bus transactions sized by the codeword length (burst accesses). Using this architecture, one single encoder core is able to achieve an encoded throughput rate of at least 10 Gbit/s for all code rates with a minimum clock frequency of 380 MHz.
+
+1This clock frequency can be achieved with a comfortable margin using state-of-the-art ground FPGAs such as TSMC’s 16 nm [23] and Intel’s 14 nm [24] silicon nodes with appropriate pipelining and hazard mitigation strategies to solve data dependencies of partial-parallel LDPC decoders.
+
+C. Error rate simulations
+Code performance assessments were obtained using FPGA acceleration cards [27]. The acceleration framework was proto-
+
+6661
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:29:38 UTC from IEEE Xplore. Restrictions apply.
+
+2023 IEEE International Conference on Communications (ICC): SAC Satellite and Space Communications Track
+
+BER 25 it.
+
+FER 25 it.
+
+FER 50 it.
+
+100
+
+10−3
+
+Error Rate
+
+10−6
+
+10−9
+
+10−12
+
+1
+
+2
+
+3
+
+4
+
+Eb/N0 [dB]
+
+Fig. 3.
+
+BER and FER versus
+
+Eb N0
+
+for various Rc
+
+∈
+
+{2/5, 1/2, 3/5, 2/3, 3/4, 4/5, 5/6, 7/8, 9/10} (from left to right).
+
+typed on a multi-core Intel XEON CPU with 56 logical cores,
+
+1 TB of RAM, and a single ALVEO U200 FPGA acceleration
+
+card. The xdma shell with its associated Vitis toolchain suite
+
+provided by the FPGA supplier is used to implement the
+
+digital testbed. A multi-threaded program coupled to speed-
+
+optimized x86 single instruction, multiple data (SIMD) (SEE,
+
+AVX) is implemented to accelerate the functions running on
+
+the processor: random generation of payloads, channel sample
+
+generation, and error rate measurements. Both encoding and
+
+decoding parts are accelerated through the use of multiple IP
+
+cores running on the FPGA. The digital testbed is able to
+
+process more than 9 GLLR/s which is sufficient to assess the
+
+error floor performance within a reasonable time (a few days
+
+per code rate).
+
+Monte
+
+Carlo
+
+simulations
+
+of
+
+error
+
+rates
+
+versus
+
+Eb N0
+
+over
+
+an
+
+AWGN channel are given in Figure 3. Observe that none of
+
+the curves exhibit error floors at the target BER of 10−12.
+
+The internal quantization is tuned for code floors while mini-
+
+mizing the hardware overhead for all code rates. The selected
+
+quantization strategy is 6 bits for the channel LLRs, 9 bits for
+
+a posteriori probability (APP) ratios, and 7 bits for decoder
+
+messages.
+
+D. Resource utilization
+Both QC LDPC encoder and decoder IP cores were evaluated after place and route with Vivado 2019.2 using the out-of-context mode with timing estimation for clock delay/skew. Chosen FPGA technologies are Xilinx Kintex Ultrascale KU60 (speed grade −1, commercial part equivalent to the space-grade KU60) for the encoder and Xilinx Virtex Ultrascale+ VU47P (speed grade −2) for the decoder. The VU47P is a stacked silicon interconnect (SSI) device composed of 3 dice denoted super logic region (SLR) by the manufacturer. The resource utilization is given in Table III for single core configurations. The maximum operating frequency (fMAX) is measured with unreachable timing constraints to
+
+TABLE III RESOURCE UTILIZATION OF SINGLE IP CORES.
+
+IP LUT
+
+FF BRAM URAM fMAX
+
+Enc. 3 800 5 000
+
+21
+
+N/A 380 MHz
+
+Dec. 25 000 26 000 29.5
+
+13 430 MHz
+
+TABLE IV RESOURCE UTILIZATION FOR 10 GBIT/S DOWNLINKS.
+
+IP
+
+LUT
+
+FF
+
+BRAM URAM Freq.
+
+Enc. 7 500 10 300
+
+42
+
+N/A 200 MHz
+
+Dec. 752 000 877 000 944
+
+416 300 MHz
+
+TABLE V NORMALIZED PERFORMANCES OF ENCODERS USING A XCZU9EG FPGA.
+
+IP Proposed Enc. DVB-S2 Enc.
+ARJA Enc.
+
+LUT/Gbits 298 4 063 3 099
+
+FF/Gbits 393 3 146 4 046
+
+BRAM/Gbits 1.647 3.059 0
+
+estimate the timing margin of IP cores. Memory resources are BRAM and URAM according to the technology of the FPGA manufacturer.
+Results for operational configurations with a typical clock derating are given in Table IV. The multi-core parallelization strategy is implemented to fulfill the 10 GLLR/s requirement: 2 cores for the encoder, 32 cores for the decoder. The latter is organized into 8 clusters of 4 cores, which provides a safe margin in terms of throughput (at least 35% for the worst case). The multi-die configuration of the FPGA is carefully handled to avoid timing issues. Thanks to an efficient use of clusters with synthesis constraints and pipeline stages between super logic region crossing, the multi-core scalability is successfully achieved. The resulting layout is shown in Figure 4.
+A comparison of normalized performances with state-ofthe-art DVB-S2 [28], [29] and ARJA [30] encoders is included in Table V for the same FPGA technology (Xilinx XCZU9EG). For the ARJA encoder, a full parallel architecture optimized for multigigabit applications is chosen. This approach saves internal memory blocks but supports only one code rate Rc = 1/2. Observe that the encoder of the proposed code needs significantly less resources than its competitors, while at the same time a multi-rate compatible architecture is supported. To give an example, the number of LUTs compared to the DVB-S2 and ARJA encoder is reduced by a factor of 13 and 10, respectively, while the number of FFs is reduced by a factor of 8 and 10, respectively.
+V. CONCLUSION
+We introduced a methodology to design LDPC codes with low error floors, iterative decoding thresholds close to capacity, and highly efficient encoders. An FPGA implementation was put in place to validate the performance of the codes. We experience strongly reduced resource utilization for encoding by a factor of around 10 compared to state-of-the-art LDPC codes, while showing competitive decoding performance. As a consequence, the proposed codes have been selected by CCSDS for standardization of optical LEO downlinks.
+
+6662
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:29:38 UTC from IEEE Xplore. Restrictions apply.
+
+2023 IEEE International Conference on Communications (ICC): SAC Satellite and Space Communications Track
+
+Fig. 4. Layout of 8 clusters of 4 decoder cores using a VU47P FPGA.
+
+APPENDIX
+
+13131313131313010
+
+B9 = 3 1 3 1 3 1 3 1 3 1 3 1 3 1 0 1 1
+
+10
+
+20000000000000100
+
+13131313131313010
+
+B7 = 3 1 3 1 3 1 3 1 3 1 3 1 3 1 0 1 1 8 20000000000000100
+
+1313131313010
+
+B5 = 3 1 3 1 3 1 3 1 3 1 0 1 1
+
+6
+
+2000000000100
+
+12131313010
+
+B4 = 3 1 3 1 3 1 3 1 0 1 1
+
+5
+
+20000000100
+
+131313010
+
+B3 = 3 1 3 1 3 1 0 1 1
+
+4
+
+200000100
+
+1 3 1 3 1 3 0 1 0 0 0
+
+31313101100 B 3 = 2 0 0 0 0 0 1 0 0 0 0
+5 2 0 1 0 2 0 1 0 1 1 0
+
+10102110001
+
+1 2 1 3 1 3 1 3 0 1 0 0 0
+
+3131313101100 B 2 = 2 0 0 0 0 0 0 0 1 0 0 0 0
+3 2 0 1 0 2 1 1 0 1 0 1 1 0
+
+1110201010001
+
+1 2 1 3 1 3 0 1 1 0 0 0 0 0 0 0
+
+3131310110000000
+
+2 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0
+
+2 0 1 0 1 0 0 2 0 1 0 0 0 0 0 0
+
+
+
+
+
+B1 2
+
+,
+
+2 5
+
+=
+
+1 2
+
+0 1
+
+2 0
+
+0 0
+
+1 1
+
+0 0
+
+0 1
+
+0 1
+
+1 0
+
+0 0
+
+1 0
+
+0 1
+
+0 0
+
+0 0
+
+0 0
+
+0 0
+
+1 0 2 0 1 0 0 1 0 0 0 0 1 0 0 0
+
+2 1 0 0 1 0 1 0 1 0 0 0 0 1 0 0
+
+2 1 0 0 2 0 0 0 0 0 0 0 0 0 1 0
+
+2100010000000001
+
+REFERENCES
+[1] Optical communications and physical layer coding, Pink sheets, Consultative Committee for Space Data Systems (CCSDS) Draft Recommended Standard 141.0-P-1.1, Jul. 2020.
+
+[2] R. G. Gallager, Low-Density Parity-Check Codes. Cambridge, MA: M.I.T. Press, 1963.
+[3] Technical Specification Group Radio Access Network - NR - Multiplexing and channel coding, 3GPP Technical specification TS 38.212 V16.5.0, Mar. 2021.
+[4] TM Synchronization and Channel Coding, Blue Book, Issue 2, Consultative Committee for Space Data Systems (CCSDS) Recommendation for Space Data System Standard 131.0.B.2, Aug. 2011.
+[5] J. Thorpe, “Low-density parity-check (LDPC) codes constructed from protographs,” Pasadena, CA, USA, Aug. 2003.
+[6] X.-Y. Hu, E. Eleftheriou, and D.-M. Arnold, “Progressive edge-growth Tanner graphs,” in IEEE Global Telecommun. Conf. (GLOBECOM, vol. 2, 2001, pp. 995–1001.
+[7] T. Tian, C. R. Jones, J. D. Villasenor, and R. D. Wesel, “Selective avoidance of cycles in irregular LDPC code construction,” IEEE Trans. Commun., vol. 52, no. 8, pp. 1242–1247, 2004.
+[8] T. J. Richardson and R. L. Urbanke, “The Capacity of Low-Density Parity-Check Codes under Message-Passing Decoding,” IEEE Trans. Inf. Theory, vol. 47, no. 2, pp. 599–618, 2001.
+[9] A. Ashikhmin, G. Kramer, and S. ten Brink, “Extrinsic information transfer functions: Model and erasure channel properties,” IEEE Trans. Inf. Theory, vol. 50, no. 11, pp. 2657–2673, 2004.
+[10] G. Liva and M. Chiani, “Protograph LDPC Codes Design Based on EXIT Analysis,” in IEEE Global Telecommun. Conf. (GLOBECOM, Nov. 2007, pp. 3250–3254.
+[11] R. Smarandache and P. O. Vontobel, “Quasi-cyclic LDPC codes: Influence of proto- and Tanner-graph structure on minimum Hamming distance upper bounds,” IEEE Trans. Inf. Theory, vol. 58, no. 2, pp. 585–607, Feb. 2012.
+[12] B. K. Butler and P. H. Siegel, “Bounds on the minimum distance of punctured quasi-cyclic LDPC codes,” IEEE Trans. Inf. Theory, vol. 59, no. 7, pp. 4584–4597, Jul. 2013.
+[13] S. V. S. Ranganathan, D. Divsalar, and R. D. Wesel, “Design of improved quasi-cyclic protograph-based raptor-like LDPC codes for short blocklengths,” in Proc. IEEE Int. Symp. Inf. Theory (ISIT), Aachen, Germany, Aug. 2017, pp. 1207–1211.
+[14] Physical Layer for Ultra Mobile Broadband (UMB) Air Interface Specification, 3rd generation partnership project 2 (3GPP2) Radio Interface Specification C.S0084-001-0 v3.0, Aug. 2008.
+[15] T. Richardson and R. Urbanke, “Multi-edge type LDPC codes,” 2004. [16] B. Matuz, “Verfahren zum Wiederherstellen verlorengegangener
+und/oder bescha¨digter Daten,” Sep. 2015, German patent, DE 10 2015 216 987 B4. [17] C. Jones, E. Valles, M. Smith, and J. Villasenor, “Approximate-min constraint node updating for ldpc code decoding,” in IEEE Military Communications Conference, 2003. MILCOM 2003., vol. 1, 2003, pp. 157–162 Vol.1. [18] J. Dielissen, A. Hekstra, and V. Berg, “Low cost LDPC decoder for DVB-S2,” in Proceedings of the Design Automation Test in Europe Conference, vol. 2, 2006, pp. 1–6. [19] J. Zhang and M. Fossorier, “Shuffled iterative decoding,” IEEE Trans. Commun., vol. 53, no. 2, pp. 209–213, 2005. [20] J. Dielissen and A. Hekstra, “Non-fractional parallelism in LDPC decoder implementations,” in 2007 Design, Automation Test in Europe Conference & Exhibition, 2007, pp. 1–6. [21] ARM, “AMBA AXI and ACE protocol specification,” 2011. [22] J. Chen and M. Fossorier, “Density evolution for two improved BP-based decoding algorithms of LDPC codes,” IEEE Commun. Lett., vol. 6, no. 5, pp. 208–210, 2002. [23] Xilinx, “Virtex UltraScale+ FPGA data sheet: DC and AC switching characteristics,” 2021. [24] Intel, “Intel® stratix® 10 device datasheet,” 2021. [25] J. L. Hennessy and D. A. Patterson, Computer Architecture: A Quantitative Approach, 5th ed. Amsterdam: Morgan Kaufmann, 2012. [26] M. Gomes, G. Falcao, A. Sengo, V. Ferreira, V. Silva, and M. Falcao, “High throughput encoder architecture for DVB-S2 LDPC-IRA codes,” in Int. Conf. Microelectronics, 2007, pp. 271–274. [27] Xilinx, “Breathe new life into your data center with Alveo adaptable accelerator cards,” 2018. [28] Comblock, “DVB-S2 BCH code decoder encoder,” 2020. [29] ——, “DVB-S2X LDPC code decoder encoder,” 2020. [30] D. Theodoropoulos, N. Kranitis, A. Tsigkanos, and A. Paschalis, “Efficient architectures for multigigabit CCSDS LDPC encoders,” IEEE Trans. VLSI Syst., vol. 28, pp. 1118–1127, 2020.
+
+6663
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 14:29:38 UTC from IEEE Xplore. Restrictions apply.
+
+

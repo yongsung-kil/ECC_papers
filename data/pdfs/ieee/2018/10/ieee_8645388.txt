@@ -1,0 +1,286 @@
+Learning from the Syndrome
+
+Loren Lugosch1 Fluent.ai Inc.
+Montre´al, Que´bec, Canada loren.lugosch@fluent.ai
+
+Warren J. Gross McGill University Montre´al, Que´bec, Canada warren.gross@mcgill.ca
+
+Abstract—In this paper, we introduce the syndrome loss, an alternative loss function for neural error-correcting decoders based on a relaxation of the syndrome. The syndrome loss penalizes the decoder for producing outputs that do not correspond to valid codewords. We show that training with the syndrome loss yields decoders with consistently lower frame error rate for a number of short block codes, at little additional cost during training and no additional cost during inference. The proposed method does not depend on knowledge of the transmitted codeword, making it a promising tool for online adaptation to changing channel conditions.
+I. INTRODUCTION
+Researchers are currently exploring the use of neural networks in digital communication systems, either as replacements for certain components or as an end-to-end solution. Much of this work has focused on trying to train improved decoders for error-correcting codes, since for many codes and channels the design of a near-optimal decoder is an unsolved problem. There have been many attempts to build machine learning-based decoders over the years [1]–[7], but these attempts have largely been thwarted by the “curse of dimensionality” described in [8]: for a code with k-bit messages, there are 2k possible codewords, and a na¨ıvely configured learning algorithm may not generalize to the many codewords not seen during training. Indeed, [9] found that a fully-connected neural network for decoding even the simple (7,4) Hamming code could not successfully decode received vectors corresponding to codewords never shown during training.
+A few recent breakthroughs have reignited interest in the idea of decoding using deep learning. First, in [10], Nachmani et al. showed that by unrolling the belief propagation decoding algorithm for a number of iterations and assigning learnable weights to each iteration, a neural network is formed that can be trained to achieve error correction performance significantly better than that of the conventional belief propagation decoder for short high-density parity-check (HDPC) codes. Since the code is hardwired into the neural network structure, it suffices to train it using only the all-zeros codeword, thus sidestepping the curse of dimensionality. Subsequent works modified Nachmani et al.’s approach to be more hardwarefriendly [11], use fewer parameters through weight sharing and attain close to optimal performance by being combined with a state-of-the-art HDPC decoder [12], [13], and handle channels with correlated noise using a convolutional neural
+1The first author performed this work while at McGill University.
+
+network [14]. Second, in [8], Gruber et al. reported the same failure of fully-connected neural networks to generalize to new codewords as was originally reported in [9], but found that the effect was much less pronounced for codes for which the parity-check matrix is not random but rather has structure (specifically, polar codes [15]), suggesting that fully-connected neural networks are capable of learning something like a decoding algorithm rather than simply memorizing the code. The approaches in [16] and [17] strike a balance between fully-connected neural networks and conventional decoding algorithms to achieve lower latency decoding of polar codes.
+Existing methods for training neural channel decoders have typically used the binary cross-entropy as the loss function for supervised learning. The cross-entropy loss is indeed an appropriate loss function for training a binary classifier. However, error correction is not a simple binary classification problem but rather a structured prediction problem, since the bits to be predicted are related to each other through the code structure. We therefore hypothesize that decoder training can be improved by incorporating knowledge of the code structure into the loss function.
+To test this hypothesis, we introduce a new loss function, the syndrome loss, which penalizes the decoder for producing outputs that do not correspond to valid codewords. We show that combining the syndrome loss with the cross-entropy loss improves the frame error rate of several neural channel decoders for short block codes across all signal-to-noise ratios.
+Perhaps more interestingly, the syndrome loss is completely unsupervised: that is, the decoder does not require knowledge of the transmitted codeword in order to compute the loss. Unsupervised learning could enable online training of decoders without the use of pilot signals, a useful property for receivers that must adapt quickly to changing channel conditions [18]. We show that, while taking care not to overfit to the training codewords, decoders can indeed be trained using only unsupervised learning.
+In the rest of the paper, we define the syndrome loss, relate it to previous work, and show how it may be useful using a set of supervised and unsupervised learning experiments.
+II. THE SYNDROME LOSS
+In this work, we consider communication systems that use a binary linear code to transmit over an additive white Gaussian noise (AWGN) channel, although our method could potentially be applied to other types of channel. The transmitter encodes
+
+   ,(((
+
+
+
+$VLORPDU 
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:36:38 UTC from IEEE Xplore. Restrictions apply.
+
+a k-bit message u ∈ GF(2)k using a generator matrix G ∈ GF(2)n×k to obtain an n-bit codeword c = Gu ∈ GF(2)n.
+
+The codeword is put in a bipolar format x = 1 − 2c ∈ {−1, +1}n and transmitted over the channel. The receiver receives a noisy signal y = x + w ∈ Rn, where w ∈ Rn is a
+
+vector of AWGN channel noise with variance σ2. The decoder
+
+must estimate x from y. We consider decoders that produce a soft output s ∈ Rn, where the estimated bipolar codeword
+
+is found by taking the hard decision xˆ = sign(s), and the
+
+corresponding estimated binary codeword is cˆ = 0.5 − 0.5xˆ.
+
+A linear code can be described by a parity-check matrix
+
+H ∈ GF(2)(n−k)×n. For example, the following is a parity-
+
+check matrix for the (7,4)-Hamming code:
+
+⎡
+
+⎤
+
+1101100
+
+H = ⎣1 0 1 1 0 1 0⎦ .
+
+(1)
+
+0111001
+
+The product Hcˆ ∈ GF(2)n−k is called the syndrome. If cˆ
+
+is a codeword, the syndrome will contain only 0; otherwise,
+
+the syndrome will contain at least a single 1. The syndrome
+
+can therefore be used to check if the decoder has successfully
+
+produced a valid codeword as an output.
+
+Since adding numbers in GF(2) is equivalent to multiplying
+
+numbers in {−1, +1}, the syndrome can be expressed equiv-
+
+alently in the bipolar format in terms of the soft output s as
+
+follows:
+
+synd(s)i =
+
+sign(sj ),
+
+(2)
+
+j∈M(i)
+
+where M(i) is the set of columns in the ith row of H equal to 1.
+One could imagine training a decoder to produce outputs that are codewords by minimizing the number of entries of the syndrome equal to −1. However, the syndrome is not well suited for conventional gradient-based learning, since the gradient of each entry is 0 almost everywhere. Accordingly, we introduce the “soft syndrome”, a relaxation of the usual “hard syndrome”. The soft syndrome is defined as follows:
+
+softsynd(s)i = min |sj|
+
+sign(sj ).
+
+(3)
+
+j∈M(i)
+
+j∈M(i)
+
+Note that this is just the check node equation from min-sum decoding, which has a non-trivial gradient (c.f. Chapter 5 of [19]).
+As an example illustrating the behavior of the soft syndrome, suppose that the transmitter using the (7,4)-Hamming code sends the all-zeros codeword,
+
+x = {+1, +1, +1, +1, +1, +1, +1},
+
+(4)
+
+and the receiver observes the sequence
+
+y = {+1.67, +1.42, −0.03, +1.03, +0.88, +1.98, +0.44}, (5)
+which contains one error. Suppose that the decoder outputs s = y. Whereas the hard syndrome given the parity-check matrix of Eq. 1 evaluates to
+
+synd(s) = {+1, −1, −1},
+
+(6)
+
+the soft syndrome evaluates to
+
+softsynd(s) = {+0.88, −0.03, −0.03}.
+
+(7)
+
+We can construct a loss function, the syndrome loss, based on the soft syndrome that penalizes all the entries that are negative as follows:
+
+1 n−k
+
+syndrome(s) = n − k
+
+max(1 − softsynd(s)i, 0). (8)
+
+i=1
+
+The usual supervised binary classification loss function is the cross-entropy loss:
+
+1n cross-entropy(c, s) = n cj log g(−sj )+(1−cj ) log(1−g(−sj )),
+j=1
+(9) where g(·) is the logistic sigmoid function.
+We propose to combine the syndrome loss with the cross-
+entropy loss to obtain a complete loss function:
+
+total(c, s) = (1 − λ) · syndrome(s) + λ · cross-entropy(c, s), (10)
+where λ ∈ [0, 1]. When λ = 1, the loss is just the usual supervised loss; when 0 < λ < 1, the loss is supervised with the syndrome loss as a regularization term; when λ = 0, there is no dependence on the transmitted codeword, so the loss is unsupervised.
+
+III. RELATED WORK
+Other papers have proposed the use of something like the syndrome loss for decoding applications. In [20], the authors interpreted an iterative decoding algorithm as a gradient descent-based algorithm for minimizing a “generalized syndrome weight”. This generalized syndrome weight was also treated in [21] and [22] in a similar way. In [23] and [24], Xia and Wu approached the problem of blind detection and identification of LDPC codes using “syndrome LLRs” for each candidate code.
+It is important to distinguish our syndrome-based training method from that of [25], in which the syndrome is calculated from the received signal and used as part of the input to a neural network decoder. In our method, the decoder can take on any form, as long as the output is a soft estimate of the transmitted codeword. Thus, our method is not suitable for decoders in which the output is an estimate of the original message u, such as the polar decoder of [8].
+
+IV. SUPERVISED LEARNING EXPERIMENTS
+We trained neural normalized min-sum (NNMS) decoders [13] for four short block codes: a (63, 45) BCH code, a (16,8) LDPC code, a (128,64) polar code, and a (200,100) LDPC code. For all experiments described in this paper, we used the Adam update rule [26] with a learning rate of 0.01, and trained on 10,000 minibatches of 120 codewords each, with added noise drawn uniformly from all signal-to-noise ratios (SNRs). The all-zeros codeword was used during training, and random codewords were used during testing. We used the “multi-loss” approach proposed in [10]: the loss is computed for the soft
+
+
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:36:38 UTC from IEEE Xplore. Restrictions apply.
+
+100 10−1 10−2
+
+No learning λ = 0.5 λ=1
+
+100 10−1
+
+No learning λ = 0.5 λ=1
+
+FER
+
+FER
+
+10−3
+
+10−2
+
+10−4
+12345678 Eb/N0 (dB)
+
+10−3 12345678 Eb/N0 (dB)
+
+Fig. 1. Comparison of FER for decoders for the (63,45) BCH code trained Fig. 2. Comparison of FER for decoders for the (128,64) polar code trained
+
+with different values of λ.
+
+with different values of λ.
+
+output of every decoding iteration and these losses are summed to obtain the final loss. We measured the frame error rate (FER) of the decoders using Monte Carlo simulation, requiring a minimum of 100 frame errors to be detected and at least 100,000 frames for each SNR to be simulated to minimize the variance of the FER estimates. The hyperparameter λ was set to either 1 (purely supervised) or 0.5 (supervised + regularized). Slightly better results can be obtained by tuning the value of λ; we have not attempted this here to show that the syndrome loss works even without careful tuning.
+The performance of the decoders is shown in Fig. 1, 2, 3, and 4. The performance for decoders without learning (i.e., all weights are equal to 1) is also shown for comparison. It can be seen that the decoders trained with the syndrome loss have a small but consistent improvement in FER across all signalto-noise ratios. Thus, using the syndrome loss, decoders can be obtained with better FER performance at no additional cost during inference and little additional cost during training. The impact of the syndrome loss on bit error rate (BER), however, is less consistent. In some instances, we have found that BER is improved, and in others BER is made worse. It may be that the decoder attempts to output a valid codeword at the expense of making more bit errors.
+V. UNSUPERVISED LEARNING EXPERIMENTS
+We attempted to train decoders using purely unsupervised learning, i.e. with λ = 0. In some instances, training the decoder with λ = 0 led to the decoder having FER ≈ 1 across all SNRs. In these instances, because the decoder was trained using only the all-zeros codeword, it was able to find a set of positive and negative weights which, when multiplied with the all-zeros codeword, yield a valid (but incorrect) codeword. Two techniques were found to prevent this failure mode:
+
+100 10−1
+
+No learning λ = 0.5 λ=1
+
+10−2
+
+FER
+
+10−3
+
+10−4
+
+12345678 Eb/N0 (dB)
+Fig. 3. Comparison of FER for decoders for the (16,8) LDPC code trained with different values of λ.
+
+1) constraining the weights to being positive, e.g. using the softplus function (since we have observed that the weights are generally all positive after supervised learning), or 2) training using random codewords instead of the all-zeros codeword. The latter technique is preferable, since in theory some of the weights could be negative for the optimal parameter setting. The performance of an NNMS decoder for the (63, 36) BCH code trained on random codewords with λ = 0 is shown in Fig. 5. The performance of the decoder with unsupervised learning is better than the decoder without learning, suggesting that the syndrome loss could potentially be used for online learning in
+
+
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:36:38 UTC from IEEE Xplore. Restrictions apply.
+
+100 10−1 10−2 10−3
+
+No learning λ = 0.5 λ=1
+
+training the model using supervised learning. We have not attempted to train an unconstrained neural network using the syndrome loss; we leave this for future work.
+VI. CONCLUSION
+In this paper, we introduced the syndrome loss, a new loss function for neural error-correcting decoders. The syndrome loss is designed to teach decoders to produce outputs with a correct structure. Decoders trained using the syndrome loss have consistently lower frame error rate when the syndrome loss is used as a regularization term and are capable of purely unsupervised learning when the appropriate precautions are taken.
+
+FER
+
+10−4
+
+1
+
+2
+
+3
+
+4
+
+5
+
+Eb/N0 (dB)
+
+Fig. 4. Comparison of FER for decoders for the (200,100) LDPC code trained with different values of λ.
+
+100 10−1
+
+No learning λ=0
+
+FER
+
+10−2
+
+10−3
+
+10−4
+12345678 Eb/N0 (dB)
+Fig. 5. Comparison of FER for decoders for the (63,36) BCH code with or without unsupervised learning (λ = 0).
+decoders when the transmitted codewords are unknown. While the syndrome loss does teach the decoder about the
+structure of the code, in principle there is no guarantee that this will help the decoder learn to decode. For example, a decoder that simply outputs a random codeword independent of the received signal would incur no syndrome loss. Therefore, some prior information about the goal of decoding must be provided to the decoder. For a neural belief propagation decoder, this information is built into the network through the graphical model of the code. For a tabula rasa neural network, the prior information must be supplied in some other way, such as pre-
+
+ACKNOWLEDGMENT
+Thanks to Ali Hashemi for providing the parity-check
+matrix for the polar code used in our experiments.
+REFERENCES
+[1] G. Zeng, D. Hush, and N. Ahmed, “An application of neural net in decoding error-correcting codes,” in IEEE International Symposium on Circuits and Systems,, May 1989, pp. 782–785 vol.2.
+[2] W. R. Caid and R. W. Means, “Neural network error correcting decoders for block and convolutional codes,” in Global Telecommunications Conference, 1990, and Exhibition. ’Communications: Connecting the Future’, GLOBECOM ’90., IEEE, Dec 1990, pp. 1028–1031 vol.2.
+[3] S. E. El-Khamy, E. A. Youssef, and H. M. Abdou, “Soft decision decoding of block codes using artificial neural network,” in Proceedings IEEE Symposium on Computers and Communications, July 1995, pp. 234–240.
+[4] L. G. Tallini and P. Cull, “Neural nets for decoding error-correcting codes,” in IEEE Technical Applications Conference and Workshops. Northcon/95. Conference Record, Oct 1995, pp. 89–.
+[5] A. Hamalainen and J. Henriksson, “A recurrent neural decoder for convolutional codes,” in 1999 IEEE International Conference on Communications (Cat. No. 99CH36311), vol. 2, 1999, pp. 1305–1309 vol.2.
+[6] H. Abdelbaki, E. Gelenbe, and S. E. El-Khamy, “Random neural network decoder for error correcting codes,” in Neural Networks, 1999. IJCNN’99. International Joint Conference on, vol. 5. IEEE, 1999, pp. 3241–3245.
+[7] J.-L. Wu, Y.-H. Tseng, and Y.-M. Huang, “Neural network decoders for linear block codes,” International Journal of Computational Engineering Science, vol. 3, no. 03, pp. 235–255, 2002.
+[8] T. Gruber, S. Cammerer, J. Hoydis, and S. t. Brink, “On deep learningbased channel decoding,” Conference on Information Sciences and Systems (CISS), 2017.
+[9] A. D. Stefano, O. Mirabella, G. D. Cataldo, and G. Palumbo, “On the use of neural networks for Hamming coding,” in IEEE International Sympoisum on Circuits and Systems (ISCAS), Jun 1991, pp. 1601–1604 vol.3.
+[10] E. Nachmani, Y. Be’ery, and D. Burshtein, “Learning to decode linear codes using deep learning,” 54th Annual Allerton Conf. on Communication, Control and Computing, 2016.
+[11] L. Lugosch and W. J. Gross, “Neural offset min-sum decoding,” in 2017 IEEE International Symposium on Information Theory, June 2017, pp. 1361–1365.
+[12] E. Nachmani, E. Marciano, D. Burshtein, and Y. Be’ery, “RNN decoding of linear block codes,” arXiv preprint arXiv:1702.07560, 2017.
+[13] E. Nachmani, E. Marciano, L. Lugosch, W. J. Gross, D. Burshtein, and Y. Beery, “Deep learning methods for improved decoding of linear codes,” IEEE Journal of Selected Topics in Signal Processing, vol. 12, no. 1, pp. 119–131, 2018.
+[14] F. Liang, C. Shen, and F. Wu, “An iterative BP-CNN architecture for channel decoding,” arXiv preprint arXiv:1707.05697, 2017.
+[15] E. Arikan, “Channel polarization: A method for constructing capacityachieving codes for symmetric binary-input memoryless channels,” IEEE Transactions on Information Theory, vol. 55, no. 7, pp. 3051–3073, 2009.
+
+
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:36:38 UTC from IEEE Xplore. Restrictions apply.
+
+[16] N. Doan, S. A. Hashemi, and W. J. Gross, “Neural successive cancellation decoding of polar codes,” in 2018 IEEE 19th International Workshop on Signal Processing Advances in Wireless Communications (SPAWC). IEEE, 2018, pp. 1–5.
+[17] S. Cammerer, T. Gruber, J. Hoydis, and S. ten Brink, “Scaling deep learning-based decoding of polar codes via partitioning,” in GLOBECOM 2017-2017 IEEE Global Communications Conference. IEEE, 2017, pp. 1–6.
+[18] S. Schibisch, S. Cammerer, S. Do¨rner, J. Hoydis, and S. t. Brink, “Online label recovery for deep learning-based communication through error correcting codes,” arXiv preprint arXiv:1807.00747, 2018.
+[19] L. Lugosch, “Learning algorithms for error correction,” Master’s thesis, McGill University, 2018.
+[20] R. Lucas, M. Bossert, and M. Breitbach, “On iterative soft-decision decoding of linear binary block codes and product codes,” IEEE Journal on Selected Areas in Communications, vol. 16, no. 2, pp. 276–296, Feb 1998.
+[21] J. Jiang and K. R. Narayanan, “Iterative soft-input soft-output decoding of Reed-Solomon codes by adapting the parity-check matrix,” IEEE Transactions on Information Theory, vol. 52, no. 8, pp. 3746–3756, 2006.
+[22] I. Dimnik and Y. Be’ery, “Improved random redundant iterative HDPC decoding,” IEEE Transactions on Communications, vol. 57, no. 7, 2009.
+[23] T. Xia and H. C. Wu, “Blind identification of nonbinary LDPC codes using average LLR of syndrome a posteriori probability,” IEEE Communications Letters, vol. 17, no. 7, pp. 1301–1304, July 2013.
+[24] ——, “Novel blind identification of LDPC codes using average LLR of syndrome a posteriori probability,” IEEE Transactions on Signal Processing, vol. 62, no. 3, pp. 632–640, Feb 2014.
+[25] A. Bennatan, Y. Choukroun, and P. Kisilev, “Deep learning for decoding of linear codes-a syndrome-based approach,” arXiv preprint arXiv:1802.04741, 2018.
+[26] D. Kingma and J. Ba, “Adam: A method for stochastic optimization,” International Conference on Learning Representations, 2015.
+
+Authorized licensed use limited to: Yonsei Univ. Downloaded on June 24,2026 at 12:36:38 UTC from IEEE Xplore. Restrictions apply.
+
+
