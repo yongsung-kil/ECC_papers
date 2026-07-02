@@ -1,16 +1,17 @@
-# Stage 3 오케스트레이터 프롬프트 (멀티 agnet 병렬 실행)
+# Stage 3 오케스트레이터 프롬프트 (멀티 agent 병렬 실행)
 
 > 위치: criteria/stage3/orchestrator_prompt.md
 > 사용처: 메인 Claude(오케스트레이터)에게 이 파일 내용을 그대로 지시문으로 준다.
-> 짝 문서: [analys_prompt.md](analysis_prompt.md) - 각 subagent가 따라야 할 분석 절차.
+> 짝 문서: [analysis_prompt.md](analysis_prompt.md) - 각 subagent가 따라야 할 분석 절차.
 
 
 ---
 
 ## 작업
 
-[analysis_prompt.md](analysis_prompt.md) 의 절차를 따라 `data/pdfs/` 아래 미처리 논문 파일들을 분석한다.
+[analysis_prompt.md](analysis_prompt.md) 의 절차를 따라 `data/pdfs/` 아래 미처리 논문(**.txt 추출본**)을 분석한다.
 - 결과 저장 위치: `criteria/stage3/results/{id_underscore}.md` (한 편당 한 파일)
+  - `id_underscore` = 논문 id의 `:`를 `_`로 치환(점·버전은 유지). 예: `ieee:11123581`→`ieee_11123581`, `arxiv:1012.3201v1`→`arxiv_1012.3201v1`.
 - "미처리 논문" 판정: `criteria/stage3/results/`에 `{id_underscore}.md`가 없는 논문
 
 ## 입력 파라미터 (사용자가 호출 시 지정)
@@ -22,7 +23,8 @@
 |---|---|---|
 | `YEAR` | 처리 대상 연도 (단일 또는 범위) | `2024` / `2023-2025` / `all` |
 
--처리 대상 경로: `data/pdfs/{ieee.arxiv}/{YEAR}/**/*.pdf` (`YEAR=all` 이면 모든 연도)
+- 처리 대상 경로: `data/pdfs/{ieee|arxiv}/{YEAR}/**/*.txt` (`YEAR=all` 이면 모든 연도)
+  - **PDF는 이 환경에서 Read 불가(poppler/`pdftoppm` 미설치) + 편당 수십 페이지라 토큰 과다 + git 미추적. 반드시 `.txt` 추출본을 읽는다.**
 - `YEAR`가 없으면 그 때만 사용자에게 한 번 확인한다.
 
 ## 고정 정책 (변경 금지)
@@ -42,7 +44,8 @@
 
 ### 라운드 구성
 - **한 라운드 = 10개의 subagent를 동시 호출**.
-  반드시 **하나의 메시지 안에 10개의 'Agent' tool_use 블록**을 넣는다.
+  반드시 **하나의 메시지 안에 10개의 `Agent` tool_use 블록**을 넣는다.
+  (메시지를 쪼개서 순차 호출하면 안됨 - 병렬 효과가 사라짐)
 - 각 subagent에게 **논문 3편을 한 묶음**으로 할당한다.
   (한 라운드에서 **30편** 처리)
 - 마지막 라운드에서 남은 편수가 30미만이면 가능한 만큼만 할당
@@ -68,10 +71,10 @@
 
 ---
 
-## 각 agnet에게 줄 프롬프트 템플릿
+## 각 agent에게 줄 프롬프트 템플릿
 
-오케스트레이터는 매 라운드 각 agent를 호출할 때 아래 템플릿을 채워 보낸다.
-**프롬프트가 자기원결적이어야 한다.** - agent는 이 대화의 맥락을 모른다.
+오케스트레이터는 매 라운드 각 subagent를 호출할 때 아래 템플릿을 채워 보낸다.
+**프롬프트가 자기완결적이어야 한다** - agent는 이 대화의 맥락을 모른다.
 
 ```
 너는 LDPC ECC 논문 분석 작업자다.
@@ -79,7 +82,7 @@
 [필수 사전 읽기]
 1. criteria/stage3/analysis_prompt.md - 분석 절차, 출력 형식
 2. criteria/stage3/categories.md - enum 목록
-3. Prime_ECC_3.1_Claude/CLAUDE.md (있다면)
+3. criteria/stage3/Prime_ECC_3.1_Claude/paper_screening_profile.md - Prime ECC 3.1 코드 프로파일 (판정 기준, 자기완결 / 코드 접근 불필요)
 
 [할당된 논문 (정확히 3편 - 마지막 batch만 1~2편 가능)]
 - {paper_path_1}
@@ -91,15 +94,15 @@
 
 [수행 절차 - 한 편씩 순차 처리]
 할당된 논문을 **위에서부터 한 편씩** 처리한다.
-**한 편을 완전히 끝내기 전까지 다음 편의 .pdf를 읽지 말것.**
+**한 편을 완전히 끝내기 전까지 다음 편의 .txt를 읽지 말것.**
 (여러 편을 동시에 Read 해서 컨텍스트에 쌓아두면 분석 품질이 떨어진다.)
 
 각 논문 1편 처리 사이클:
 1. 해당 논문의 .txt 본문을 Read 로 읽는다. (이 한 편만)
-2. anlysis_prompt.md의 "출력 형식 (A/B/C/D)" 그대로 생성한다.
-3. criteria/stage3/results/{id_undersocre}.md 에 Write 로 저장한다.
+2. analysis_prompt.md의 "출력 형식 (A/B/C/D)" 그대로 생성한다.
+3. criteria/stage3/results/{id_underscore}.md 에 Write 로 저장한다.
     - 이미 파일이 존재하면 건너뛰고 그 사실을 보고한다 (덮어쓰지 말 것).
-4. 저장 완료를 확이한 뒤에야 **다음 편**으로 넘어간다.
+4. 저장 완료를 확인한 뒤에야 **다음 편**으로 넘어간다.
 5. enum 오타 금지. 본문 근거 없으면 `미상`. 추측 금지.
 
 3편을 모두 위 사이클로 끝내면 [반환값] 형식으로 보고하고 종료한다.
@@ -108,8 +111,8 @@
 다음 형식으로만 반환하라 (자유 텍스트 금지):
 
 DONE:
-- {paper_id_1} -> resutls/{id_underscore_1}.md
-- {paper_id_2} -> resutls/{id_underscore_1}.md
+- {paper_id_1} -> results/{id_underscore_1}.md
+- {paper_id_2} -> results/{id_underscore_2}.md
 
 SKIPPED:
 - {paper_id} (이미 존재)
@@ -131,9 +134,10 @@ Round K: 완료 X편 / 스킵 Y편 / 실패 Z편 / 남은 W편
 ---
 
 ## 시작 절차
+0. `criteria/stage3/results/`가 없으면 생성한다.
 1. 사용자가 넘긴 `YEAR`로 대상 `.txt` 경로 목록을 만든다.
-   - `data/pdfs/{ieee.arxiv}/{YEAR}/**/*.txt'
-2. `critera/stage3/results/`와 대조해 **미처리분**만 추린다.
+   - `data/pdfs/{ieee|arxiv}/{YEAR}/**/*.txt`
+2. `criteria/stage3/results/`와 대조해 **미처리분**만 추린다.
 3. 미처리 목록을 **3편씩** 묶어 batch로 분할 (마지막 batch는 1~2편 가능).
 4. **10 batch = 1 라운드**. 라운드 단위로 처리.
 5. 첫 라운드 시작 전 한 번만 보고:
