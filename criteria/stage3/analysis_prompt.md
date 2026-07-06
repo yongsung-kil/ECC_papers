@@ -129,5 +129,7 @@ A섹션과 동일 내용을 JSON으로 한 번 더. 키는 enum 영문 슬러그
 
 ## 결과 저장
 
-`results/{id_underscore}.md` (예: `results/ieee_11123581.md`, `results/arxiv_1012.3201v1.md`).
-`id_underscore` = id의 `:`를 `_`로 치환(점·버전 유지). 한 편당 한 파일.
+`results/{연도}/{id_underscore}.md` (예: `results/2026/ieee_11123581.md`, `results/2012/arxiv_1012.3201v1.md`).
+- `{연도}` = 처리한 `.txt`가 있던 `data/pdfs/{ieee|arxiv}/{연도}/**/*.txt` 경로의 연도. A섹션 헤더에 적는 발행연도(본문 근거)와 다를 수 있어도 **폴더는 입력 경로 연도를 따른다** (연도별 진행률 집계가 이 폴더 기준이므로).
+- 연도 폴더가 없으면 새로 생성한다.
+- `id_underscore` = id의 `:`를 `_`로 치환(점·버전 유지). 한 편당 한 파일.

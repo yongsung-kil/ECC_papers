@@ -10,9 +10,12 @@
 ## 작업
 
 [analysis_prompt.md](analysis_prompt.md) 의 절차를 따라 `data/pdfs/` 아래 미처리 논문(**.txt 추출본**)을 분석한다.
-- 결과 저장 위치: `criteria/stage3/results/{id_underscore}.md` (한 편당 한 파일)
+- 결과 저장 위치: `criteria/stage3/results/{연도}/{id_underscore}.md` (한 편당 한 파일, **연도별 폴더**)
   - `id_underscore` = 논문 id의 `:`를 `_`로 치환(점·버전은 유지). 예: `ieee:11123581`→`ieee_11123581`, `arxiv:1012.3201v1`→`arxiv_1012.3201v1`.
-- "미처리 논문" 판정: `criteria/stage3/results/`에 `{id_underscore}.md`가 없는 논문
+  - `{연도}` = 처리한 `.txt`가 있던 `data/pdfs/{ieee|arxiv}/{연도}/**/*.txt` 경로의 그 **연도 그대로** 사용한다 (analysis 헤더에 적은 연도가 아님).
+    - 이 값은 `papers.db`의 `published` 연도와 항상 일치하도록 이미 구성돼 있다(파일 다운로드 시 그 기준으로 분류됨). 분석 중 논문 본문에서 다른 연도가 읽히더라도(예: 컨퍼런스 발표일 vs 저널 게재일) **폴더는 반드시 입력 경로 연도를 따른다** — 안 그러면 연도별 진행률 집계가 어긋난다.
+  - 연도 폴더가 없으면 새로 생성한다.
+- "미처리 논문" 판정: 같은 `{연도}` 폴더 `criteria/stage3/results/{연도}/`에 `{id_underscore}.md`가 없는 논문 (입력 경로 연도와 출력 폴더 연도가 항상 같으므로 해당 연도 폴더만 보면 된다)
 
 ## 입력 파라미터 (사용자가 호출 시 지정)
 
@@ -84,6 +87,9 @@
 2. criteria/stage3/categories.md - enum 목록
 3. criteria/stage3/Prime_ECC_3.1_Claude/paper_screening_profile.md - Prime ECC 3.1 코드 프로파일 (판정 기준, 자기완결 / 코드 접근 불필요)
 
+[처리 대상 연도]
+- {YEAR} (아래 모든 논문의 결과는 이 연도 폴더에 저장한다)
+
 [할당된 논문 (정확히 3편 - 마지막 batch만 1~2편 가능)]
 - {paper_path_1}
 - {paper_path_2}
@@ -100,7 +106,8 @@
 각 논문 1편 처리 사이클:
 1. 해당 논문의 .txt 본문을 Read 로 읽는다. (이 한 편만)
 2. analysis_prompt.md의 "출력 형식 (A/B/C/D)" 그대로 생성한다.
-3. criteria/stage3/results/{id_underscore}.md 에 Write 로 저장한다.
+3. criteria/stage3/results/{YEAR}/{id_underscore}.md 에 Write 로 저장한다. (`{YEAR}` = 위 [처리 대상 연도], 본문에서 다른 연도가 읽혀도 폴더는 항상 이 값 사용)
+    - 연도 폴더가 없으면 새로 생성한다.
     - 이미 파일이 존재하면 건너뛰고 그 사실을 보고한다 (덮어쓰지 말 것).
 4. 저장 완료를 확인한 뒤에야 **다음 편**으로 넘어간다.
 5. enum 오타 금지. 본문 근거 없으면 `미상`. 추측 금지.
@@ -111,8 +118,8 @@
 다음 형식으로만 반환하라 (자유 텍스트 금지):
 
 DONE:
-- {paper_id_1} -> results/{id_underscore_1}.md
-- {paper_id_2} -> results/{id_underscore_2}.md
+- {paper_id_1} -> results/{YEAR}/{id_underscore_1}.md
+- {paper_id_2} -> results/{YEAR}/{id_underscore_2}.md
 
 SKIPPED:
 - {paper_id} (이미 존재)
@@ -134,10 +141,10 @@ Round K: 완료 X편 / 스킵 Y편 / 실패 Z편 / 남은 W편
 ---
 
 ## 시작 절차
-0. `criteria/stage3/results/`가 없으면 생성한다.
+0. `criteria/stage3/results/{YEAR}/`가 없으면 생성한다.
 1. 사용자가 넘긴 `YEAR`로 대상 `.txt` 경로 목록을 만든다.
    - `data/pdfs/{ieee|arxiv}/{YEAR}/**/*.txt`
-2. `criteria/stage3/results/`와 대조해 **미처리분**만 추린다.
+2. `criteria/stage3/results/{YEAR}/`(같은 연도 폴더)와 대조해 **미처리분**만 추린다.
 3. 미처리 목록을 **3편씩** 묶어 batch로 분할 (마지막 batch는 1~2편 가능).
 4. **10 batch = 1 라운드**. 라운드 단위로 처리.
 5. 첫 라운드 시작 전 한 번만 보고:
