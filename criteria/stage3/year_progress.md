@@ -1,7 +1,7 @@
 # Stage3 연도별 진행 현황
 
 - 전체 대상(filtered_in): 6222편
-- 완료(stage3 결과): 5708편 (91.7%)
+- 완료(stage3 결과): 6211편 (99.8%)
 - 집계 기준: 총/완료 모두 DB `published` 연도 + `source`/`content_type`(IEEE Journal/Conference/arXiv) 기준으로 통일
 
 | 연도 | IEEE Journal | Conference | arXiv | 전체 |
@@ -17,13 +17,13 @@
 | 2000 | 7/8 (88%) | 8/8 (100%) | - | 15/16 (94%) |
 | 2001 | 24/24 (100%) | 42/42 (100%) | - | 66/66 (100%) |
 | 2002 | 15/15 (100%) | 60/60 (100%) | - | 75/75 (100%) |
-| 2003 | 18/19 (95%) | 79/79 (100%) | 1/1 (100%) | 98/99 (99%) |
-| 2004 | 54/56 (96%) | 107/107 (100%) | 2/2 (100%) | 163/165 (99%) |
-| 2005 | 30/54 (56%) | 67/167 (40%) | 0/8 (0%) | 97/229 (42%) |
+| 2003 | 19/19 (100%) | 79/79 (100%) | 1/1 (100%) | 99/99 (100%) |
+| 2004 | 56/56 (100%) | 107/107 (100%) | 2/2 (100%) | 165/165 (100%) |
+| 2005 | 53/54 (98%) | 165/167 (99%) | 8/8 (100%) | 226/229 (99%) |
 | 2006 | 52/54 (96%) | 197/197 (100%) | 9/9 (100%) | 258/260 (99%) |
-| 2007 | 66/70 (94%) | 194/194 (100%) | 12/12 (100%) | 272/276 (99%) |
-| 2008 | 0/60 (0%) | 0/236 (0%) | 0/8 (0%) | 0/304 (0%) |
-| 2009 | 77/88 (88%) | 164/212 (77%) | 0/5 (0%) | 241/305 (79%) |
+| 2007 | 69/70 (99%) | 194/194 (100%) | 12/12 (100%) | 275/276 (100%) |
+| 2008 | 60/60 (100%) | 236/236 (100%) | 8/8 (100%) | 304/304 (100%) |
+| 2009 | 88/88 (100%) | 212/212 (100%) | 5/5 (100%) | 305/305 (100%) |
 | 2010 | 67/67 (100%) | 251/251 (100%) | 14/14 (100%) | 332/332 (100%) |
 | 2011 | 64/64 (100%) | 209/211 (99%) | 10/10 (100%) | 283/285 (99%) |
 | 2012 | 68/68 (100%) | 234/234 (100%) | 18/18 (100%) | 320/320 (100%) |
@@ -41,126 +41,126 @@
 | 2024 | 76/76 (100%) | 123/123 (100%) | 25/25 (100%) | 224/224 (100%) |
 | 2025 | 101/101 (100%) | 162/163 (99%) | 39/39 (100%) | 302/303 (100%) |
 | 2026 | 68/68 (100%) | 21/21 (100%) | 33/33 (100%) | 122/122 (100%) |
-| **합계** | **1671/1777 (94%)** | **3709/4096 (91%)** | **328/349 (94%)** | **5708/6222 (92%)** |
+| **합계** | **1771/1777 (100%)** | **4091/4096 (100%)** | **349/349 (100%)** | **6211/6222 (100%)** |
 
-## 세부 카테고리별 분포 (완료 5708편 기준)
+## 세부 카테고리별 분포 (완료 6211편 기준)
 
 ### 이식성
 | 값 | 편수 | 비율 |
 |---|---|---|
-| 상 | 214 | 3.7% |
-| 중 | 1755 | 30.7% |
-| 하 | 3737 | 65.5% |
+| 상 | 224 | 3.6% |
+| 중 | 1908 | 30.7% |
+| 하 | 4077 | 65.6% |
 | 미상 | 2 | 0.0% |
 
 ### 추천도
 | 값 | 편수 | 비율 |
 |---|---|---|
-| 상 | 206 | 3.6% |
-| 중 | 1668 | 29.2% |
-| 하 | 3834 | 67.2% |
+| 상 | 216 | 3.5% |
+| 중 | 1808 | 29.1% |
+| 하 | 4187 | 67.4% |
 
 ### NAND관련성
 | 값 | 편수 | 비율 |
 |---|---|---|
-| 직접 | 347 | 6.1% |
-| 간접 | 2324 | 40.7% |
-| 낮음 | 3036 | 53.2% |
+| 직접 | 350 | 5.6% |
+| 간접 | 2676 | 43.1% |
+| 낮음 | 3184 | 51.3% |
 | 미상 | 1 | 0.0% |
 
 ### 대상
 | 값 | 편수 | 비율 |
 |---|---|---|
-| decoder | 2608 | 45.7% |
-| encoder | 141 | 2.5% |
-| both | 1067 | 18.7% |
-| code-design | 1220 | 21.4% |
-| other | 672 | 11.8% |
+| decoder | 2862 | 46.1% |
+| encoder | 162 | 2.6% |
+| both | 1177 | 19.0% |
+| code-design | 1294 | 20.8% |
+| other | 716 | 11.5% |
 
 ### 부호종류
 | 값 | 편수 | 비율 |
 |---|---|---|
-| QC-LDPC | 1642 | 28.8% |
-| SC-LDPC | 312 | 5.5% |
-| regular | 806 | 14.1% |
-| irregular | 830 | 14.5% |
-| protograph | 300 | 5.3% |
-| 기타 | 1423 | 24.9% |
-| 미상 | 395 | 6.9% |
+| QC-LDPC | 1808 | 29.1% |
+| SC-LDPC | 323 | 5.2% |
+| regular | 932 | 15.0% |
+| irregular | 917 | 14.8% |
+| protograph | 314 | 5.1% |
+| 기타 | 1492 | 24.0% |
+| 미상 | 425 | 6.8% |
 
 ### 연판정
 | 값 | 편수 | 비율 |
 |---|---|---|
-| hard-1bit | 404 | 7.1% |
-| soft-2~3bit | 662 | 11.6% |
-| soft-4bit+ | 1864 | 32.7% |
-| 무관 | 2589 | 45.4% |
-| 미상 | 186 | 3.3% |
-| N/A | 3 | 0.1% |
+| hard-1bit | 424 | 6.8% |
+| soft-2~3bit | 670 | 10.8% |
+| soft-4bit+ | 1945 | 31.3% |
+| 무관 | 2871 | 46.2% |
+| 미상 | 298 | 4.8% |
+| N/A | 3 | 0.0% |
 
 ### HW설계
 | 값 | 편수 | 비율 |
 |---|---|---|
-| O | 1330 | 23.3% |
-| X | 4378 | 76.7% |
+| O | 1471 | 23.7% |
+| X | 4740 | 76.3% |
 
 ### 검증수준
 | 값 | 편수 | 비율 |
 |---|---|---|
-| 이론 | 712 | 12.5% |
-| 시뮬 | 3652 | 64.0% |
-| FPGA | 513 | 9.0% |
-| ASIC합성 | 491 | 8.6% |
-| 실측 | 306 | 5.4% |
-| 미상 | 33 | 0.6% |
+| 이론 | 780 | 12.6% |
+| 시뮬 | 3973 | 64.0% |
+| FPGA | 566 | 9.1% |
+| ASIC합성 | 538 | 8.7% |
+| 실측 | 319 | 5.1% |
+| 미상 | 34 | 0.5% |
 | FPGA합성 | 1 | 0.0% |
 
 ### 병렬화
 | 값 | 편수 | 비율 |
 |---|---|---|
-| 없음 | 110 | 1.9% |
-| 부분 | 1209 | 21.2% |
-| 완전병렬 | 607 | 10.6% |
-| 미상 | 3735 | 65.4% |
-| N/A | 44 | 0.8% |
+| 없음 | 124 | 2.0% |
+| 부분 | 1345 | 21.7% |
+| 완전병렬 | 644 | 10.4% |
+| 미상 | 4051 | 65.2% |
+| N/A | 44 | 0.7% |
 | 언급 | 2 | 0.0% |
 | 무관 | 1 | 0.0% |
 
 ### 정정능력향상
 | 값 | 편수 | 비율 |
 |---|---|---|
-| O | 2416 | 42.3% |
-| X | 1574 | 27.6% |
-| N/A | 1718 | 30.1% |
+| O | 2630 | 42.3% |
+| X | 1723 | 27.7% |
+| N/A | 1858 | 29.9% |
 
 ### 개선영역
 | 값 | 편수 | 비율 |
 |---|---|---|
-| waterfall | 1326 | 23.2% |
-| error-floor | 735 | 12.9% |
-| both | 448 | 7.8% |
-| N/A | 3198 | 56.0% |
+| waterfall | 1421 | 22.9% |
+| error-floor | 806 | 13.0% |
+| both | 497 | 8.0% |
+| N/A | 3486 | 56.1% |
 | 미상 | 1 | 0.0% |
 
 ### iteration감소
 | 값 | 편수 | 비율 |
 |---|---|---|
-| O | 776 | 13.6% |
-| 부분 | 418 | 7.3% |
-| X | 1504 | 26.3% |
-| N/A | 3001 | 52.6% |
-| 미상 | 9 | 0.2% |
+| O | 847 | 13.6% |
+| 부분 | 444 | 7.1% |
+| X | 1751 | 28.2% |
+| N/A | 3160 | 50.9% |
+| 미상 | 9 | 0.1% |
 
 ### latency
 | 값 | 편수 | 비율 |
 |---|---|---|
-| 개선 | 1310 | 23.0% |
-| 동등 | 444 | 7.8% |
-| 악화 | 341 | 6.0% |
-| N/A | 3600 | 63.1% |
+| 개선 | 1434 | 23.1% |
+| 동등 | 593 | 9.5% |
+| 악화 | 384 | 6.2% |
+| N/A | 3787 | 61.0% |
 | 미상 | 13 | 0.2% |
 
-## 추천도 '상' 논문 목록 (206편) - Prime ECC 3.1 이식 우선 검토 대상
+## 추천도 '상' 논문 목록 (216편) - Prime ECC 3.1 이식 우선 검토 대상
 
 | 연도 | 이식성 | 대상 | 논문 | 핵심기여 |
 |---|---|---|---|---|
@@ -306,6 +306,8 @@
 | 2009 | 상 | decoder | [ieee:5117900](results/2009/ieee_5117900.md)<br>A shuffled message-passing decoding method for memory-based LDPC decoders | shuffled MPD의 메모리 접근/저장 복잡도를 정렬된 상위 γ(=3)개 /Qji/ 값만 저장하는 방식으로 대폭 절감해 memory-based HW 구현 가능하게 함 |
 | 2009 | 상 | both | [ieee:5205323](results/2009/ieee_5205323.md)<br>A 47 Gb/s LDPC Decoder with Improved Low Error Rate Performance | 4비트 offset min-sum + post-processor(message biasing)로 (8,8) absorbing-set 기인 error floor를 10^-14까지 억제 |
 | 2009 | 상 | decoder | [ieee:5303564](results/2009/ieee_5303564.md)<br>Design of BP-Based Decoding for Short LDPC Codes Using MMSE Criterion | scaled/offset min-sum 계수를 MMSE 기준으로 이론 유도해 UMP-BP 대비 성능을 BP에 근접시킴 |
+| 2009 | 상 | decoder | [ieee:6041337](results/2009/ieee_6041337.md)<br>Energy Efficiency of SISO Algorithms for Turbo-Decoding Message-Passing LDPC Decoders | TDMP(layered) LDPC 디코더에 Self-Corrected Min-Sum(SCMS) 커널 도입 + erased-message 기반 CN 비활성화·조기종료로 에너지/iteration 절감 |
+| 2008 | 상 | decoder | [ieee:4594965](results/2008/ieee_4594965.md)<br>Self-Corrected Min-Sum decoding of LDPC codes | VN 메시지 sign 변동 시 erasure(0)로 CN 메시지 symmetric Gaussian화 -> Sum-Product급 성능을 Min-Sum 저복잡도로 달성 |
 | 2007 | 상 | decoder | [ieee:4162517](results/2007/ieee_4162517.md)<br>A Memory Efficient Partially Parallel Decoder Architecture for Quasi-Cyclic LDPC Codes | modified min-sum 디코딩 절차를 재배열해 check-to-variable 메시지의 데이터 중복성을 활용, 압축 저장 및 PROF 기반 CNU로 30% 이상 메모리 절감을 달성한 partially parallel 디코더 아키텍처 |
 | 2007 | 상 | decoder | [ieee:4203089](results/2007/ieee_4203089.md)<br>Self-Compensation Technique for Simplified Belief-Propagation Algorithm | order statistics 기반 이론유도로 min-sum check node 출력을 반복/입력크기에 따라 동적으로 정규화하는 self-compensation 기법 |
 | 2007 | 상 | decoder | [ieee:4252785](results/2007/ieee_4252785.md)<br>Efficient Message Passing Architecture for High Throughput LDPC Decoder | Min-Sum을 재구성해 VNU/CNU 간 압축된 요약 메시지만 교환하여 배선·메모리를 대폭 절감 |
@@ -335,6 +337,7 @@
 | 2005 | 상 | decoder | [ieee:1402639](results/2005/ieee_1402639.md)<br>Shuffled Iterative Decoding | BP 수직분할 스케줄(shuffled/group-shuffled): 같은 iter 내 갱신된 메시지 즉시 재사용, 복잡도 동일·수렴 가속 |
 | 2005 | 상 | decoder | [ieee:1425734](results/2005/ieee_1425734.md)<br>On Implementation of Min-Sum Algorithm and Its Modifications for Decoding Low-Density Parity-Check (LDPC) Codes | 4bit 양자화 min-sum에 clipping+조건부/무조건 보정으로 BP 근접·초과 성능 |
 | 2005 | 상 | decoder | [ieee:1495850](results/2005/ieee_1495850.md)<br>Reduced-Complexity Decoding of LDPC Codes | min-sum(BP-based)에 normalization/offset 보정항을 더해 BP 근접 성능 달성, DE로 파라미터 최적화 |
+| 2005 | 상 | decoder | [ieee:1523516](results/2005/ieee_1523516.md)<br>A Degree-Matched Check Node Approximation for LDPC Decoding | check node degree에 맞춘 ln(dc-1) 기반 보정항을 CN당 1회만 적용해 min-sum 손실을 sum-product 수준으로 회복 |
 | 2005 | 상 | decoder | [ieee:1543380](results/2005/ieee_1543380.md)<br>The Box-Minus Operator and its Application to Low-Complexity Belief Propagation Decoding | box-plus 역연산 box-minus + LUT 보정함수 기반 lookup-sum BP로 min-sum 수준 복잡도에 sum-product 성능 근접 |
 | 2002 | 상 | decoder | [ieee:1001666](results/2002/ieee_1001666.md)<br>Density Evolution for Two Improved BP-Based Decoding Algorithms of LDPC Codes | Normalized/Offset BP-based(=normalized/offset min-sum) 디코딩과 density evolution 기반 최적 scaling/offset 파라미터 도출 |
 | 2002 | 상 | decoder | [ieee:1188418](results/2002/ieee_1188418.md)<br>On Implementation of Min-Sum Algorithm for Decoding Low-Density Parity-Check (LDPC) Codes | min-sum의 clipping·양자화 효과 분석(4bit로 near-ideal)과 offset형 correction으로 BP 근접 성능 개선 |
@@ -361,6 +364,12 @@
 | 2010 | 중 | both | [ieee:5402492](results/2010/ieee_5402492.md)<br>Low-Floor Detection/Decoding of LDPC-Coded Partial Response Channels | dominant trapping set의 한 비트를 pinning(외부 BCH/사전고정)해 나머지를 iterative 복호로 정정, error floor 수 자릿수 저감 |
 | 2010 | 중 | decoder | [ieee:5454076](results/2010/ieee_5454076.md)<br>Iterative Decoding Beyond Belief Propagation | trapping-set 온톨로지로 설계한 2/3-bit 유한알파벳 메시지 복호가 error-floor에서 BP/min-sum 초과 |
 | 2009 | 중 | both | [ieee:5174517](results/2009/ieee_5174517.md)<br>Capacity-Approaching Protograph Codes | 선형 최소거리 성장을 보장하는 protograph 구성법(check-node splitting, precoding)과 고속 HW 디코더용 Min* 근사 및 최적 연산 스케줄 제시 |
+| 2009 | 중 | decoder | [ieee:5336848](results/2009/ieee_5336848.md)<br>Design of LDPC Decoders for Improved Low Error Rate Performance: Quantization and Algorithm Choices | absorbing set로 error-floor 원인 규명 + dual quantization/offset min-sum으로 약한 흡수집합 완화해 error-floor 저감 |
+| 2009 | 중 | both | [ieee:5394825](results/2009/ieee_5394825.md)<br>Trapping Set Ontology | Trapping set ontology(critical number + parent-child 위상관계 DB)로 error-floor 예측·저error-floor 코드 구성을 코드 독립적·선형복잡도로 지원 |
+| 2009 | 중 | decoder | [ieee:5469944](results/2009/ieee_5469944.md)<br>Low Error Rate LDPC Decoders | FPGA(BEE2) HW emulation으로 error-floor의 error-inducing noise/state를 포착·분석, absorbing set 기반 error 분류 후 two-domain 양자화·min-sum·post-processing으로 error floor를 수 자릿수 낮춤 |
+| 2008 | 중 | decoder | [ieee:4601062](results/2008/ieee_4601062.md)<br>LDPC Decoder Strategies for Achieving Low Error Floors | dominant trapping set을 식별해 bi-mode erasure post-processing/bit-pinning+outer BCH/G-LDPC BCJR로 error floor를 수 자릿수 저감 |
+| 2008 | 중 | decoder | [ieee:4697990](results/2008/ieee_4697990.md)<br>A Two-Stage Iterative Decoding of LDPC Codes for Lowering Error Floors | 사전지식 없이 unsatisfied check 추적으로 trapping set 검출 후 selective bit-flipping 재복호로 error floor 저감 |
+| 2008 | 중 | decoder | [ieee:4698365](results/2008/ieee_4698365.md)<br>Lowering LDPC Error Floors by Postprocessing | absorbing set 구조를 이용해 unsatisfied check 메시지 신뢰도↑/satisfied check 신뢰도↓ 선택적 바이어싱 postprocessing으로 error floor 제거 |
 | 2007 | 중 | both | [ieee:4100818](results/2007/ieee_4100818.md)<br>Quasi-Cyclic LDPC Codes for the Magnetic Recording Channel: Code Design and VLSI Implementation | FPGA 시뮬레이터로 초저 error rate까지 검증하여 error-floor free QC-LDPC 구조 가이드라인 도출, p배 병렬 디코더 아키텍처와 1.8Gb/s ASIC 구현 |
 | 2007 | 중 | encoder | [ieee:4212932](results/2007/ieee_4212932.md)<br>A Hardware Efficient LDPC Encoding Scheme for Exploiting Decoder Structure and Resources | dual-diagonal QC-LDPC의 weight-3 parity column을 zero cyclic shift로 변형해, 임의 parity bit 생성-순차 결정-체크벡터 보정 3단계 인코딩을 min-sum 디코더 하드웨어로 재사용해 별도 인코더 HW를 없앰 |
 | 2007 | 중 | decoder | [ieee:4313075](results/2007/ieee_4313075.md)<br>Improving LDPC Decoders via Informed Dynamic Scheduling | LBP와 ANS를 결합한 mixed scheduling(F-LBP/ANS, A-LBP/ANS)으로 trapping-set 오류를 해결하면서 ANS의 non-ML/myopic 오류를 회피, 저복잡도 LC-ANS도 유사 성능 |
@@ -368,5 +377,6 @@
 | 2006 | 중 | decoder | [ieee:4027623](results/2006/ieee_4027623.md)<br>Improvements in Belief-Propagation Decoding Based on Averaging Information from Decoder and Correction of Clusters of Nodes | BP 실패 시 평균 신뢰도/부호/degree 통계로 waterfall 영역 노드 재선정, error-floor 영역 SUC 단일-오류-이웃 순차 보정(Algorithm B) |
 | 2006 | 중 | both | [ieee:4036079](results/2006/ieee_4036079.md)<br>Optimal Puncturing of Block-Type LDPC Codes and Their Fast Convergence Decoding | 동일 punctured parity node에 연결된 check node를 병합해 puncturing을 등가적으로 처리하는 이론을 제시하고, punctured 노드를 아예 제거한 축소 Tanner graph에서 디코딩하는 새 알고리즘(PD)으로 기존 erasure decoding(CED) 대비 수렴속도·복잡도를 개선 |
 | 2006 | 중 | both | [ieee:7071541](results/2006/ieee_7071541.md)<br>High-Throughput Multi-Rate LDPC Decoder Based on Architecture-Oriented Parity Check Matrices | odd/even block-column을 두 독립 메모리모듈에 균등분배하는 architecture-oriented block-structured irregular PCM 설계 + 3-stage 파이프라인 layered BP 디코더로 1Gb/s급 throughput 달성 |
+| 2005 | 중 | decoder | [ieee:1651870](results/2005/ieee_1651870.md)<br>A Performance Improvement and Error Floor Avoidance Technique for Belief Propagation Decoding of LDPC Codes | trapping set을 IS로 식별→LUT화, BP 실패 시 trap bit hard-flip으로 error-floor 제거 |
 | 2003 | 중 | both | [ieee:1235639](results/2003/ieee_1235639.md)<br>A Novel Design Methodology for High-Performance Programmable Decoder Cores for AA-LDPC Codes | AA-LDPC(permutation-block 구조)+TDMP turbo-decoding으로 메시지 메모리 75% 절감·iteration 20~50% 감소, shuffle-exchange 라우팅 기반 programmable 디코더 코어 |
 | 2001 | 중 | both | [ieee:959255](results/2001/ieee_959255.md)<br>Low-Density Parity-Check Codes Based on Finite Geometries: A Rediscovery and New Results | Euclidean/Projective 유한기하 기반 cyclic/QC-LDPC 부호 4종 대수적 구성(girth 6, 큰 min-distance, error-floor 없음) + column/row splitting 확장·shortening + weighted BF/2단 hybrid 복호 |
