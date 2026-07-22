@@ -31,14 +31,26 @@
   "내부 메시지/데이터패스 양자화가 핵심 기법인가"를 O/X + 한 줄 근거로 판정 → [quant_tags.json](quant_tags.json).
   단순 언급(예: 입력 LLR 양자화만, LUT를 다른 용도로 사용)은 X.
 
+### 디코더양자화(dq) 웹 노출 축 (2026-07-22 확장)
+
+- Q(핵심) 판정과 **별개로**, 본문 키워드 스니펫 기반 '유무' 판정을 추가해 웹 뷰어에 3값으로 노출한다.
+- 파이프라인: `quant_body_scan.py` → `quant_body_batches/`(스니펫 배치) → agent 판정 → [quant_body_tags.json](quant_body_tags.json)
+  (sid → `{bq: 있음|없음|미상, reason}`; 있음 1,159 / 없음 1,927 / 미상 0, 총 3,086편).
+- **dq 3값 산출**(`export_web.py`): quant_tags에서 `quant=="O"`면 **핵심**(208), 아니면 quant_body_tags의 **bq**
+  값(있음/없음/미상), 어느 쪽에도 없으면(키워드 무매칭 2,920편) **없음**. → 분포: 핵심 208 / 있음 1,159 / 없음 4,847.
+- `papers.json`에는 `dq`/`dq_reason`으로 실린다(기존 `tags`/`q_reason` 대체). 웹은 이 필드를 직접 사용(파생 없음).
+
 ## 파일 구성
 
 | 파일 | 역할 |
 |---|---|
 | [reselect.py](reselect.py) | 6,214편 md 파싱(표+JSON) → H/R/L 판정 + Q 키워드 후보 추출 + 리포트/JSON 생성 |
-| [quant_tags.json](quant_tags.json) | Q 2차 agent 판정 결과 (id → O/X + 근거 한 줄) |
+| [quant_tags.json](quant_tags.json) | Q 2차 agent 판정 결과 (id → O/X + 근거 한 줄) = dq "핵심" 소스 |
+| [quant_body_scan.py](quant_body_scan.py) | 본문 키워드 스니펫 스캔 → `quant_body_batches/` 생성 |
+| [quant_body_tags.json](quant_body_tags.json) | 본문 스니펫 agent 판정 (sid → bq 있음/없음/미상 + 근거) = dq "있음/없음" 소스 |
+| [export_web.py](export_web.py) | 6,214편 → `docs/papers.json` (dq/dq_reason 3값 포함) |
 | [reselect_report.md](reselect_report.md) | 사람용 리포트: 집계 + 기준별 목록 + 통합 목록(태그 컬럼) |
-| [reselect.json](reselect.json) | 기계용: 논문별 태그 + 파싱된 수치 (웹 뷰어·stage4/5 입력) |
+| [reselect.json](reselect.json) | 기계용: 논문별 태그 + 파싱된 수치 (stage4/5 입력) |
 
 ## 실행
 

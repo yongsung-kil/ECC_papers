@@ -11,7 +11,8 @@
 추가 파생 필드:
 - rate_max : 표 rate 문자열에서 (0,1] 범위의 소수·분수 최댓값 (불가 시 null).
 - length_max: 표 length 문자열에서 비트 최댓값 (콤마 제거, `~`는 상한, kB→×8192; 불가 시 null).
-- tags/q_reason: `reselect.json`이 있으면 sid로 조인 (없으면 tags=[], q_reason=null).
+- dq/dq_reason: 디코더양자화 3값. quant_tags.json에서 quant=="O"면 "핵심"(reason 동반),
+  아니면 quant_body_tags.json의 bq("있음"/"없음"/"미상")과 그 reason, 둘 다 없으면 "없음"/null.
 
 출력: `ensure_ascii=False`, `separators=(",",":")`로 크기를 아낀다. 표준 라이브러리만 사용.
 """
@@ -25,7 +26,8 @@ STAGE3_DIR = BASE_DIR.parent                           # criteria/stage3
 RESULTS_DIR = STAGE3_DIR / "results"
 REPO_ROOT = STAGE3_DIR.parent.parent                  # 저장소 루트
 DB_PATH = REPO_ROOT / "data" / "papers.db"
-RESELECT_JSON = BASE_DIR / "reselect.json"
+QUANT_TAGS_JSON = BASE_DIR / "quant_tags.json"            # 핵심 판정 (quant O/X)
+QUANT_BODY_TAGS_JSON = BASE_DIR / "quant_body_tags.json"  # 본문 스니펫 판정 (bq 있음/없음/미상)
 OUTPUT_PATH = REPO_ROOT / "docs" / "papers.json"
 
 # md 하단 ```json 블록 (year_progress.py와 동일 regex)
@@ -153,42 +155,36 @@ def load_db_info():
     return info
 
 
-def load_reselect_tags():
-    """reselect.json이 있으면 sid → {tags, q_reason} 매핑을 만든다 (없으면 빈 dict).
-
-    reselect.json 형식이 dict(sid 키) / list(sid 필드) 어느 쪽이든 수용한다.
-    """
-    if not RESELECT_JSON.exists():
+def load_quant_tags():
+    """quant_tags.json → sid → {"quant": "O"|"X", "reason": ...}. 없으면 빈 dict."""
+    if not QUANT_TAGS_JSON.exists():
         return {}
-    data = json.loads(RESELECT_JSON.read_text(encoding="utf-8"))
-
-    entries = []
-    if isinstance(data, dict):
-        # {"papers": [...]} 또는 {sid: {...}} 두 형태 모두 처리
-        if "papers" in data and isinstance(data["papers"], list):
-            entries = data["papers"]
-        else:
-            for sid, val in data.items():
-                if isinstance(val, dict):
-                    entries.append({"sid": sid, **val})
-    elif isinstance(data, list):
-        entries = data
-
-    tags = {}
-    for e in entries:
-        if not isinstance(e, dict):
-            continue
-        sid = e.get("sid") or (id_to_stem(e["id"]) if e.get("id") else None)
-        if not sid:
-            continue
-        tags[sid] = {
-            "tags": e.get("tags", []) or [],
-            "q_reason": e.get("q_reason"),
-        }
-    return tags
+    return json.loads(QUANT_TAGS_JSON.read_text(encoding="utf-8"))
 
 
-def build_paper(path: Path, db_info: dict, reselect_tags: dict, fails: list):
+def load_quant_body_tags():
+    """quant_body_tags.json → sid → {"bq": "있음"|"없음"|"미상", "reason": ...}. 없으면 빈 dict."""
+    if not QUANT_BODY_TAGS_JSON.exists():
+        return {}
+    return json.loads(QUANT_BODY_TAGS_JSON.read_text(encoding="utf-8"))
+
+
+def derive_dq(stem: str, quant_tags: dict, body_tags: dict):
+    """디코더양자화 3값을 산출한다: 핵심(quant=="O") > 본문판정(bq) > 없음.
+
+    반환: (dq, dq_reason). 핵심이면 quant_tags의 reason, 본문 판정이면 body_tags의
+    reason, 어느 쪽에도 없으면 ("없음", None).
+    """
+    qt = quant_tags.get(stem)
+    if qt and qt.get("quant") == "O":
+        return "핵심", qt.get("reason")
+    bt = body_tags.get(stem)
+    if bt:
+        return bt.get("bq"), bt.get("reason")
+    return "없음", None
+
+
+def build_paper(path: Path, db_info: dict, quant_tags: dict, body_tags: dict, fails: list):
     """md 한 편을 papers.json 레코드(dict)로 변환. 실패 시 None."""
     stem = path.stem
     text = path.read_text(encoding="utf-8")
@@ -233,9 +229,9 @@ def build_paper(path: Path, db_info: dict, reselect_tags: dict, fails: list):
     record["code_length"] = code_length
     record["length_max"] = parse_length_max(code_length)
 
-    tag_info = reselect_tags.get(stem, {})
-    record["tags"] = tag_info.get("tags", [])
-    record["q_reason"] = tag_info.get("q_reason")
+    dq, dq_reason = derive_dq(stem, quant_tags, body_tags)
+    record["dq"] = dq
+    record["dq_reason"] = dq_reason
 
     record["md"] = path.relative_to(REPO_ROOT).as_posix()
 
@@ -254,13 +250,15 @@ def _as_str(value):
 
 def main() -> None:
     import datetime
+    from collections import Counter
     db_info = load_db_info()
-    reselect_tags = load_reselect_tags()
+    quant_tags = load_quant_tags()
+    body_tags = load_quant_body_tags()
 
     papers = []
     fails = []
     for path in sorted(RESULTS_DIR.glob("*/*.md")):
-        rec = build_paper(path, db_info, reselect_tags, fails)
+        rec = build_paper(path, db_info, quant_tags, body_tags, fails)
         if rec is not None:
             papers.append(rec)
 
@@ -277,10 +275,13 @@ def main() -> None:
     size_mb = OUTPUT_PATH.stat().st_size / (1024 * 1024)
     print(f"wrote {OUTPUT_PATH}")
     print(f"  총 {len(papers)}편, 생성일 {generated}, 크기 {size_mb:.2f} MB")
-    if reselect_tags:
-        print(f"  reselect.json 조인: {len(reselect_tags)}편에 태그 반영")
-    else:
-        print("  reselect.json 없음 → 모든 tags=[]")
+    dist = Counter(p["dq"] for p in papers)
+    order = ["핵심", "있음", "없음", "미상"]
+    parts = [f"{k} {dist[k]}" for k in order if dist.get(k)]
+    for k in dist:
+        if k not in order:
+            parts.append(f"{k} {dist[k]}")
+    print("  dq 분포: " + " / ".join(parts))
     if fails:
         print(f"  파싱/조인 실패 {len(fails)}편:")
         for f in fails:

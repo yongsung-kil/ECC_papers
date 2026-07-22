@@ -27,7 +27,11 @@
 - [x] Q 태그: 키워드 스캔 → 걸린 논문 전량 opus agent 재확인 (원문 재독 없음)
   - 2026-07-22: 키워드 후보 1,948편 → opus 20배치 전수 판정(O 208 / X 1,740), `quant_tags.json`
 - [x] `docs/` 웹 뷰어(papers.json 6.21MB + 단일 index.html, 필터/검색/정렬/프리셋) 작성·태그 반영
-- [ ] GitHub Pages 활성화 + 커밋/푸시 확인 후 완료 처리(tasks→done)
+- [x] GitHub Pages 활성화 + 커밋/푸시 (https://yongsung-kil.github.io/ECC_papers/)
+- [x] 디코더양자화 축 확장 (2026-07-22): '핵심 기여'만이던 판정을 본문 txt 스니펫 재판정으로 확장
+  - 본문 키워드 스캔 3,086편 → opus 31배치 판정(있음 1,159/없음 1,927) → dq 3값: 핵심 208/있음 1,159/없음 4,847
+  - 계기: ieee_6661539(EG-LDPC FPGA)가 HW 구현 양자화인데 X — 기준 문제 확인 후 유무 축 신설
+- [ ] 완료 처리(tasks→done 이동) — 보류 중
 
 ### stage4: 외부 검증 기반 추가 필터 — 🔄 틀만 (입력 대기)
 - [x] 스켈레톤 생성 (`criteria/stage4/`: README·filter_criteria·reviewed_papers·orchestrator + results/)
