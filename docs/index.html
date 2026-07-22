@@ -246,7 +246,7 @@
         <div class="gfields" id="grpNum">
           <div class="fld">
             <label>rate_max ≥</label>
-            <input type="number" id="rateMin" step="0.01" min="0" max="1" placeholder="0.0">
+            <input type="number" id="rateMin" step="0.05" min="0" max="1" placeholder="0.0">
           </div>
           <div class="fld">
             <label>length_max ≥ (bit)</label>
@@ -538,18 +538,6 @@ function dispVal(f,p){
   var cls = valCls(f.key, raw);
   return cls? '<span class="'+cls+'">'+esc(v)+'</span>' : esc(v);
 }
-// 원문 검색 URL (사용자 지정 형식). sid 접두로 IEEE/arXiv 판별.
-function searchUrl(p){
-  var sid=p.sid||"", title=p.title||"";
-  if(sid.indexOf("arxiv_")===0){
-    var q=encodeURIComponent(title).replace(/%20/g,"+");
-    return "https://arxiv.org/search/?query="+q+"&searchtype=all&abstracts=show&order=-announced_date_first&size=50";
-  }
-  if(sid.indexOf("ieee_")===0){
-    return "https://ieeexplore.ieee.org/search/searchresult.jsp?newsearch=true&queryText="+encodeURIComponent(title);
-  }
-  return null;
-}
 // 원문 직행 URL. IEEE=document/{번호}, arXiv=abs/{id}(구식 카테고리 id는 _→/ 치환).
 function directUrl(p){
   var sid=p.sid||"";
@@ -565,11 +553,10 @@ function openDetail(sid){
     return '<dt>'+esc(f.label)+'</dt><dd>'+dispVal(f,p)+'</dd>';
   }).join("");
   var qReason = p.dq_reason? '<dt>디코더양자화 근거</dt><dd>'+esc(p.dq_reason)+'</dd>' : '';
-  var _direct = directUrl(p), _search = searchUrl(p);
+  var _direct = directUrl(p);
   var links = '<div class="srclinks">'+
     '<a class="srclink" href="'+GITHUB_BLOB+esc(p.md)+'" target="_blank" rel="noopener">분석 MD ↗</a>'+
     (_direct? '<a class="srclink" href="'+esc(_direct)+'" target="_blank" rel="noopener">원문 바로가기 ↗</a>':'')+
-    (_search? '<a class="srclink" href="'+esc(_search)+'" target="_blank" rel="noopener">논문 검색 ↗</a>':'')+
   '</div>';
   var html =
     '<div class="mh">'+
@@ -692,13 +679,20 @@ function addChips(raw){
   syncQ();
 }
 
+// 입력 중(포커스)에는 값을 덮어쓰지 않는다 — "0." 같은 미완성 소수점 입력 보존
+function setNumInput(id, val){
+  var e = el(id);
+  if(document.activeElement === e) return;
+  e.value = (val===null||val===undefined) ? "" : val;
+}
+
 // 컨트롤 상태를 state에 맞춤 (프리셋/해시 복원 후)
 function syncControls(){
   renderChips();
-  el("rateMin").value = state.rateMin===null?"":state.rateMin;
-  el("lengthMin").value = state.lengthMin===null?"":state.lengthMin;
-  el("yearMin").value = state.yearMin===null?"":state.yearMin;
-  el("yearMax").value = state.yearMax===null?"":state.yearMax;
+  setNumInput("rateMin", state.rateMin);
+  setNumInput("lengthMin", state.lengthMin);
+  setNumInput("yearMin", state.yearMin);
+  setNumInput("yearMax", state.yearMax);
   ENUM_FIELDS.forEach(function(f){
     var wrap=document.querySelector('.ms[data-key="'+f.key+'"]');
     if(!wrap) return;
@@ -713,7 +707,13 @@ function syncControls(){
 }
 
 // ---------- 입력 바인딩 ----------
-function numOrNull(v){ v=v.trim(); if(v==="") return null; var n=Number(v); return isNaN(n)?null:n; }
+// 빈칸이면 필터 해제(null), 유효 숫자면 반영, 잘못된 입력("0..5" 등)은 마지막 유효값 유지
+function updateNum(key, raw){
+  var v = raw.trim();
+  if(v===""){ state[key]=null; return; }
+  var n = Number(v);
+  if(!isNaN(n)) state[key]=n;
+}
 el("search").addEventListener("keydown",function(e){
   if(e.key==="Enter" || e.key===","){
     e.preventDefault();
@@ -722,10 +722,10 @@ el("search").addEventListener("keydown",function(e){
     state.chips.pop(); syncQ(); state.page=1; render();
   }
 });
-el("rateMin").addEventListener("input",function(){ state.rateMin=numOrNull(this.value); state.page=1; render(); });
-el("lengthMin").addEventListener("input",function(){ state.lengthMin=numOrNull(this.value); state.page=1; render(); });
-el("yearMin").addEventListener("input",function(){ state.yearMin=numOrNull(this.value); state.page=1; render(); });
-el("yearMax").addEventListener("input",function(){ state.yearMax=numOrNull(this.value); state.page=1; render(); });
+el("rateMin").addEventListener("input",function(){ updateNum("rateMin", this.value); state.page=1; render(); });
+el("lengthMin").addEventListener("input",function(){ updateNum("lengthMin", this.value); state.page=1; render(); });
+el("yearMin").addEventListener("input",function(){ updateNum("yearMin", this.value); state.page=1; render(); });
+el("yearMax").addEventListener("input",function(){ updateNum("yearMax", this.value); state.page=1; render(); });
 
 // ---------- 프리셋 ----------
 function clearFilters(){
