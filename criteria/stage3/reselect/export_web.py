@@ -13,6 +13,8 @@
 - length_max: 표 length 문자열에서 비트 최댓값 (콤마 제거, `~`는 상한, kB→×8192; 불가 시 null).
 - dq/dq_reason: 디코더양자화 3값. quant_tags.json에서 quant=="O"면 "핵심"(reason 동반),
   아니면 quant_body_tags.json의 bq("있음"/"없음"/"미상")과 그 reason, 둘 다 없으면 "없음"/null.
+- month: 발행 월(1~12, 불명 null). `data/pdfs/{venue}/{연}/{월}/{stem}` 폴더 구조에서 취하고
+  (arxiv sid 접두 별칭 처리), DB published 파싱값으로 교차검증(불일치 시 경로 우선·건수 보고).
 
 출력: `ensure_ascii=False`, `separators=(",",":")`로 크기를 아낀다. 표준 라이브러리만 사용.
 """
@@ -26,6 +28,7 @@ STAGE3_DIR = BASE_DIR.parent                           # criteria/stage3
 RESULTS_DIR = STAGE3_DIR / "results"
 REPO_ROOT = STAGE3_DIR.parent.parent                  # 저장소 루트
 DB_PATH = REPO_ROOT / "data" / "papers.db"
+PDFS_DIR = REPO_ROOT / "data" / "pdfs"                    # {venue}/{연}/{월}/{stem}.{pdf,txt}
 QUANT_TAGS_JSON = BASE_DIR / "quant_tags.json"            # 핵심 판정 (quant O/X)
 QUANT_BODY_TAGS_JSON = BASE_DIR / "quant_body_tags.json"  # 본문 스니펫 판정 (bq 있음/없음/미상)
 OUTPUT_PATH = REPO_ROOT / "docs" / "papers.json"
@@ -62,6 +65,57 @@ def extract_published_year(published: str) -> str:
 def id_to_stem(paper_id: str) -> str:
     """results 저장 규칙과 동일하게 ':'와 '/'를 '_'로 치환한다."""
     return paper_id.replace(":", "_").replace("/", "_")
+
+
+MONTH_RE = re.compile(
+    r"\b(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?"
+    r"|aug(?:ust)?|sep(?:t|tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\.?\b",
+    re.IGNORECASE,
+)
+MONTH_NUM = {"jan": 1, "feb": 2, "mar": 3, "apr": 4, "may": 5, "jun": 6,
+             "jul": 7, "aug": 8, "sep": 9, "oct": 10, "nov": 11, "dec": 12}
+
+
+def parse_published_month(published: str):
+    """DB published 문자열에서 발행 월(1~12)을 파싱. 불가 시 None (교차검증용).
+
+    arXiv는 ISO(YYYY-MM-DD), IEEE는 "8-10 Oct. 2013"/"April 2026"처럼 월명 표기.
+    """
+    if not published:
+        return None
+    m_iso = re.search(r"(?:19|20)\d{2}-(\d{2})(?:-\d{2})?", published)
+    if m_iso:
+        mm = int(m_iso.group(1))
+        if 1 <= mm <= 12:
+            return mm
+    m = MONTH_RE.search(published)
+    if m:
+        return MONTH_NUM[m.group(1)[:3].lower()]
+    return None
+
+
+def build_month_map() -> dict:
+    """data/pdfs/{venue}/{연}/{월}/{stem}.(pdf|txt) → stem → month(int|None).
+
+    arxiv 파일 stem에는 'arxiv_' 접두가 없으므로 'arxiv_'+stem 별칭도 등록한다
+    (quant_body_scan.build_sid_map과 동일 규칙).
+    """
+    month_map = {}
+    if not PDFS_DIR.exists():
+        return month_map
+    for p in PDFS_DIR.rglob("*"):
+        if p.suffix.lower() not in (".pdf", ".txt"):
+            continue
+        parts = p.relative_to(PDFS_DIR).parts       # (venue, 연, 월, 파일명)
+        if len(parts) < 4:
+            continue
+        venue, mm = parts[0], parts[2]
+        month = int(mm) if mm.isdigit() and 1 <= int(mm) <= 12 else None
+        stem = p.stem
+        month_map[stem] = month
+        if venue == "arxiv" and not stem.startswith("arxiv_"):
+            month_map["arxiv_" + stem] = month
+    return month_map
 
 
 def venue_type(source: str, content_type: str) -> str:
@@ -151,7 +205,8 @@ def load_db_info():
     for paper_id, published, source, content_type in rows:
         year_str = extract_published_year(published)
         year = int(year_str) if year_str.isdigit() else None
-        info[id_to_stem(paper_id)] = (paper_id, year, venue_type(source, content_type))
+        db_month = parse_published_month(published)
+        info[id_to_stem(paper_id)] = (paper_id, year, venue_type(source, content_type), db_month)
     return info
 
 
@@ -184,7 +239,8 @@ def derive_dq(stem: str, quant_tags: dict, body_tags: dict):
     return "없음", None
 
 
-def build_paper(path: Path, db_info: dict, quant_tags: dict, body_tags: dict, fails: list):
+def build_paper(path: Path, db_info: dict, quant_tags: dict, body_tags: dict,
+                month_map: dict, fails: list, mismatches: list):
     """md 한 편을 papers.json 레코드(dict)로 변환. 실패 시 None."""
     stem = path.stem
     text = path.read_text(encoding="utf-8")
@@ -203,7 +259,13 @@ def build_paper(path: Path, db_info: dict, quant_tags: dict, body_tags: dict, fa
     if db_match is None:
         fails.append(f"{path.parent.name}/{path.name} (filtered_in DB에 없음)")
         return None
-    paper_id, year, vtype = db_match
+    paper_id, year, vtype, db_month = db_match
+
+    # month: 경로 폴더 우선, 없으면 DB 파싱값 폴백. 둘 다 있고 다르면 경로 우선 + 불일치 집계
+    path_month = month_map.get(stem)
+    if path_month is not None and db_month is not None and path_month != db_month:
+        mismatches.append((stem, path_month, db_month))
+    month = path_month if path_month is not None else db_month
 
     # code_rate/code_length: md 표 원문 문자열 우선, 없으면 JSON 블록 값으로 폴백
     rate_row = RATE_ROW_RE.search(text)
@@ -216,6 +278,7 @@ def build_paper(path: Path, db_info: dict, quant_tags: dict, body_tags: dict, fa
         "id": paper_id,
         "title": obj.get("title"),
         "year": year if year is not None else obj.get("year"),
+        "month": month,
         "venue": obj.get("venue"),
         "vtype": vtype,
     }
@@ -254,11 +317,13 @@ def main() -> None:
     db_info = load_db_info()
     quant_tags = load_quant_tags()
     body_tags = load_quant_body_tags()
+    month_map = build_month_map()
 
     papers = []
     fails = []
+    mismatches = []
     for path in sorted(RESULTS_DIR.glob("*/*.md")):
-        rec = build_paper(path, db_info, quant_tags, body_tags, fails)
+        rec = build_paper(path, db_info, quant_tags, body_tags, month_map, fails, mismatches)
         if rec is not None:
             papers.append(rec)
 
@@ -282,6 +347,10 @@ def main() -> None:
         if k not in order:
             parts.append(f"{k} {dist[k]}")
     print("  dq 분포: " + " / ".join(parts))
+    month_null = sum(1 for p in papers if p.get("month") is None)
+    print(f"  month: null {month_null}편 / 경로·DB 불일치 {len(mismatches)}건")
+    for stem, pm, dm in mismatches[:5]:
+        print(f"    - {stem}: path={pm} db={dm}")
     if fails:
         print(f"  파싱/조인 실패 {len(fails)}편:")
         for f in fails:
