@@ -1,6 +1,6 @@
 # TODO
 
-> Claude 마지막 확인: 2026-07-22 16:10:59
+> Claude 마지막 확인: 2026-08-11 00:19:39
 
 전체 로드맵: `_pm/tasks/roadmap/roadmap.md` · 완료 이력: `_pm/DONE.md`
 
@@ -38,13 +38,19 @@
 - [ ] 외부 검증 논문 리스트 채우기 (`criteria/stage4/reviewed_papers.md`, 원천: 루트 `reviewed_papers.txt`)
 - [ ] 매핑 방법·필터 방향·출력 형식 확정 → 기준 고정 후 실행 (상세: `criteria/stage4/README.md` "미결정")
 
-### stage5: pseudo-code + 간단 구현 — 🔄 틀만 (대상·언어 대기)
+### stage5: pseudo-code + 간단 구현 — 🔄 틀만 (대상·언어 대기)ㅇ
 - [x] 스켈레톤 생성 (`criteria/stage5/`: README·implementation_prompt·orchestrator·targets + results/_TEMPLATE/)
 - [ ] 예시 대상 논문 선정 (stage4 미완 → stage3 샘플, `criteria/stage5/targets.md`)
 - [ ] 구현 언어(Python/C++)·검증 깊이 확정 → 예시 1~2편 구현
 - [ ] (추후) Prime ECC 3.1 src 실이식
 
 > 참고: 위 stage4/stage5는 `criteria/stageN/` 실행 폴더 번호 기준. 로드맵 Phase 4(아이디어 평가)/Phase 5(운영)와는 번호가 다름.
+
+### 상위 페이지(개요) 제작 — 🔄 진행 중 (상세: `_pm/tasks/20260810_page구성/`)
+프로젝트 전체 구조를 보여주는 상위 페이지. 독자는 회사 임원이며 발표 화면으로 쓴다.
+- [x] 설계 확정 (`설계.md`) — 사이드바 전체 + 개요 페이지 본문, 메인 블록도 1개 + 보조 3개
+- [ ] `docs/index.html` 상위 페이지 작성, 기존 탐색기를 `docs/papers.html`로 이동
+- [ ] 발표 해상도에서 첫 화면 확인
 
 ### Phase 5: 관리 & 운영 — 예정
 - [ ] 검토 이력 관리 · 저장소 용량 관리 · 리포트 생성
@@ -53,3 +59,4 @@
 
 ## 새 작업 추가
 (여기에 새 작업을 적으면 Claude가 처리합니다)
+
