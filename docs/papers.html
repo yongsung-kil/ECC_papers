@@ -172,6 +172,22 @@
   .freetext{background:var(--surface-soft); border:1px solid var(--hairline); border-radius:0; padding:12px 14px; line-height:1.6; font-weight:400; font-size:14px; color:var(--body-strong);}
   .srclink{display:inline-flex; align-items:center; height:28px; padding:0 12px; background:transparent; color:var(--ink); border:1px solid var(--ink); border-radius:0; text-decoration:none; font-weight:700; font-size:11.5px; letter-spacing:.4px; text-transform:uppercase; white-space:nowrap;}
   .srclink:hover{background:var(--ink); color:var(--canvas); text-decoration:none;}
+
+  /* 분석 MD 전문 */
+  .mdfull{background:var(--surface-soft); border:1px solid var(--hairline); padding:14px 16px; font-size:13.5px; line-height:1.65; color:var(--body-strong); overflow-x:auto;}
+  .mdfull h3{font-size:15px; font-weight:700; color:var(--ink); letter-spacing:.3px; margin:20px 0 8px;}
+  .mdfull h3:first-child{margin-top:0;}
+  .mdfull p{margin:8px 0;}
+  .mdfull table{border-collapse:collapse; margin:10px 0; font-size:13px;}
+  .mdfull th,.mdfull td{border:1px solid var(--hairline); padding:5px 10px; text-align:left; vertical-align:top;}
+  .mdfull th{background:var(--surface-card); color:var(--body-strong); font-weight:700;}
+  .mdfull pre{background:var(--canvas); border:1px solid var(--hairline); padding:10px 12px; margin:10px 0; overflow-x:auto; font-size:12.5px; line-height:1.55; color:var(--body-strong);}
+  .mdfull code{background:var(--surface-elevated); padding:1px 5px; font-size:12.5px;}
+  .mdfull pre code{background:transparent; padding:0;}
+  .mdfull blockquote{margin:10px 0; padding:8px 12px; border-left:3px solid #4d9fff; background:var(--surface-card);}
+  .mdfull ol{margin:8px 0; padding-left:26px;}
+  .mdfull li{margin:3px 0;}
+  .mdfull a{text-decoration:underline;}
   .empty{padding:48px; text-align:center; color:var(--muted); font-weight:400; letter-spacing:.5px;}
 
   @media (max-width:640px){
@@ -556,10 +572,9 @@ function openDetail(sid){
   }).join("");
   var qReason = p.dq_reason? '<dt>디코더양자화 근거</dt><dd>'+esc(p.dq_reason)+'</dd>' : '';
   var _direct = directUrl(p);
-  var links = '<div class="metalinks">'+
-    '<a class="srclink" href="'+GITHUB_BLOB+esc(p.md)+'" target="_blank" rel="noopener">분석 MD ↗</a>'+
-    (_direct? '<a class="srclink" href="'+esc(_direct)+'" target="_blank" rel="noopener">원문 바로가기 ↗</a>':'')+
-  '</div>';
+  var links = _direct? '<div class="metalinks">'+
+    '<a class="srclink" href="'+esc(_direct)+'" target="_blank" rel="noopener">원문 바로가기 ↗</a>'+
+  '</div>' : '';
   var html =
     '<div class="mh">'+
       '<div class="mhl"><h2>'+esc(p.title)+'</h2></div>'+
@@ -570,17 +585,115 @@ function openDetail(sid){
       '<div class="freetext">'+ (p.key_contribution? esc(p.key_contribution) : '<span class="muted">기록 없음</span>') +'</div>'+
       '<div class="section-t">한계 · 주의</div>'+
       '<div class="freetext">'+ (p.caveat? esc(p.caveat) : '<span class="muted">기록 없음</span>') +'</div>'+
-      '<div class="submeta">'+links+'</div>'+
+      (links? '<div class="submeta">'+links+'</div>' : '')+
       '<dl class="kv">'+kv+qReason+'</dl>'+
+      '<div class="section-t">분석 MD 전문</div>'+
+      '<div class="mdfull" id="mdfull"></div>'+
     '</div>';
   el("modal").innerHTML=html;
   el("overlay").classList.add("open");
   document.body.style.overflow="hidden";
   el("closeModal").addEventListener("click",closeDetail);
+  loadMd(p);
 }
 function closeDetail(){
+  _mdSid=null;
   el("overlay").classList.remove("open");
   document.body.style.overflow="";
+}
+
+// ---------- 분석 MD 전문 (클릭 시 저장소 원본 fetch → 자체 렌더) ----------
+var RAW_BASE = "https://raw.githubusercontent.com/yongsung-kil/ECC_papers/master/";
+var MD_CACHE = {};   // sid → 렌더된 HTML
+var _mdSid = null;   // 현재 모달의 sid (뒤늦게 도착한 응답 무시용)
+
+// 인라인 문법: 굵게, 인라인 코드. 링크는 저장소 상대경로라 웹에서 죽으므로 텍스트만 남긴다.
+function mdInline(s){
+  s = esc(s);
+  s = s.replace(/\[([^\]]+)\]\([^)]*\)/g, "$1");
+  s = s.replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>");
+  s = s.replace(/`([^`]+)`/g, "<code>$1</code>");
+  return s;
+}
+
+// 분석 MD 코퍼스에 실제 쓰이는 문법만 처리: 제목(##/###), 표, 인용(>), 숫자 목록, 코드펜스(```/```json)
+function mdToHtml(text){
+  var lines = text.split(/\r?\n/);
+  var out = [], i = 0;
+  while(i < lines.length){
+    var ln = lines[i];
+    var fence = ln.match(/^```/);
+    if(fence){
+      var buf = [];
+      i++;
+      while(i < lines.length && !/^```/.test(lines[i])){ buf.push(lines[i]); i++; }
+      i++; // 닫는 펜스
+      out.push('<pre><code>'+esc(buf.join("\n"))+'</code></pre>');
+      continue;
+    }
+    if(/^\|/.test(ln)){
+      var rows = [];
+      while(i < lines.length && /^\|/.test(lines[i])){ rows.push(lines[i]); i++; }
+      var hasSep = rows.length > 1 && /^\|[\s\-:|]+\|?\s*$/.test(rows[1]);
+      var thtml = '<table>';
+      for(var r = 0; r < rows.length; r++){
+        if(hasSep && r === 1) continue; // 구분행(|---|)
+        var tag = (hasSep && r === 0) ? "th" : "td";
+        var cells = rows[r].replace(/^\|/,"").replace(/\|\s*$/,"").split("|");
+        thtml += '<tr>'+cells.map(function(c){ return '<'+tag+'>'+mdInline(c.trim())+'</'+tag+'>'; }).join("")+'</tr>';
+      }
+      out.push(thtml+'</table>');
+      continue;
+    }
+    var h = ln.match(/^#{2,6}\s+(.*)/);
+    if(h){ out.push('<h3>'+mdInline(h[1])+'</h3>'); i++; continue; }
+    if(/^>\s?/.test(ln)){
+      var q = [];
+      while(i < lines.length && /^>\s?/.test(lines[i])){ q.push(lines[i].replace(/^>\s?/,"")); i++; }
+      out.push('<blockquote>'+mdInline(q.join(" "))+'</blockquote>');
+      continue;
+    }
+    if(/^\d+\.\s/.test(ln)){
+      var items = [];
+      while(i < lines.length && /^\d+\.\s/.test(lines[i])){ items.push(lines[i].replace(/^\d+\.\s/,"")); i++; }
+      out.push('<ol>'+items.map(function(t){ return '<li>'+mdInline(t)+'</li>'; }).join("")+'</ol>');
+      continue;
+    }
+    if(ln.trim()===""){ i++; continue; }
+    var para = [ln];
+    i++;
+    while(i < lines.length && lines[i].trim()!=="" && !/^(```|\||#{2,6}\s|>\s?|\d+\.\s)/.test(lines[i])){ para.push(lines[i]); i++; }
+    out.push('<p>'+mdInline(para.join(" "))+'</p>');
+  }
+  return out.join("");
+}
+
+function loadMd(p){
+  var sid = p.sid, box = el("mdfull");
+  _mdSid = sid;
+  if(MD_CACHE[sid]){ box.innerHTML = MD_CACHE[sid]; return; }
+  box.innerHTML = '<span class="muted">분석 MD 불러오는 중…</span>';
+  function ok(text){
+    var html = mdToHtml(text);
+    MD_CACHE[sid] = html;
+    if(_mdSid === sid){ var b = el("mdfull"); if(b) b.innerHTML = html; }
+  }
+  function fail(){
+    if(_mdSid !== sid) return;
+    var b = el("mdfull"); if(!b) return;
+    b.innerHTML = '<span class="muted">분석 MD를 불러오지 못했습니다. </span>'+
+      '<a href="'+GITHUB_BLOB+esc(p.md)+'" target="_blank" rel="noopener">GitHub에서 보기 ↗</a>';
+  }
+  fetch(RAW_BASE + p.md)
+    .then(function(r){ if(!r.ok) throw new Error(r.status); return r.text(); })
+    .then(ok)
+    .catch(function(){
+      // 저장소 루트에서 로컬 서버를 띄운 경우의 폴백
+      fetch("../" + p.md)
+        .then(function(r){ if(!r.ok) throw new Error(r.status); return r.text(); })
+        .then(ok)
+        .catch(fail);
+    });
 }
 el("overlay").addEventListener("click",function(e){ if(e.target===el("overlay")) closeDetail(); });
 document.addEventListener("keydown",function(e){ if(e.key==="Escape") closeDetail(); });
